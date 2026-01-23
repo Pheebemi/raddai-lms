@@ -1,41 +1,31 @@
 'use client';
 
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
-import { AdminDashboard } from '@/components/dashboards/admin-dashboard';
-import { ManagementDashboard } from '@/components/dashboards/management-dashboard';
-import { StaffDashboard } from '@/components/dashboards/staff-dashboard';
-import { StudentDashboard } from '@/components/dashboards/student-dashboard';
-import { ParentDashboard } from '@/components/dashboards/parent-dashboard';
-import ProtectedRoute from '@/components/protected-route';
-import AppLayout from '@/components/app-layout';
+import { Loader2 } from 'lucide-react';
 
 export default function DashboardPage() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
 
-  if (!user) return null;
-
-  const renderDashboard = () => {
-    switch (user.role) {
-      case 'admin':
-        return <AdminDashboard />;
-      case 'management':
-        return <ManagementDashboard />;
-      case 'staff':
-        return <StaffDashboard />;
-      case 'student':
-        return <StudentDashboard />;
-      case 'parent':
-        return <ParentDashboard />;
-      default:
-        return <StudentDashboard />;
+  useEffect(() => {
+    if (!isLoading && user) {
+      // Redirect to role-specific dashboard
+      router.push(`/dashboard/${user.role}`);
     }
-  };
+  }, [user, isLoading, router]);
 
-  return (
-    <ProtectedRoute>
-      <AppLayout>
-        {renderDashboard()}
-      </AppLayout>
-    </ProtectedRoute>
-  );
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-muted-foreground">Loading your dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 }

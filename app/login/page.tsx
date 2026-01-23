@@ -16,9 +16,8 @@ import { toast } from 'sonner';
 import { UserRole } from '@/types';
 
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  role: z.enum(['admin', 'management', 'staff', 'student', 'parent'] as const),
+  username: z.string().min(1, 'Please enter your username'),
+  password: z.string().min(1, 'Please enter your password'),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -40,16 +39,15 @@ export default function LoginPage() {
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: '',
+      username: '',
       password: '',
-      role: 'student',
     },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      const result = await login(data.email, data.password, data.role);
+      const result = await login(data.username, data.password);
 
       if (result.success) {
         toast.success('Login successful! Redirecting...');
@@ -85,55 +83,14 @@ export default function LoginPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               <FormField
                 control={form.control}
-                name="role"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Select Your Role</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Choose your role" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {roleOptions.map((option) => (
-                          <SelectItem key={option.value} value={option.value}>
-                            <div className="flex items-center gap-2">
-                              <option.icon className="h-4 w-4" />
-                              <div>
-                                <div className="font-medium">{option.label}</div>
-                                <div className="text-xs text-muted-foreground">{option.description}</div>
-                              </div>
-                            </div>
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {roleInfo && (
-                <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
-                  <roleInfo.icon className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-sm">
-                    <span className="font-medium">{roleInfo.label}</span>
-                    <span className="text-muted-foreground ml-1">- {roleInfo.description}</span>
-                  </div>
-                </div>
-              )}
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>Username</FormLabel>
                     <FormControl>
                       <Input
-                        type="email"
-                        placeholder="Enter your email"
+                        type="text"
+                        placeholder="Enter your username"
                         {...field}
                       />
                     </FormControl>

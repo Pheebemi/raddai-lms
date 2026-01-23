@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthState, User, UserRole } from '@/types';
-import { mockCredentials, getMockUserByRole } from '@/lib/mock-data';
+import { authApi, handleApiError } from '@/lib/api';
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string, role: UserRole) => Promise<{ success: boolean; message: string }>;
+  login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
@@ -31,13 +31,32 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
   });
 
+  // Refresh token function
+  const refreshAccessToken = async () => {
+    const refreshToken = localStorage.getItem('edumanage_refresh_token');
+    if (!refreshToken) {
+      throw new Error('No refresh token available');
+    }
+
+    try {
+      const response = await authApi.refreshToken(refreshToken);
+      localStorage.setItem('edumanage_token', response.access);
+      return response.access;
+    } catch (error) {
+      // If refresh fails, logout user
+      logout();
+      throw error;
+    }
+  };
+
   // Check for existing session on mount
   useEffect(() => {
-    const initializeAuth = () => {
+    const initializeAuth = async () => {
       const storedUser = localStorage.getItem('edumanage_user');
       const storedToken = localStorage.getItem('edumanage_token');
+      const storedRefreshToken = localStorage.getItem('edumanage_refresh_token');
 
-      if (storedUser && storedToken) {
+      if (storedUser && storedToken && storedRefreshToken) {
         try {
           const user = JSON.parse(storedUser);
           setAuthState({
@@ -49,6 +68,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           // Invalid stored data, clear it
           localStorage.removeItem('edumanage_user');
           localStorage.removeItem('edumanage_token');
+          localStorage.removeItem('edumanage_refresh_token');
           setAuthState(prev => ({ ...prev, isLoading: false }));
         }
       } else {
@@ -60,49 +80,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, []);
 
   const login = async (
-    email: string,
-    password: string,
-    role: UserRole
+    username: string,
+    password: string
   ): Promise<{ success: boolean; message: string }> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    try {
+      // Call Django API
+      const response = await authApi.login(username, password);
 
-    // Validate credentials based on role
-    const credentials = mockCredentials[role];
-    if (!credentials) {
-      return { success: false, message: 'Invalid role selected' };
+      // Convert Django user format to frontend format
+      const user: User = {
+        id: response.user.id.toString(),
+        email: response.user.email,
+        firstName: response.user.first_name,
+        lastName: response.user.last_name,
+        role: response.user.role,
+        phone: response.user.phone_number,
+        address: response.user.address,
+        dateOfBirth: response.user.date_of_birth,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Store tokens and user data in localStorage
+      localStorage.setItem('edumanage_user', JSON.stringify(user));
+      localStorage.setItem('edumanage_token', response.access);
+      localStorage.setItem('edumanage_refresh_token', response.refresh);
+
+      // Update state
+      setAuthState({
+        user,
+        isAuthenticated: true,
+        isLoading: false,
+      });
+
+      return { success: true, message: 'Login successful' };
+    } catch (error) {
+      const errorMessage = handleApiError(error);
+      return { success: false, message: errorMessage };
     }
-
-    if (email !== credentials.email || password !== credentials.password) {
-      return { success: false, message: 'Invalid email or password' };
-    }
-
-    // Get user data
-    const user = getMockUserByRole(role);
-    if (!user) {
-      return { success: false, message: 'User not found' };
-    }
-
-    // Create mock token
-    const token = `mock_jwt_token_${user.id}_${Date.now()}`;
-
-    // Store in localStorage
-    localStorage.setItem('edumanage_user', JSON.stringify(user));
-    localStorage.setItem('edumanage_token', token);
-
-    // Update state
-    setAuthState({
-      user,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-
-    return { success: true, message: 'Login successful' };
   };
 
   const logout = () => {
     localStorage.removeItem('edumanage_user');
     localStorage.removeItem('edumanage_token');
+    localStorage.removeItem('edumanage_refresh_token');
     setAuthState({
       user: null,
       isAuthenticated: false,
