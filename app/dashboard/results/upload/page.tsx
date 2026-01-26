@@ -73,17 +73,33 @@ export default function UploadResultsPage() {
         // Filter classes based on staff's assigned classes
         let filteredClassesList = formattedClasses;
         if (currentStaff && currentStaff.assigned_classes && currentStaff.assigned_classes.length > 0) {
+          console.log('Staff assigned classes:', currentStaff.assigned_classes);
+          console.log('Available classes:', formattedClasses.map(c => c.name));
+
           // Filter classes to only show those assigned to the current staff
-          filteredClassesList = formattedClasses.filter(cls =>
-            currentStaff.assigned_classes.some((assignedClass: any) => {
+          filteredClassesList = formattedClasses.filter(cls => {
+            const isAssigned = currentStaff.assigned_classes.some((assignedClass: any) => {
               // Match by name (flexible matching)
               const className = cls.name.toLowerCase().trim();
               const assignedName = assignedClass.name ? assignedClass.name.toLowerCase().trim() : '';
-              return className === assignedName ||
+              const matches = className === assignedName ||
                      className.includes(assignedName) ||
                      assignedName.includes(className);
-            })
-          );
+
+              if (matches) {
+                console.log(`Matched: ${cls.name} with ${assignedClass.name}`);
+              }
+
+              return matches;
+            });
+            return isAssigned;
+          });
+
+          console.log('Filtered classes:', filteredClassesList.map(c => c.name));
+        } else {
+          console.log('No assigned classes found for staff, showing all classes');
+          // If no assigned classes or staff profile not found, show all classes
+          // This allows admins or users during setup to see all classes
         }
 
         // Format subjects data
