@@ -193,6 +193,28 @@ export const feesApi = {
   },
 };
 
+// Generic API functions
+export const fetchClasses = async () => {
+  const response = await fetch(`${API_BASE_URL}/classes/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleApiResponse<any>(response);
+};
+
+export const fetchSubjects = async () => {
+  const response = await fetch(`${API_BASE_URL}/subjects/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleApiResponse<any>(response);
+};
+
+export const fetchAcademicYears = async () => {
+  const response = await fetch(`${API_BASE_URL}/academic-years/`, {
+    headers: getAuthHeaders(),
+  });
+  return handleApiResponse<any>(response);
+};
+
 // Users API
 export const usersApi = {
   getStudents: async (): Promise<Student[]> => {

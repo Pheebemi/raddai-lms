@@ -1,16 +1,8 @@
+'use client';
+
+import { useState, useEffect } from 'react';
 import ProtectedRoute from '@/components/protected-route';
 import AppLayout from '@/components/app-layout';
-import { ResultsUploadContent } from './upload-content';
-
-export default function UploadResultsPage() {
-  return (
-    <ProtectedRoute allowedRoles={['staff']}>
-      <AppLayout>
-        <ResultsUploadContent />
-      </AppLayout>
-    </ProtectedRoute>
-  );
-}
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Upload, Save, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
+import { fetchClasses, fetchSubjects, fetchAcademicYears, usersApi } from '@/lib/api';
 
 interface StudentResult {
   id: string;
@@ -43,24 +36,11 @@ export default function UploadResultsPage() {
   const [selectedTerm, setSelectedTerm] = useState('');
   const [students, setStudents] = useState<StudentResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-
-  // Mock data - in real app, this would come from API
-  const classes = [
-    { id: '1', name: 'Jss1 A' },
-    { id: '2', name: 'Jss1 B' },
-    { id: '3', name: 'Jss2 A' },
-  ];
-
-  const subjects = [
-    { id: '1', name: 'Mathematics' },
-    { id: '2', name: 'English' },
-    { id: '3', name: 'Science' },
-  ];
-
-  const academicYears = [
-    { id: '2023-2024', name: '2023-2024' },
-    { id: '2024-2025', name: '2024-2025' },
-  ];
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [classes, setClasses] = useState<any[]>([]);
+  const [filteredClasses, setFilteredClasses] = useState<any[]>([]);
+  const [subjects, setSubjects] = useState<any[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
 
   const terms = [
     { id: 'first', name: 'First Term' },
@@ -69,27 +49,107 @@ export default function UploadResultsPage() {
     { id: 'final', name: 'Final Exam' },
   ];
 
-  // Mock students data - in real app, this would be fetched based on selected class
-  const mockStudents = [
-    { id: '1', studentId: 'S001', studentName: 'Alice Smith' },
-    { id: '2', studentId: 'S002', studentName: 'Bob Johnson' },
-    { id: '3', studentId: 'S003', studentName: 'Charlie Brown' },
-  ];
+  // Load classes, subjects, and academic years on component mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsInitialLoading(true);
+      try {
+        const [classesData, subjectsData, yearsData, staffData] = await Promise.all([
+          fetchClasses(),
+          fetchSubjects(),
+          fetchAcademicYears(),
+          usersApi.getStaff(),
+        ]);
+
+        // Find the current user's staff profile
+        const currentStaff = staffData.find((s: any) => s.user.id === user?.id);
+
+        // Format classes data
+        const formattedClasses = (classesData.results || classesData).map((cls: any) => ({
+          id: cls.id.toString(),
+          name: cls.name,
+        }));
+
+        // Filter classes based on staff's assigned classes
+        let filteredClassesList = formattedClasses;
+        if (currentStaff && currentStaff.assigned_classes && currentStaff.assigned_classes.length > 0) {
+          // Filter classes to only show those assigned to the current staff
+          filteredClassesList = formattedClasses.filter(cls =>
+            currentStaff.assigned_classes.some((assignedClass: any) => {
+              // Match by name (flexible matching)
+              const className = cls.name.toLowerCase().trim();
+              const assignedName = assignedClass.name ? assignedClass.name.toLowerCase().trim() : '';
+              return className === assignedName ||
+                     className.includes(assignedName) ||
+                     assignedName.includes(className);
+            })
+          );
+        }
+
+        // Format subjects data
+        const formattedSubjects = (subjectsData.results || subjectsData).map((subj: any) => ({
+          id: subj.id.toString(),
+          name: subj.name,
+        }));
+
+        // Format academic years data
+        const formattedYears = (yearsData.results || yearsData).map((year: any) => ({
+          id: year.id.toString(),
+          name: year.name,
+        }));
+
+        setClasses(formattedClasses);
+        setFilteredClasses(filteredClassesList);
+        setSubjects(formattedSubjects);
+        setAcademicYears(formattedYears);
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+        toast.error('Failed to load form data');
+      } finally {
+        setIsInitialLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, [user]);
 
   useEffect(() => {
-    if (selectedClass) {
-      // In real app, fetch students for the selected class
-      const studentsWithResults = mockStudents.map(student => ({
-        ...student,
-        ca1_score: 0,
-        ca2_score: 0,
-        ca3_score: 0,
-        ca4_score: 0,
-        exam_score: 0,
-        remarks: '',
-      }));
-      setStudents(studentsWithResults);
-    }
+    const fetchStudentsForClass = async () => {
+      if (selectedClass) {
+        setIsLoading(true);
+        try {
+          // Fetch students for the selected class from API
+          const allStudents = await usersApi.getStudents();
+          const classStudents = allStudents.filter(student =>
+            student.class.toLowerCase().includes(selectedClass.toLowerCase()) ||
+            selectedClass.toLowerCase().includes(student.class.toLowerCase())
+          );
+
+          const studentsWithResults = classStudents.map(student => ({
+            id: student.id,
+            studentId: student.studentId,
+            studentName: `${student.user.firstName} ${student.user.lastName}`,
+            ca1_score: 0,
+            ca2_score: 0,
+            ca3_score: 0,
+            ca4_score: 0,
+            exam_score: 0,
+            remarks: '',
+          }));
+
+          setStudents(studentsWithResults);
+        } catch (error) {
+          console.error('Failed to fetch students:', error);
+          toast.error('Failed to load students for this class');
+        } finally {
+          setIsLoading(false);
+        }
+      } else {
+        setStudents([]);
+      }
+    };
+
+    fetchStudentsForClass();
   }, [selectedClass]);
 
   const updateStudentResult = (studentId: string, field: string, value: string | number) => {
@@ -144,8 +204,32 @@ export default function UploadResultsPage() {
     return 'F';
   };
 
+  if (isInitialLoading) {
+    return (
+      <ProtectedRoute allowedRoles={['staff']}>
+        <AppLayout>
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold tracking-tight">Upload Results</h1>
+                <p className="text-muted-foreground">Loading form data...</p>
+              </div>
+            </div>
+            <div className="grid gap-6">
+              <div className="animate-pulse">
+                <div className="h-32 bg-muted rounded-lg"></div>
+              </div>
+            </div>
+          </div>
+        </AppLayout>
+      </ProtectedRoute>
+    );
+  }
+
   return (
-    <div className="space-y-6">
+    <ProtectedRoute allowedRoles={['staff']}>
+      <AppLayout>
+        <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Upload Results</h1>
@@ -198,7 +282,7 @@ export default function UploadResultsPage() {
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map(cls => (
+                  {filteredClasses.map(cls => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -367,6 +451,8 @@ export default function UploadResultsPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+        </div>
+      </AppLayout>
+    </ProtectedRoute>
   );
 }

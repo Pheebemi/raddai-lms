@@ -47,19 +47,19 @@ function useStaffDashboardData() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch staff profile and students
-        const [studentsData, resultsData] = await Promise.all([
+        // Fetch staff profile, students, and results
+        const [staffData, studentsData, resultsData] = await Promise.all([
+          usersApi.getStaff().catch(() => []),
           usersApi.getStudents().catch(() => []),
           resultsApi.getList().catch(() => []),
         ]);
 
+        // Find the current user's staff profile
+        const currentStaff = staffData.find((s: Staff) => s.user.id === user.id);
+        setStaffProfile(currentStaff || null);
+
         setStudents(studentsData);
         setResults(resultsData);
-
-        // Get staff profile from user data
-        if (user.profile && typeof user.profile === 'object' && 'staff_id' in user.profile) {
-          setStaffProfile(user.profile as Staff);
-        }
       } catch (err) {
         setError(handleApiError(err));
       } finally {
@@ -85,10 +85,54 @@ export function StaffDashboard() {
 
   // Filter students for this staff member (students in their classes)
   const assignedStudents = useMemo(() => {
-    if (!staffProfile) return [];
-    // For now, we'll show all students since we don't have class assignment data from API
-    // This should be filtered based on staff's assigned classes
-    return students;
+    if (!staffProfile) {
+      // If no staff profile found, return empty array
+      return [];
+    }
+    
+    // If staff has no assigned classes, show all students (fallback)
+    if (!staffProfile.assignedClasses || staffProfile.assignedClasses.length === 0) {
+      console.warn('Staff has no assigned classes, showing all students');
+      return students;
+    }
+    
+    // Filter students whose class matches any of the staff's assigned classes
+    return students.filter(student => {
+      if (!student.class) return false;
+      
+      const studentClass = student.class.toLowerCase().trim();
+      
+      return staffProfile.assignedClasses!.some(assignedClass => {
+        if (!assignedClass) return false;
+        
+        const assignedClassLower = assignedClass.toLowerCase().trim();
+        
+        // Exact match
+        if (studentClass === assignedClassLower) return true;
+        
+        // Check if student class contains assigned class name (handles "Grade 10 A" vs "Grade 10")
+        if (studentClass.includes(assignedClassLower)) return true;
+        
+        // Check if assigned class contains student class name
+        if (assignedClassLower.includes(studentClass)) return true;
+        
+        // Extract grade numbers and compare (handles "Grade 10" vs "10")
+        const studentGradeMatch = studentClass.match(/(\d+)/);
+        const assignedGradeMatch = assignedClassLower.match(/(\d+)/);
+        if (studentGradeMatch && assignedGradeMatch) {
+          if (studentGradeMatch[1] === assignedGradeMatch[1]) {
+            // If grades match, check section if present
+            const studentSection = studentClass.match(/[a-z]$/i)?.[0];
+            const assignedSection = assignedClassLower.match(/[a-z]$/i)?.[0];
+            if (!assignedSection || studentSection === assignedSection) {
+              return true;
+            }
+          }
+        }
+        
+        return false;
+      });
+    });
   }, [students, staffProfile]);
 
   // Filter results uploaded by this staff member
@@ -242,6 +286,11 @@ export function StaffDashboard() {
             <CardTitle>My Students</CardTitle>
             <CardDescription>
               Students in your assigned classes
+              {staffProfile?.assignedClasses && staffProfile.assignedClasses.length > 0 && (
+                <span className="ml-2">
+                  ({staffProfile.assignedClasses.length} class{staffProfile.assignedClasses.length !== 1 ? 'es' : ''})
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -257,7 +306,7 @@ export function StaffDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assignedStudents.slice(0, 5).map((student) => {
+                  {assignedStudents.map((student) => {
                     // Calculate average performance for this student
                     const studentResults = results.filter(r => r.studentId === student.id);
                     const avgPerformance = studentResults.length > 0
