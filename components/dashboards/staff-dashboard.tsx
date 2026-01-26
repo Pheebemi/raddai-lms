@@ -7,6 +7,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Users,
   BookOpen,
@@ -14,35 +23,136 @@ import {
   TrendingUp,
   Clock,
   Calendar,
-  AlertTriangle
+  AlertTriangle,
+  GraduationCap
 } from 'lucide-react';
-import { mockResults, mockStudents, getMockStaffByUserId } from '@/lib/mock-data';
+import { usersApi, resultsApi, handleApiError } from '@/lib/api';
+import { Student, Result, Staff } from '@/types';
+import { toast } from 'sonner';
+import { useState, useEffect } from 'react';
+
+function useStaffDashboardData() {
+  const { user } = useAuth();
+  const [students, setStudents] = useState<Student[]>([]);
+  const [staffProfile, setStaffProfile] = useState<Staff | null>(null);
+  const [results, setResults] = useState<Result[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStaffData = async () => {
+      if (!user || user.role !== 'staff') return;
+
+      try {
+        setIsLoading(true);
+        setError(null);
+
+        // Fetch staff profile and students
+        const [studentsData, resultsData] = await Promise.all([
+          usersApi.getStudents().catch(() => []),
+          resultsApi.getList().catch(() => []),
+        ]);
+
+        setStudents(studentsData);
+        setResults(resultsData);
+
+        // Get staff profile from user data
+        if (user.profile && typeof user.profile === 'object' && 'staff_id' in user.profile) {
+          setStaffProfile(user.profile as Staff);
+        }
+      } catch (err) {
+        setError(handleApiError(err));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchStaffData();
+  }, [user]);
+
+  return {
+    students,
+    staffProfile,
+    results,
+    isLoading,
+    error,
+  };
+}
 
 export function StaffDashboard() {
   const { user } = useAuth();
+  const { students, staffProfile, results, isLoading, error } = useStaffDashboardData();
 
-  const staff = user ? getMockStaffByUserId(user.id) : null;
+  // Filter students for this staff member (students in their classes)
   const assignedStudents = useMemo(() => {
-    if (!staff?.assignedClasses) return [];
-    return mockStudents.filter(s => staff.assignedClasses.includes(s.class));
-  }, [staff?.assignedClasses]);
+    if (!staffProfile) return [];
+    // For now, we'll show all students since we don't have class assignment data from API
+    // This should be filtered based on staff's assigned classes
+    return students;
+  }, [students, staffProfile]);
 
-  // Generate fixed values for class performances to avoid Math.random
-  const classPerformances = useMemo(() => {
-    return staff?.assignedClasses.map((_, index) => 75 + (index * 5)) || [];
-  }, [staff?.assignedClasses]);
+  // Filter results uploaded by this staff member
+  const recentUploads = useMemo(() => {
+    return results
+      .filter(r => r.teacherId === user?.id)
+      .slice(0, 3);
+  }, [results, user?.id]);
 
-  // Mock data for staff dashboard
-  const pendingResults = 3;
+  // Calculate statistics
   const totalAssignedStudents = assignedStudents.length;
-  const classesToday = 4;
-  const avgClassPerformance = 78;
+  const pendingResults = results.filter(r => r.teacherId === user?.id && !r.grade).length;
+  const avgClassPerformance = results.length > 0
+    ? Math.round(results.reduce((sum, r) => sum + r.percentage, 0) / results.length)
+    : 0;
 
   if (!user) return null;
 
-  const recentUploads = mockResults
-    .filter(r => r.teacherId === user.id)
-    .slice(0, 3);
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              <span>Failed to load dashboard data</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -72,39 +182,41 @@ export function StaffDashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Assigned Students</CardTitle>
+            <CardTitle className="text-sm font-medium">My Students</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{totalAssignedStudents}</div>
             <p className="text-xs text-muted-foreground">
-              Across {staff?.assignedClasses.length || 0} classes
+              Students in your classes
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Results</CardTitle>
-            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Results Uploaded</CardTitle>
+            <Upload className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingResults}</div>
+            <div className="text-2xl font-bold">{recentUploads.length}</div>
             <p className="text-xs text-muted-foreground">
-              Need to be uploaded
+              Recent uploads
             </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Classes Today</CardTitle>
+            <CardTitle className="text-sm font-medium">Subjects Taught</CardTitle>
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{classesToday}</div>
+            <div className="text-2xl font-bold">
+              {new Set(results.filter(r => r.teacherId === user?.id).map(r => r.subjectId)).size}
+            </div>
             <p className="text-xs text-muted-foreground">
-              Scheduled for today
+              Different subjects
             </p>
           </CardContent>
         </Card>
@@ -117,17 +229,96 @@ export function StaffDashboard() {
           <CardContent>
             <div className="text-2xl font-bold">{avgClassPerformance}%</div>
             <p className="text-xs text-muted-foreground">
-              Class average
+              Student average
             </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Result Uploads */}
+        {/* Assigned Students */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Recent Result Uploads</CardTitle>
+            <CardTitle>My Students</CardTitle>
+            <CardDescription>
+              Students in your assigned classes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {assignedStudents.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Student</TableHead>
+                    <TableHead>Class</TableHead>
+                    <TableHead>Roll No</TableHead>
+                    <TableHead>Performance</TableHead>
+                    <TableHead>Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {assignedStudents.slice(0, 5).map((student) => {
+                    // Calculate average performance for this student
+                    const studentResults = results.filter(r => r.studentId === student.id);
+                    const avgPerformance = studentResults.length > 0
+                      ? Math.round(studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length)
+                      : 0;
+
+                    return (
+                      <TableRow key={student.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8">
+                              <AvatarFallback>
+                                {student.user.firstName[0]}{student.user.lastName[0]}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <p className="font-medium text-sm">
+                                {student.user.firstName} {student.user.lastName}
+                              </p>
+                              <p className="text-xs text-muted-foreground">
+                                ID: {student.studentId}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell>{student.class}</TableCell>
+                        <TableCell>{student.rollNumber}</TableCell>
+                        <TableCell>
+                          {avgPerformance > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <Progress value={avgPerformance} className="w-16 h-2" />
+                              <span className="text-xs font-medium">{avgPerformance}%</span>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">No data</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            Active
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No students assigned yet</p>
+                <p className="text-sm">Students in your classes will appear here</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Recent Result Uploads */}
+        <Card className="col-span-3">
+          <CardHeader>
+            <CardTitle>Recent Uploads</CardTitle>
             <CardDescription>
               Results you&apos;ve uploaded recently
             </CardDescription>
@@ -136,32 +327,27 @@ export function StaffDashboard() {
             <div className="space-y-4">
               {recentUploads.length > 0 ? (
                 recentUploads.map((result) => {
-                  const student = mockStudents.find(s => s.id === result.studentId);
+                  const student = assignedStudents.find(s => s.id === result.studentId);
                   return (
-                    <div key={result.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-4">
-                        <Avatar className="h-10 w-10">
-                          <AvatarImage src={student?.user.avatar} />
-                          <AvatarFallback>
-                            {student?.user.firstName[0]}{student?.user.lastName[0]}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">
-                            {student?.user.firstName} {student?.user.lastName}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            {result.subjectId === 'sub-1' ? 'Mathematics' :
-                             result.subjectId === 'sub-2' ? 'Physics' : 'Chemistry'} •
-                            Term {result.term} • Class {student?.class}
-                          </p>
-                        </div>
+                    <div key={result.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <Avatar className="h-10 w-10">
+                        <AvatarFallback>
+                          {student?.user.firstName[0]}{student?.user.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">
+                          {student?.user.firstName} {student?.user.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {result.subject_name || result.subjectId} • {result.term}
+                        </p>
                       </div>
                       <div className="text-right">
                         <Badge variant="secondary" className="mb-1">
                           {result.grade}
                         </Badge>
-                        <p className="text-sm font-medium">{result.marks}/{result.maxMarks}</p>
+                        <p className="text-xs font-medium">{result.marks_obtained}/{result.total_marks}</p>
                       </div>
                     </div>
                   );
@@ -170,67 +356,60 @@ export function StaffDashboard() {
                 <div className="text-center py-8 text-muted-foreground">
                   <Upload className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p>No recent uploads</p>
+                  <p className="text-sm">Upload results to see them here</p>
                 </div>
               )}
             </div>
           </CardContent>
         </Card>
-
-        {/* Today&apos;s Schedule */}
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Today&apos;s Schedule</CardTitle>
-            <CardDescription>
-              Your classes for today
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {[
-                { time: '9:00 AM', subject: 'Mathematics', class: '10-A', room: '101' },
-                { time: '10:30 AM', subject: 'Physics', class: '10-A', room: '102' },
-                { time: '1:00 PM', subject: 'Mathematics', class: '9-B', room: '101' },
-                { time: '2:30 PM', subject: 'Chemistry', class: '10-B', room: '103' },
-              ].map((schedule, index) => (
-                <div key={index} className="flex items-center gap-3 p-3 border rounded-lg">
-                  <div className="flex items-center justify-center w-12 h-12 bg-primary/10 rounded-lg">
-                    <Clock className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-medium">{schedule.subject}</p>
-                    <p className="text-sm text-muted-foreground">
-                      {schedule.time} • Room {schedule.room} • Class {schedule.class}
-                    </p>
-                  </div>
-                  <Badge variant="outline">Upcoming</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
-      {/* Class Performance Overview */}
+      {/* Subject-wise Performance */}
       <Card>
         <CardHeader>
-          <CardTitle>Class Performance Overview</CardTitle>
+          <CardTitle>Subject Performance</CardTitle>
           <CardDescription>
-            Performance across your assigned classes
+            Average performance across subjects you've taught
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {staff?.assignedClasses.map((className, index) => (
-              <div key={className} className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Class {className}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {classPerformances[index]}% average
-                  </span>
+            {/* Group results by subject */}
+            {Object.entries(
+              results
+                .filter(r => r.teacherId === user?.id)
+                .reduce((acc, result) => {
+                  const subjectKey = result.subject_name || result.subjectId;
+                  if (!acc[subjectKey]) {
+                    acc[subjectKey] = [];
+                  }
+                  acc[subjectKey].push(result);
+                  return acc;
+                }, {} as Record<string, Result[]>)
+            ).map(([subject, subjectResults]) => {
+              const avgPerformance = subjectResults.length > 0
+                ? Math.round(subjectResults.reduce((sum, r) => sum + r.percentage, 0) / subjectResults.length)
+                : 0;
+
+              return (
+                <div key={subject} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">{subject}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {avgPerformance}% average ({subjectResults.length} results)
+                    </span>
+                  </div>
+                  <Progress value={avgPerformance} className="h-2" />
                 </div>
-                <Progress value={classPerformances[index]} className="h-2" />
+              );
+            })}
+            {results.filter(r => r.teacherId === user?.id).length === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No performance data yet</p>
+                <p className="text-sm">Upload results to see performance metrics</p>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>

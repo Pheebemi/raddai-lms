@@ -1,7 +1,7 @@
 import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, Student, Staff, Parent } from '@/types';
 
 // API Base URL
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
 // API Response types
 interface ApiResponse<T> {
@@ -135,17 +135,31 @@ export const resultsApi = {
     const response = await fetch(`${API_BASE_URL}/results/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    const results = data.results || data;
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return results.map((item: any) => ({
       id: item.id.toString(),
       studentId: item.student.toString(),
       subjectId: item.subject.toString(),
+      subject_name: item.subject_name || item.subjectId,
       term: item.term as 'Term 1' | 'Term 2' | 'Term 3' | 'Final',
       academicYear: item.academic_year_name,
-      marks: parseFloat(item.marks_obtained),
-      maxMarks: parseFloat(item.total_marks),
+      // CA Scores
+      ca1_score: parseFloat(item.ca1_score) || 0,
+      ca2_score: parseFloat(item.ca2_score) || 0,
+      ca3_score: parseFloat(item.ca3_score) || 0,
+      ca4_score: parseFloat(item.ca4_score) || 0,
+      ca_total: parseFloat(item.ca_total) || 0,
+      // Exam Score
+      exam_score: parseFloat(item.exam_score) || 0,
+      // Calculated totals
+      marks_obtained: parseFloat(item.marks_obtained) || 0,
+      total_marks: parseFloat(item.total_marks) || 100,
+      percentage: parseFloat(item.percentage) || 0,
       grade: item.grade || '',
       remarks: item.remarks || '',
       teacherId: item.uploaded_by?.toString() || '',
@@ -185,28 +199,40 @@ export const usersApi = {
     const response = await fetch(`${API_BASE_URL}/students/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    const results = data.results || data;
 
     // Convert Django format to frontend format
-    return data.map(item => ({
-      id: item.id.toString(),
-      user: convertDjangoUser(item.user_details),
-      studentId: item.student_id,
-      class: item.current_class_name || '',
-      section: '', // Django doesn't have section in student model
-      rollNumber: 0, // Would need to be added to Django model
-      admissionDate: item.admission_date,
-    }));
+    return results.map((item: any) => {
+      const className = item.current_class_name || '';
+      const classParts = className.split(' ');
+      const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+
+      return {
+        id: item.id.toString(),
+        user: convertDjangoUser(item.user_details),
+        studentId: item.student_id,
+        class: className, // Keep full class name
+        section: section,
+        rollNumber: 0, // Would need to be added to Django model
+        admissionDate: item.admission_date,
+      };
+    });
   },
 
   getStaff: async (): Promise<Staff[]> => {
     const response = await fetch(`${API_BASE_URL}/staff/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    const results = data.results || data;
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return results.map((item: any) => ({
       id: item.id.toString(),
       user: convertDjangoUser(item.user_details),
       staffId: item.staff_id,
@@ -223,10 +249,13 @@ export const usersApi = {
     const response = await fetch(`${API_BASE_URL}/parents/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    const results = data.results || data;
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return results.map((item: any) => ({
       id: item.id.toString(),
       user: convertDjangoUser(item.user_details),
       children: item.children_details?.map((child: any) => ({

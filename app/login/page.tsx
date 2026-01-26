@@ -143,11 +143,11 @@ export default function LoginPage() {
               Demo Credentials:
             </h4>
             <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <div><strong>Admin:</strong> admin@school.edu / admin123</div>
-              <div><strong>Management:</strong> principal@school.edu / principal123</div>
-              <div><strong>Staff:</strong> teacher1@school.edu / teacher123</div>
-              <div><strong>Student:</strong> alice.student@school.edu / student123</div>
-              <div><strong>Parent:</strong> parent1@email.com / parent123</div>
+              <div><strong>Admin:</strong> admin / admin123</div>
+              <div><strong>Management:</strong> management / mgmt123</div>
+              <div><strong>Staff:</strong> teacher1 / teacher123</div>
+              <div><strong>Student:</strong> student1 / student123</div>
+              <div><strong>Parent:</strong> parent1 / parent123</div>
             </div>
           </div>
         </CardContent>

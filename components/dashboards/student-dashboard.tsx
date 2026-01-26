@@ -5,26 +5,33 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   GraduationCap,
   DollarSign,
   Calendar,
   FileText,
   TrendingUp,
-  Clock
+  Clock,
+  AlertCircle
 } from 'lucide-react';
-import { mockResults, mockFeeTransactions, mockAnnouncements, getMockStudentByUserId } from '@/lib/mock-data';
+import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 export function StudentDashboard() {
   const { user } = useAuth();
+  const { results, feeTransactions, announcements, studentProfile, isLoading, error } = useDashboardData();
 
   if (!user) return null;
 
-  const student = getMockStudentByUserId(user.id);
-  const results = mockResults.filter(r => r.studentId === user.id);
-  const feeTransactions = mockFeeTransactions.filter(ft => ft.studentId === user.id);
-
-  // Calculate attendance percentage (mock)
+  // Calculate attendance percentage (mock for now - would come from API)
   const attendancePercentage = 87;
 
   // Calculate fee summary
@@ -32,10 +39,63 @@ export function StudentDashboard() {
     .filter(ft => ft.status === 'pending' || ft.status === 'overdue')
     .reduce((sum, ft) => sum + ft.amount, 0);
 
-  const recentResults = results.slice(0, 3);
-  const recentAnnouncements = mockAnnouncements
-    .filter(a => a.targetRoles.includes('student'))
-    .slice(0, 3);
+  // Group results by term
+  const resultsByTerm = results.reduce((acc, result) => {
+    if (!acc[result.term]) {
+      acc[result.term] = [];
+    }
+    acc[result.term].push(result);
+    return acc;
+  }, {} as Record<string, typeof results>);
+
+  const recentAnnouncements = announcements.slice(0, 3);
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <Skeleton className="h-9 w-64" />
+            <Skeleton className="h-4 w-96 mt-2" />
+          </div>
+          <div className="flex gap-2">
+            <Skeleton className="h-10 w-32" />
+            <Skeleton className="h-10 w-24" />
+          </div>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i}>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-4" />
+              </CardHeader>
+              <CardContent>
+                <Skeleton className="h-8 w-16 mb-2" />
+                <Skeleton className="h-3 w-20" />
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <Card className="w-full max-w-md">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="h-5 w-5" />
+              <span>Failed to load dashboard data</span>
+            </div>
+            <p className="text-sm text-muted-foreground mt-2">{error}</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -69,9 +129,9 @@ export function StudentDashboard() {
             <GraduationCap className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{student?.class || '10'}</div>
+            <div className="text-2xl font-bold">{studentProfile?.class || 'Not Assigned'}</div>
             <p className="text-xs text-muted-foreground">
-              Section {student?.section || 'A'}
+              Current Class
             </p>
           </CardContent>
         </Card>
@@ -109,54 +169,63 @@ export function StudentDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {recentResults[0]?.grade || 'A'}
+              {results[0]?.grade || 'N/A'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {recentResults[0]?.subjectId ? 'Mathematics' : 'No results yet'}
+              {results[0] ? `${results[0].subjectId} (${results[0].percentage.toFixed(1)}%)` : 'No results yet'}
             </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Recent Results */}
+        {/* Results by Term */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Recent Results</CardTitle>
+            <CardTitle>Academic Results</CardTitle>
             <CardDescription>
-              Your latest academic performance
+              Your performance across all terms
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {recentResults.length > 0 ? (
-                recentResults.map((result) => (
-                  <div key={result.id} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center gap-4">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {result.subjectId === 'sub-1' ? 'M' : result.subjectId === 'sub-2' ? 'P' : 'C'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {result.subjectId === 'sub-1' ? 'Mathematics' :
-                           result.subjectId === 'sub-2' ? 'Physics' : 'Chemistry'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          Term {result.term} • {result.academicYear}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="flex items-center gap-2">
-                        <Badge variant={result.grade === 'A+' ? 'default' : result.grade === 'A' ? 'secondary' : 'outline'}>
-                          {result.grade}
-                        </Badge>
-                        <span className="font-medium">{result.marks}/{result.maxMarks}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">{result.remarks}</p>
-                    </div>
+            <div className="space-y-6">
+              {Object.keys(resultsByTerm).length > 0 ? (
+                Object.entries(resultsByTerm).map(([term, termResults]) => (
+                  <div key={term} className="space-y-2">
+                    <h3 className="font-semibold text-lg">{term} - {termResults[0]?.academicYear}</h3>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Subject</TableHead>
+                          <TableHead className="text-center">CA1</TableHead>
+                          <TableHead className="text-center">CA2</TableHead>
+                          <TableHead className="text-center">CA3</TableHead>
+                          <TableHead className="text-center">CA4</TableHead>
+                          <TableHead className="text-center">Exam</TableHead>
+                          <TableHead className="text-center">Grade</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {termResults.map((result) => (
+                        <TableRow key={result.id}>
+                          <TableCell className="font-medium">{result.subject_name || result.subjectId}</TableCell>
+                            <TableCell className="text-center">{result.ca1_score}</TableCell>
+                            <TableCell className="text-center">{result.ca2_score}</TableCell>
+                            <TableCell className="text-center">{result.ca3_score}</TableCell>
+                            <TableCell className="text-center">{result.ca4_score}</TableCell>
+                            <TableCell className="text-center">{result.exam_score}</TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={
+                                result.grade.startsWith('A') ? 'default' :
+                                result.grade.startsWith('B') ? 'secondary' : 'outline'
+                              }>
+                                {result.grade}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 ))
               ) : (

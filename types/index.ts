@@ -76,10 +76,21 @@ export interface Result {
   id: string;
   studentId: string;
   subjectId: string;
+  subject_name?: string;
   term: 'Term 1' | 'Term 2' | 'Term 3' | 'Final';
   academicYear: string;
-  marks: number;
-  maxMarks: number;
+  // CA Scores (10 marks each)
+  ca1_score: number;
+  ca2_score: number;
+  ca3_score: number;
+  ca4_score: number;
+  ca_total: number;
+  // Final Exam (60 marks)
+  exam_score: number;
+  // Calculated totals
+  marks_obtained: number;
+  total_marks: number;
+  percentage: number;
   grade: string;
   remarks?: string;
   teacherId: string;
