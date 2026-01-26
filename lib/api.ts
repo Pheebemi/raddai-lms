@@ -146,8 +146,9 @@ export const resultsApi = {
       studentId: item.student.toString(),
       subjectId: item.subject.toString(),
       subject_name: item.subject_name || item.subjectId,
-      term: item.term as 'Term 1' | 'Term 2' | 'Term 3' | 'Final',
+      term: item.term as 'first' | 'second' | 'third' | 'final',
       academicYear: item.academic_year_name,
+      academicYearId: item.academic_year.toString(),
       // CA Scores
       ca1_score: parseFloat(item.ca1_score) || 0,
       ca2_score: parseFloat(item.ca2_score) || 0,

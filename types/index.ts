@@ -77,8 +77,9 @@ export interface Result {
   studentId: string;
   subjectId: string;
   subject_name?: string;
-  term: 'Term 1' | 'Term 2' | 'Term 3' | 'Final';
+  term: 'first' | 'second' | 'third' | 'final';
   academicYear: string;
+  academicYearId?: string;
   // CA Scores (10 marks each)
   ca1_score: number;
   ca2_score: number;

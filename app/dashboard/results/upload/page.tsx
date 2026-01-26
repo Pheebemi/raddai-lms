@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Upload, Save, X, Plus } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchClasses, fetchSubjects, fetchAcademicYears, usersApi } from '@/lib/api';
+import { fetchClasses, fetchSubjects, fetchAcademicYears, usersApi, resultsApi } from '@/lib/api';
 
 interface StudentResult {
   id: string;
@@ -26,6 +26,7 @@ interface StudentResult {
   ca4_score: number;
   exam_score: number;
   remarks: string;
+  existingResultId?: string;
 }
 
 export default function UploadResultsPage() {
@@ -41,6 +42,10 @@ export default function UploadResultsPage() {
   const [filteredClasses, setFilteredClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
+
+  // Calculate statistics for upload page
+  const existingResultsCount = students.filter(s => s.existingResultId).length;
+  const isEditingExisting = existingResultsCount > 0;
 
   const terms = [
     { id: 'first', name: 'First Term' },
@@ -103,11 +108,12 @@ export default function UploadResultsPage() {
 
   useEffect(() => {
     const fetchStudentsForClass = async () => {
-      if (selectedClass) {
+      if (selectedClass && selectedSubject && selectedAcademicYear && selectedTerm) {
         setIsLoading(true);
         try {
           // Fetch students for the selected class from API
           const allStudents = await usersApi.getStudents();
+          const allResults = await resultsApi.getList();
 
           // Find the selected class name from the classes list
           const selectedClassObj = classes.find(cls => cls.id === selectedClass);
@@ -136,18 +142,45 @@ export default function UploadResultsPage() {
             return matches;
           });
 
-          const studentsWithResults = classStudents.map(student => ({
-            id: student.id,
-            studentId: student.studentId,
-            studentName: `${student.user.firstName} ${student.user.lastName}`,
-            ca1_score: 0,
-            ca2_score: 0,
-            ca3_score: 0,
-            ca4_score: 0,
-            exam_score: 0,
-            remarks: '',
-          }));
+          // Create students with results, pre-populating with existing data if available
+          const studentsWithResults = classStudents.map(student => {
+            // Find existing result for this student, subject, academic year, and term
+            // Debug logging for matching
+            console.log(`Looking for result for student ${student.id} (${student.user.firstName} ${student.user.lastName})`);
+            console.log(`Selected filters: subject=${selectedSubject}, academicYear=${selectedAcademicYear}, term=${selectedTerm}`);
 
+            const existingResult = allResults.find(result => {
+              const studentMatch = result.studentId === student.id;
+              const subjectMatch = result.subjectId === selectedSubject;
+              // Compare academic year ID directly
+              const academicYearMatch = result.academicYearId === selectedAcademicYear;
+              // Term should match directly (both are stored as 'first', 'second', etc.)
+              const termMatch = result.term === selectedTerm;
+
+              console.log(`Checking result ${result.id}: student=${studentMatch}, subject=${subjectMatch}, year=${academicYearMatch} (${result.academicYearId} vs ${selectedAcademicYear}), term=${termMatch} (${result.term} vs ${selectedTerm})`);
+
+              return studentMatch && subjectMatch && academicYearMatch && termMatch;
+            });
+
+            if (existingResult) {
+              console.log(`Found existing result for ${student.user.firstName} ${student.user.lastName}:`, existingResult);
+            }
+
+            return {
+              id: student.id,
+              studentId: student.studentId,
+              studentName: `${student.user.firstName} ${student.user.lastName}`,
+              ca1_score: existingResult?.ca1_score || 0,
+              ca2_score: existingResult?.ca2_score || 0,
+              ca3_score: existingResult?.ca3_score || 0,
+              ca4_score: existingResult?.ca4_score || 0,
+              exam_score: existingResult?.exam_score || 0,
+              remarks: existingResult?.remarks || '',
+              existingResultId: existingResult?.id, // Track if this is an existing result
+            };
+          });
+
+          console.log(`Found ${studentsWithResults.filter(s => s.existingResultId).length} students with existing results`);
           setStudents(studentsWithResults);
         } catch (error) {
           console.error('Failed to fetch students:', error);
@@ -161,7 +194,7 @@ export default function UploadResultsPage() {
     };
 
     fetchStudentsForClass();
-  }, [selectedClass, classes]);
+  }, [selectedClass, selectedSubject, selectedAcademicYear, selectedTerm, classes]);
 
   const updateStudentResult = (studentId: string, field: string, value: string | number) => {
     setStudents(prev =>
@@ -321,9 +354,14 @@ export default function UploadResultsPage() {
       {students.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Enter Student Results</CardTitle>
+            <CardTitle>
+              {isEditingExisting ? 'Edit Student Results' : 'Enter Student Results'}
+            </CardTitle>
             <CardDescription>
-              Fill in the CA test scores (max 10 each) and final exam score (max 60) for each student
+              {isEditingExisting
+                ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 60) for each student.`
+                : 'Fill in the CA test scores (max 10 each) and final exam score (max 60) for each student'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -348,7 +386,14 @@ export default function UploadResultsPage() {
                 return (
                   <div key={student.id} className="grid grid-cols-12 gap-4 items-center py-4 border-b last:border-b-0">
                     <div className="col-span-3">
-                      <div className="font-medium">{student.studentName}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{student.studentName}</div>
+                        {student.existingResultId && (
+                          <Badge variant="secondary" className="text-xs">
+                            Existing
+                          </Badge>
+                        )}
+                      </div>
                       <div className="text-sm text-muted-foreground">{student.studentId}</div>
                     </div>
 
@@ -449,11 +494,11 @@ export default function UploadResultsPage() {
               <div className="flex justify-end pt-4">
                 <Button onClick={handleSubmit} disabled={isLoading} size="lg">
                   {isLoading ? (
-                    <>Uploading...</>
+                    <>{isEditingExisting ? 'Updating...' : 'Uploading...'}</>
                   ) : (
                     <>
                       <Upload className="mr-2 h-4 w-4" />
-                      Upload Results
+                      {isEditingExisting ? 'Update Results' : 'Upload Results'}
                     </>
                   )}
                 </Button>
