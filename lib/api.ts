@@ -168,6 +168,96 @@ export const resultsApi = {
       updatedAt: item.upload_date,
     }));
   },
+
+  create: async (resultData: {
+    student: string;
+    subject: string;
+    academic_year: string;
+    term: string;
+    ca1_score: number;
+    ca2_score: number;
+    ca3_score: number;
+    ca4_score: number;
+    exam_score: number;
+    remarks?: string;
+  }): Promise<Result> => {
+    const response = await fetch(`${API_BASE_URL}/results/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(resultData),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    // Convert response to Result format
+    return {
+      id: data.id.toString(),
+      studentId: data.student.toString(),
+      subjectId: data.subject.toString(),
+      subject_name: data.subject_name,
+      term: data.term,
+      academicYear: data.academic_year_name,
+      academicYearId: data.academic_year.toString(),
+      ca1_score: parseFloat(data.ca1_score) || 0,
+      ca2_score: parseFloat(data.ca2_score) || 0,
+      ca3_score: parseFloat(data.ca3_score) || 0,
+      ca4_score: parseFloat(data.ca4_score) || 0,
+      ca_total: parseFloat(data.ca_total) || 0,
+      exam_score: parseFloat(data.exam_score) || 0,
+      marks_obtained: parseFloat(data.marks_obtained) || 0,
+      total_marks: parseFloat(data.total_marks) || 100,
+      percentage: parseFloat(data.percentage) || 0,
+      grade: data.grade || '',
+      remarks: data.remarks || '',
+      teacherId: data.uploaded_by?.toString() || '',
+      createdAt: data.upload_date,
+      updatedAt: data.upload_date,
+    };
+  },
+
+  update: async (id: string, resultData: {
+    student?: string;
+    subject?: string;
+    academic_year?: string;
+    term?: string;
+    ca1_score?: number;
+    ca2_score?: number;
+    ca3_score?: number;
+    ca4_score?: number;
+    exam_score?: number;
+    remarks?: string;
+  }): Promise<Result> => {
+    const response = await fetch(`${API_BASE_URL}/results/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(resultData),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    // Convert response to Result format
+    return {
+      id: data.id.toString(),
+      studentId: data.student.toString(),
+      subjectId: data.subject.toString(),
+      subject_name: data.subject_name,
+      term: data.term,
+      academicYear: data.academic_year_name,
+      academicYearId: data.academic_year.toString(),
+      ca1_score: parseFloat(data.ca1_score) || 0,
+      ca2_score: parseFloat(data.ca2_score) || 0,
+      ca3_score: parseFloat(data.ca3_score) || 0,
+      ca4_score: parseFloat(data.ca4_score) || 0,
+      ca_total: parseFloat(data.ca_total) || 0,
+      exam_score: parseFloat(data.exam_score) || 0,
+      marks_obtained: parseFloat(data.marks_obtained) || 0,
+      total_marks: parseFloat(data.total_marks) || 100,
+      percentage: parseFloat(data.percentage) || 0,
+      grade: data.grade || '',
+      remarks: data.remarks || '',
+      teacherId: data.uploaded_by?.toString() || '',
+      createdAt: data.upload_date,
+      updatedAt: data.upload_date,
+    };
+  },
 };
 
 // Fee API

@@ -56,9 +56,18 @@ export default function UploadResultsPage() {
 
   // Load classes, subjects, and academic years on component mount
   useEffect(() => {
+    // Only load data if user is authenticated
+    if (!user) {
+      setIsInitialLoading(false);
+      return;
+    }
+
     const loadInitialData = async () => {
       setIsInitialLoading(true);
       try {
+        console.log('Loading initial data for user:', user);
+        console.log('Auth token exists:', !!localStorage.getItem('edumanage_token'));
+
         const [classesData, subjectsData, yearsData, staffData] = await Promise.all([
           fetchClasses(),
           fetchSubjects(),
@@ -108,9 +117,12 @@ export default function UploadResultsPage() {
 
   useEffect(() => {
     const fetchStudentsForClass = async () => {
+      if (!user) return; // Don't fetch if not authenticated
+
       if (selectedClass && selectedSubject && selectedAcademicYear && selectedTerm) {
         setIsLoading(true);
         try {
+          console.log('Fetching students and results for authenticated user:', user);
           // Fetch students for the selected class from API
           const allStudents = await usersApi.getStudents();
           const allResults = await resultsApi.getList();
@@ -207,17 +219,54 @@ export default function UploadResultsPage() {
   };
 
   const handleSubmit = async () => {
+    if (!user) {
+      toast.error('You must be logged in to save results');
+      return;
+    }
+
     if (!selectedClass || !selectedSubject || !selectedAcademicYear || !selectedTerm) {
       toast.error('Please fill in all required fields');
       return;
     }
 
+    if (students.length === 0) {
+      toast.error('No students to save results for');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // In real app, this would submit to API
-      await new Promise(resolve => setTimeout(resolve, 2000)); // Mock delay
+      const resultsToSave = students.map(student => ({
+        student: student.id,
+        subject: selectedSubject,
+        academic_year: selectedAcademicYear,
+        term: selectedTerm,
+        ca1_score: student.ca1_score,
+        ca2_score: student.ca2_score,
+        ca3_score: student.ca3_score,
+        ca4_score: student.ca4_score,
+        exam_score: student.exam_score,
+        remarks: student.remarks || '',
+      }));
 
-      toast.success('Results uploaded successfully!');
+      const promises = resultsToSave.map(async (resultData, index) => {
+        const student = students[index];
+        if (student.existingResultId) {
+          // Update existing result
+          console.log(`Updating result for ${student.studentName}`);
+          return resultsApi.update(student.existingResultId, resultData);
+        } else {
+          // Create new result
+          console.log(`Creating result for ${student.studentName}`);
+          return resultsApi.create(resultData);
+        }
+      });
+
+      await Promise.all(promises);
+
+      const action = isEditingExisting ? 'updated' : 'uploaded';
+      toast.success(`Results ${action} successfully!`);
+
       // Reset form
       setSelectedClass('');
       setSelectedSubject('');
@@ -225,7 +274,9 @@ export default function UploadResultsPage() {
       setSelectedTerm('');
       setStudents([]);
     } catch (error) {
-      toast.error('Failed to upload results');
+      console.error('Error saving results:', error);
+      const action = isEditingExisting ? 'update' : 'upload';
+      toast.error(`Failed to ${action} results: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
