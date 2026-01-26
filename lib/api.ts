@@ -258,6 +258,53 @@ export const resultsApi = {
       updatedAt: data.upload_date,
     };
   },
+
+  // Download result as PNG for a specific term and academic year
+  downloadResult: async (studentId: string, term: string, academicYear: string): Promise<string> => {
+    const response = await fetch(`${API_BASE_URL}/results/download/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        student_id: studentId,
+        term: term,
+        academic_year: academicYear,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+      throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+
+    // Return the download URL or blob
+    const data = await response.json();
+    return data.download_url || data.blob_url;
+  },
+
+  // Get results for a specific term and academic year for download
+  getResultsForDownload: async (studentId: string, term: string, academicYear: string): Promise<{
+    student: any;
+    results: Result[];
+    schoolInfo: {
+      name: string;
+      address: string;
+      phone: string;
+      email: string;
+    };
+    term: string;
+    academicYear: string;
+  }> => {
+    const response = await fetch(`${API_BASE_URL}/results/student-term-results/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        student_id: studentId,
+        term: term,
+        academic_year: academicYear,
+      }),
+    });
+    return handleApiResponse(response);
+  },
 };
 
 // Fee API
