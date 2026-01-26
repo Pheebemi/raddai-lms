@@ -70,37 +70,9 @@ export default function UploadResultsPage() {
           name: cls.name,
         }));
 
-        // Filter classes based on staff's assigned classes
+        // Show all classes for now - filtering happens when selecting students
+        // This allows staff to see all classes but only their assigned students when selecting
         let filteredClassesList = formattedClasses;
-        if (currentStaff && currentStaff.assigned_classes && currentStaff.assigned_classes.length > 0) {
-          console.log('Staff assigned classes:', currentStaff.assigned_classes);
-          console.log('Available classes:', formattedClasses.map(c => c.name));
-
-          // Filter classes to only show those assigned to the current staff
-          filteredClassesList = formattedClasses.filter(cls => {
-            const isAssigned = currentStaff.assigned_classes.some((assignedClass: any) => {
-              // Match by name (flexible matching)
-              const className = cls.name.toLowerCase().trim();
-              const assignedName = assignedClass.name ? assignedClass.name.toLowerCase().trim() : '';
-              const matches = className === assignedName ||
-                     className.includes(assignedName) ||
-                     assignedName.includes(className);
-
-              if (matches) {
-                console.log(`Matched: ${cls.name} with ${assignedClass.name}`);
-              }
-
-              return matches;
-            });
-            return isAssigned;
-          });
-
-          console.log('Filtered classes:', filteredClassesList.map(c => c.name));
-        } else {
-          console.log('No assigned classes found for staff, showing all classes');
-          // If no assigned classes or staff profile not found, show all classes
-          // This allows admins or users during setup to see all classes
-        }
 
         // Format subjects data
         const formattedSubjects = (subjectsData.results || subjectsData).map((subj: any) => ({
@@ -136,10 +108,33 @@ export default function UploadResultsPage() {
         try {
           // Fetch students for the selected class from API
           const allStudents = await usersApi.getStudents();
-          const classStudents = allStudents.filter(student =>
-            student.class.toLowerCase().includes(selectedClass.toLowerCase()) ||
-            selectedClass.toLowerCase().includes(student.class.toLowerCase())
-          );
+
+          // Find the selected class name from the classes list
+          const selectedClassObj = classes.find(cls => cls.id === selectedClass);
+          const selectedClassName = selectedClassObj ? selectedClassObj.name : selectedClass;
+
+          console.log(`Selected class ID: ${selectedClass}, Name: ${selectedClassName}`);
+          console.log(`All students:`, allStudents.map(s => ({name: `${s.user.firstName} ${s.user.lastName}`, class: s.class})));
+
+          // Filter students whose class matches the selected class
+          const classStudents = allStudents.filter(student => {
+            if (!student.class) return false;
+            const studentClass = student.class.toLowerCase().trim();
+            const targetClass = selectedClassName.toLowerCase().trim();
+
+            console.log(`Checking student ${student.user.firstName} ${student.user.lastName}: class="${studentClass}" vs target="${targetClass}"`);
+
+            // Exact match or partial match
+            const matches = studentClass === targetClass ||
+                   studentClass.includes(targetClass) ||
+                   targetClass.includes(studentClass);
+
+            if (matches) {
+              console.log(`✓ Matched student: ${student.user.firstName} ${student.user.lastName}`);
+            }
+
+            return matches;
+          });
 
           const studentsWithResults = classStudents.map(student => ({
             id: student.id,
@@ -166,7 +161,7 @@ export default function UploadResultsPage() {
     };
 
     fetchStudentsForClass();
-  }, [selectedClass]);
+  }, [selectedClass, classes]);
 
   const updateStudentResult = (studentId: string, field: string, value: string | number) => {
     setStudents(prev =>
@@ -298,7 +293,7 @@ export default function UploadResultsPage() {
                   <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
-                  {filteredClasses.map(cls => (
+                  {classes.map(cls => (
                     <SelectItem key={cls.id} value={cls.id}>{cls.name}</SelectItem>
                   ))}
                 </SelectContent>
