@@ -225,17 +225,72 @@ export function FeesContent() {
             return gradeMatches && typeMatches && academicYearMatches;
           });
 
+          console.log('🎯 Found fee structure for payment recording:', feeStructure);
+          console.log('👤 Student grade:', studentGrade, 'Academic year:', paymentData.academicYear);
+
+          // Check if we have a valid fee structure
+          if (!feeStructure) {
+            console.error('❌ No fee structure found for payment recording');
+            toast.error('Payment was successful but could not be recorded: No matching fee structure found for your grade and academic year. Please contact the administrator.');
+            return;
+          }
+
           // Record the successful payment
           try {
-            await feesApi.createPayment({
-              student: user.id,
-              fee_structure: feeStructure?.id || 'school_fee', // Use actual fee structure ID if found
+            // Calculate due date (end of current month for simplicity)
+            const now = new Date();
+            const dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
+            const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+            // Get the student profile ID, not the user ID
+            const studentId = user.profile?.id;
+            if (!studentId) {
+              console.error('❌ No student profile found for user:', user);
+              toast.error('Payment was successful but could not be recorded: Student profile not found. Please contact the administrator.');
+              return;
+            }
+
+            // Ensure studentId is a number
+            const numericStudentId = parseInt(studentId.toString());
+            if (isNaN(numericStudentId)) {
+              console.error('❌ Invalid student ID:', studentId);
+              toast.error('Payment was successful but could not be recorded: Invalid student ID. Please contact the administrator.');
+              return;
+            }
+
+            console.log('💳 Recording payment with data:', {
+              student: numericStudentId,
+              fee_structure: parseInt(feeStructure.id.toString()),
               amount_paid: currentFeeAmount,
+              total_amount: currentFeeAmount, // Same as amount_paid for full payment
+              due_date: dueDateString,
               payment_method: 'flutterwave',
-              term: paymentData.term,
-              academic_year: paymentData.academicYear,
-              remarks: `Flutterwave Payment - ${response.transaction_id} - ${paymentData.remarks}`,
+              transaction_id: response.transaction_id,
+              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`
             });
+
+            const paymentPayload = {
+              student: numericStudentId, // Use numeric student profile ID
+              fee_structure: parseInt(feeStructure.id.toString()), // Ensure fee structure ID is numeric
+              amount_paid: currentFeeAmount,
+              total_amount: currentFeeAmount, // Same as amount_paid for full payment
+              due_date: dueDateString,
+              status: 'paid', // Set status to paid for successful Flutterwave payments
+              payment_method: 'flutterwave',
+              transaction_id: response.transaction_id,
+              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`,
+            };
+
+            console.log('📤 Sending payment data to backend:', paymentPayload);
+
+            try {
+              const result = await feesApi.createPayment(paymentPayload);
+              console.log('✅ Payment recorded successfully:', result);
+            } catch (paymentError: any) {
+              console.error('❌ Payment recording failed:', paymentError);
+              console.error('❌ Error details:', paymentError.response?.data || paymentError.message);
+              throw paymentError; // Re-throw to trigger the error handling below
+            }
 
             // Refresh payments
             const updatedPayments = await feesApi.getPayments();

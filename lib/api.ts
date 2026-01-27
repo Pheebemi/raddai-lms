@@ -486,9 +486,11 @@ export const feesApi = {
     student: string;
     fee_structure: string;
     amount_paid: number;
+    total_amount: number;
+    due_date: string;
+    status?: string;
     payment_method: string;
-    term: string;
-    academic_year: string;
+    transaction_id?: string;
     remarks?: string;
   }): Promise<FeeTransaction> => {
     const response = await fetch(`${API_BASE_URL}/fee-payments/`, {
