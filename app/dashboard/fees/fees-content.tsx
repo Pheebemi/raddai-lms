@@ -178,6 +178,13 @@ export function FeesContent() {
     getFeeAmount(paymentData.term, paymentData.academicYear) :
     30000; // Default amount if no academic year selected
 
+  // Check if current term/academic year combination is already paid
+  const isCurrentTermPaid = payments.some(payment =>
+    payment.term === paymentData.term &&
+    payment.academicYearId === paymentData.academicYear &&
+    payment.status === 'paid'
+  );
+
   // Flutterwave configuration
   const flutterwaveConfig = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X',
@@ -272,6 +279,8 @@ export function FeesContent() {
             const paymentPayload = {
               student: numericStudentId, // Use numeric student profile ID
               fee_structure: parseInt(feeStructure.id.toString()), // Ensure fee structure ID is numeric
+              academic_year: paymentData.academicYear, // Academic year ID
+              term: paymentData.term, // Term (first, second, third)
               amount_paid: currentFeeAmount,
               total_amount: currentFeeAmount, // Same as amount_paid for full payment
               due_date: dueDateString,
@@ -445,11 +454,31 @@ export function FeesContent() {
                     <SelectValue placeholder="Choose a term" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="first">First Term</SelectItem>
-                    <SelectItem value="second">Second Term</SelectItem>
-                    <SelectItem value="third">Third Term</SelectItem>
+                    {['first', 'second', 'third'].map(term => {
+                      const isPaid = payments.some(payment =>
+                        payment.term === term &&
+                        payment.academicYearId === paymentData.academicYear &&
+                        payment.status === 'paid'
+                      );
+                      return (
+                        <SelectItem
+                          key={term}
+                          value={term}
+                          disabled={isPaid}
+                          className={isPaid ? 'opacity-50' : ''}
+                        >
+                          {term.charAt(0).toUpperCase() + term.slice(1)} Term {isPaid && '✓ (Already Paid)'}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
+                {isCurrentTermPaid && (
+                  <p className="text-sm text-green-600 flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    This term has already been paid for the selected academic year
+                  </p>
+                )}
               </div>
 
               {/* Academic Year Selection */}
@@ -528,13 +557,18 @@ export function FeesContent() {
               </Button>
               <Button
                 onClick={handlePaymentSubmit}
-                disabled={isSubmitting}
-                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2"
+                disabled={isSubmitting || isCurrentTermPaid}
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2 disabled:bg-gray-400"
               >
                 {isSubmitting ? (
                   <>
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                     Processing...
+                  </>
+                ) : isCurrentTermPaid ? (
+                  <>
+                    <CheckCircle className="mr-2 h-4 w-4" />
+                    Already Paid
                   </>
                 ) : (
                   <>
@@ -547,6 +581,58 @@ export function FeesContent() {
           </DialogContent>
         </Dialog>
       </div>
+
+      {/* Term Payment Status */}
+      {academicYears.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5" />
+              Term Payment Status
+            </CardTitle>
+            <CardDescription>
+              Track which terms have been paid for each academic year
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {academicYears.slice(0, 3).map(academicYear => (
+                <div key={academicYear.id} className="space-y-2">
+                  <h4 className="font-medium text-sm">{academicYear.name}</h4>
+                  <div className="space-y-1">
+                    {['first', 'second', 'third'].map(term => {
+                      const termPayment = payments.find(payment =>
+                        payment.term === term &&
+                        payment.academicYearId === academicYear.id.toString() &&
+                        payment.status === 'paid'
+                      );
+                      return (
+                        <div key={term} className="flex items-center gap-2 text-sm">
+                          {termPayment ? (
+                            <>
+                              <CheckCircle className="h-4 w-4 text-green-600" />
+                              <span className="text-green-600">
+                                {term.charAt(0).toUpperCase() + term.slice(1)} Term - Paid
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <Clock className="h-4 w-4 text-gray-400" />
+                              <span className="text-gray-500">
+                                {term.charAt(0).toUpperCase() + term.slice(1)} Term - Unpaid
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Fee Summary Cards */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

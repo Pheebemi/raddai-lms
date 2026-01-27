@@ -485,6 +485,8 @@ export const feesApi = {
   createPayment: async (paymentData: {
     student: string;
     fee_structure: string;
+    academic_year: string;
+    term: string;
     amount_paid: number;
     total_amount: number;
     due_date: string;
