@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -114,9 +115,11 @@ export function StudentDashboard() {
             <FileText className="mr-2 h-4 w-4" />
             View Results
           </Button>
-          <Button variant="outline">
-            <DollarSign className="mr-2 h-4 w-4" />
-            Pay Fees
+          <Button variant="outline" asChild>
+            <Link href="/dashboard/fees">
+              <DollarSign className="mr-2 h-4 w-4" />
+              Pay Fees
+            </Link>
           </Button>
         </div>
       </div>
@@ -155,7 +158,7 @@ export function StudentDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalDue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{totalDue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               {feeTransactions.filter(ft => ft.status === 'overdue').length} overdue
             </p>
@@ -284,9 +287,11 @@ export function StudentDashboard() {
               <FileText className="h-6 w-6" />
               View All Results
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <DollarSign className="h-6 w-6" />
-              Pay School Fees
+            <Button variant="outline" className="h-20 flex-col gap-2" asChild>
+              <Link href="/dashboard/fees">
+                <DollarSign className="h-6 w-6" />
+                Pay School Fees
+              </Link>
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2">
               <Calendar className="h-6 w-6" />

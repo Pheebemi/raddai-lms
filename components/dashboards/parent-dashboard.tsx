@@ -142,7 +142,7 @@ export function ParentDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalPendingFees.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{totalPendingFees.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               Across all children
             </p>
@@ -263,7 +263,7 @@ export function ParentDashboard() {
                               }>
                                 {fee.status}
                               </Badge>
-                              <p className="text-sm font-medium mt-1">₹{fee.amount}</p>
+                              <p className="text-sm font-medium mt-1">₦{fee.amount}</p>
                             </div>
                           </div>
                         ))

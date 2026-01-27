@@ -17,8 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, TrendingUp, Calendar, Download, Filter } from 'lucide-react';
-import { resultsApi, announcementsApi, handleApiError } from '@/lib/api';
-import { Result } from '@/types';
+import { resultsApi, announcementsApi, usersApi, handleApiError } from '@/lib/api';
+import { Result, Student } from '@/types';
 import { toast } from 'sonner';
 
 export function ResultsContent() {
@@ -79,6 +79,60 @@ export function ResultsContent() {
 
     setIsDownloading(term);
     try {
+      // Fetch student's class information
+      let studentClass = 'Not Available';
+      let studentPosition = 'N/A';
+
+      try {
+        const students = await resultsApi.getList();
+        const currentStudentResults = students.filter(r => r.studentId === user.id && r.term === term && r.academicYear === termResults[0]?.academicYear);
+
+        if (currentStudentResults.length > 0) {
+          // For now, we'll use a mock approach - in real implementation, we'd need to get all students in the same class
+          // and calculate position based on their average scores
+          const currentStudentAverage = currentStudentResults.reduce((sum, r) => sum + r.marks_obtained, 0) / currentStudentResults.length;
+
+          // Calculate actual position by comparing with all students in the same term
+          const allResults = await resultsApi.getList();
+          const termResultsAll = allResults.filter(r =>
+            r.term === term && r.academicYear === termResults[0]?.academicYear
+          );
+
+          // Group results by student and calculate averages
+          const studentAverages: { [key: string]: number } = {};
+          termResultsAll.forEach(result => {
+            if (!studentAverages[result.studentId]) {
+              studentAverages[result.studentId] = 0;
+            }
+            studentAverages[result.studentId] += result.marks_obtained;
+          });
+
+          // Calculate average for each student
+          Object.keys(studentAverages).forEach(studentId => {
+            const studentResults = termResultsAll.filter(r => r.studentId === studentId);
+            studentAverages[studentId] = studentAverages[studentId] / studentResults.length;
+          });
+
+          // Calculate current student's position
+          const sortedAverages = Object.values(studentAverages).sort((a, b) => b - a); // Descending order
+          const position = sortedAverages.indexOf(currentStudentAverage) + 1;
+          studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
+
+          // Mock class - in real app, this would come from student profile
+          // Get actual class from student data
+          try {
+            const allStudents = await usersApi.getStudents();
+            const currentStudent = allStudents.find(s => s.user.id === user.id);
+            if (currentStudent) {
+              studentClass = currentStudent.class;
+            }
+          } catch (error) {
+            console.log('Could not fetch student class:', error);
+          }
+        }
+      } catch (error) {
+        console.log('Could not fetch student class data:', error);
+      }
       // Create canvas for the result sheet
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -149,14 +203,8 @@ export function ResultsContent() {
       ctx.font = '32px Arial';
       ctx.fillText(`${user.firstName} ${user.lastName}`, 500, yPosition + 30);
       ctx.fillText(user.id, 500, yPosition + 80);
-      ctx.fillText('Not Available', 500, yPosition + 130); // Will be updated with actual class data
-
-      // Calculate position (mock for now - in real implementation, get all students' results)
-      const totalMarks = termResults.reduce((sum, r) => sum + r.marks_obtained, 0);
-      const averageScore = termResults.length > 0 ? totalMarks / termResults.length : 0;
-      // Mock position calculation - in real app, compare with all students
-      const position = Math.floor(Math.random() * 20) + 1; // Mock position 1-20
-      ctx.fillText(`${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`, 500, yPosition + 180);
+      ctx.fillText(studentClass, 500, yPosition + 130);
+      ctx.fillText(studentPosition, 500, yPosition + 180);
 
       yPosition += 250;
 

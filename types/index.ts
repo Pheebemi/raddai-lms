@@ -130,6 +130,9 @@ export interface FeeTransaction {
   paymentMethod?: string;
   transactionId?: string;
   remarks?: string;
+  term?: 'first' | 'second' | 'third';
+  academicYear?: string;
+  academicYearId?: string;
 }
 
 export interface PaymentSummary {

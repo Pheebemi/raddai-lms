@@ -327,7 +327,98 @@ export const feesApi = {
       paymentMethod: item.payment_method,
       transactionId: item.transaction_id,
       remarks: item.remarks,
+      term: item.term as 'first' | 'second' | 'third',
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year?.toString(),
     }));
+  },
+
+  getPaymentsByTerm: async (term: string, academicYear?: string): Promise<FeeTransaction[]> => {
+    const params = new URLSearchParams();
+    params.append('term', term);
+    if (academicYear) {
+      params.append('academic_year', academicYear);
+    }
+
+    const response = await fetch(`${API_BASE_URL}/fee-payments/?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any[]>(response);
+
+    // Convert Django format to frontend format
+    return data.map(item => ({
+      id: item.id.toString(),
+      studentId: item.student.toString(),
+      feeStructureId: item.fee_structure.toString(),
+      amount: parseFloat(item.amount_paid),
+      status: item.status as 'paid' | 'pending' | 'overdue' | 'partial',
+      paymentDate: item.payment_date,
+      dueDate: item.due_date,
+      paymentMethod: item.payment_method,
+      transactionId: item.transaction_id,
+      remarks: item.remarks,
+      term: item.term as 'first' | 'second' | 'third',
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year?.toString(),
+    }));
+  },
+
+  getStudentPayments: async (studentId: string): Promise<FeeTransaction[]> => {
+    const response = await fetch(`${API_BASE_URL}/fee-payments/?student=${studentId}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any[]>(response);
+
+    // Convert Django format to frontend format
+    return data.map(item => ({
+      id: item.id.toString(),
+      studentId: item.student.toString(),
+      feeStructureId: item.fee_structure.toString(),
+      amount: parseFloat(item.amount_paid),
+      status: item.status as 'paid' | 'pending' | 'overdue' | 'partial',
+      paymentDate: item.payment_date,
+      dueDate: item.due_date,
+      paymentMethod: item.payment_method,
+      transactionId: item.transaction_id,
+      remarks: item.remarks,
+      term: item.term as 'first' | 'second' | 'third',
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year?.toString(),
+    }));
+  },
+
+  createPayment: async (paymentData: {
+    student: string;
+    fee_structure: string;
+    amount_paid: number;
+    payment_method: string;
+    term: string;
+    academic_year: string;
+    remarks?: string;
+  }): Promise<FeeTransaction> => {
+    const response = await fetch(`${API_BASE_URL}/fee-payments/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(paymentData),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    // Convert response to FeeTransaction format
+    return {
+      id: data.id.toString(),
+      studentId: data.student.toString(),
+      feeStructureId: data.fee_structure.toString(),
+      amount: parseFloat(data.amount_paid),
+      status: data.status as 'paid' | 'pending' | 'overdue' | 'partial',
+      paymentDate: data.payment_date,
+      dueDate: data.due_date,
+      paymentMethod: data.payment_method,
+      transactionId: data.transaction_id,
+      remarks: data.remarks,
+      term: data.term as 'first' | 'second' | 'third',
+      academicYear: data.academic_year_name,
+      academicYearId: data.academic_year?.toString(),
+    };
   },
 };
 

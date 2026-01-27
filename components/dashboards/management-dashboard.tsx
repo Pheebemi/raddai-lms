@@ -95,7 +95,7 @@ export function ManagementDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹{totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               +12% from last month
             </p>
@@ -129,15 +129,15 @@ export function ManagementDashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">₹{(totalRevenue * 0.85).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">₦{(totalRevenue * 0.85).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Collected</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-yellow-600">₹{pendingFees.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-yellow-600">₦{pendingFees.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Pending</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">₹{(pendingFees * 0.3).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-600">₦{(pendingFees * 0.3).toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Overdue</p>
                 </div>
               </div>
@@ -177,7 +177,7 @@ export function ManagementDashboard() {
                           <Badge variant={transaction.status === 'paid' ? 'default' : 'secondary'}>
                             {transaction.status}
                           </Badge>
-                          <p className="text-sm font-medium">₹{transaction.amount}</p>
+                          <p className="text-sm font-medium">₦{transaction.amount}</p>
                         </div>
                       </div>
                     );
@@ -287,7 +287,7 @@ export function ManagementDashboard() {
                     Fee Payment Due
                   </p>
                   <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    15 students have overdue fee payments exceeding ₹50,000
+                    15 students have overdue fee payments exceeding ₦50,000
                   </p>
                 </div>
               </div>

@@ -206,7 +206,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     student: [
       ...baseItems,
       { title: 'My Results', href: '/dashboard/results', icon: 'FileText' },
-      { title: 'Fees', href: '/fees', icon: 'DollarSign' },
+      { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Assignments', href: '/assignments', icon: 'BookOpen' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
@@ -216,7 +216,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       ...baseItems,
       { title: 'Children', href: '/parent/children', icon: 'Users' },
       { title: 'Results', href: '/dashboard/results', icon: 'FileText' },
-      { title: 'Fees', href: '/fees', icon: 'DollarSign' },
+      { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Messages', href: '/messages', icon: 'MessageSquare' },
       { title: 'Profile', href: '/profile', icon: 'User' },
