@@ -314,10 +314,25 @@ export const feeStructureApi = {
     const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle different response formats
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && typeof data === 'object' && data.results) {
+      // Paginated response
+      items = data.results;
+    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
+      // Empty object response
+      items = [];
+    } else {
+      console.error('Unexpected response format from fee-structures API:', data);
+      throw new Error('Invalid response format from server');
+    }
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return items.map(item => ({
       id: item.id.toString(),
       academicYear: item.academic_year_name,
       academicYearId: item.academic_year.toString(),
@@ -378,10 +393,25 @@ export const feesApi = {
     const response = await fetch(`${API_BASE_URL}/fee-payments/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle different response formats (array, paginated, or empty object)
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && typeof data === 'object' && data.results) {
+      // Paginated response
+      items = data.results;
+    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
+      // Empty object response
+      items = [];
+    } else {
+      console.error('Unexpected response format from fee-payments API:', data);
+      throw new Error('Invalid response format from server');
+    }
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return items.map(item => ({
       id: item.id.toString(),
       studentId: item.student.toString(),
       feeStructureId: item.fee_structure.toString(),
@@ -506,7 +536,21 @@ export const fetchAcademicYears = async () => {
   const response = await fetch(`${API_BASE_URL}/academic-years/`, {
     headers: getAuthHeaders(),
   });
-  return handleApiResponse<any>(response);
+  const data = await handleApiResponse<any>(response);
+
+  // Handle different response formats
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && typeof data === 'object' && data.results) {
+    // Paginated response
+    return data.results;
+  } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
+    // Empty object response
+    return [];
+  } else {
+    console.error('Unexpected response format from academic-years API:', data);
+    throw new Error('Invalid response format from server');
+  }
 };
 
 // Users API

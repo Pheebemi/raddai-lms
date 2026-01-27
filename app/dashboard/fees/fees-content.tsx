@@ -26,7 +26,7 @@ import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
 export function FeesContent() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [payments, setPayments] = useState<FeeTransaction[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -35,31 +35,83 @@ export function FeesContent() {
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [authError, setAuthError] = useState(false);
 
   // Get fee amount for student's grade and academic year
   const getFeeAmount = (term: string, academicYear: string) => {
+    console.log('🔍 getFeeAmount:', { term, academicYear, studentClass: user?.profile?.current_class });
+
     if (!user?.profile?.current_class) {
+      console.log('❌ No current class found');
       return 30000; // Fallback amount
     }
 
     // Get student's grade from their class
     const studentClass = user.profile.current_class;
-    // Parse grade from class name (e.g., "Grade 10 A" -> 10)
-    const gradeMatch = studentClass.match(/Grade (\d+)/);
-    const grade = gradeMatch ? parseInt(gradeMatch[1]) : null;
+
+    // Try multiple ways to parse grade from class name
+    let grade = null;
+
+    // Method 1: "Grade X" or "Grade X Y"
+    const gradeMatch1 = studentClass.match(/Grade (\d+)/);
+    if (gradeMatch1) {
+      grade = parseInt(gradeMatch1[1]);
+    }
+
+    // Method 2: Just a number at the beginning
+    if (!grade) {
+      const gradeMatch2 = studentClass.match(/^(\d+)/);
+      if (gradeMatch2) {
+        grade = parseInt(gradeMatch2[1]);
+      }
+    }
+
+    // Method 3: Number anywhere in the string
+    if (!grade) {
+      const gradeMatch3 = studentClass.match(/(\d+)/);
+      if (gradeMatch3) {
+        grade = parseInt(gradeMatch3[1]);
+      }
+    }
+
+    console.log('📊 Parsed grade:', grade, 'from class:', studentClass, 'using methods:', {
+      gradeMatch1: gradeMatch1?.[1],
+      gradeMatch2: studentClass.match(/^(\d+)/)?.[1],
+      gradeMatch3: studentClass.match(/(\d+)/)?.[1]
+    });
 
     if (!grade) {
+      console.log('❌ Could not parse grade from class name');
       return 30000; // Fallback amount
     }
 
-    // Find tuition fee for this grade and academic year
-    const feeStructure = feeStructures.find(fs =>
-      fs.grade === grade &&
-      fs.academicYearId === academicYear &&
-      fs.feeType === 'tuition'
-    );
+    console.log('💰 Available fee structures:', feeStructures.map(fs => ({
+      id: fs.id,
+      grade: fs.grade,
+      feeType: fs.feeType,
+      academicYearId: fs.academicYearId,
+      academicYear: fs.academicYear,
+      amount: fs.amount
+    })));
 
-    return feeStructure ? feeStructure.amount : 30000; // Fallback to default amount
+    // Find tuition fee for this grade and academic year
+    const feeStructure = feeStructures.find(fs => {
+      const matches = fs.grade === grade &&
+        fs.feeType === 'tuition' &&
+        (fs.academicYearId === academicYear ||
+         fs.academicYearId === parseInt(academicYear) ||
+         String(fs.academicYearId) === academicYear);
+
+      if (matches) {
+        console.log('✅ Found matching fee structure:', fs);
+      }
+
+      return matches;
+    });
+
+    const result = feeStructure ? feeStructure.amount : 30000;
+    console.log('💵 Final amount:', result, feeStructure ? '(from fee structure)' : '(fallback)');
+    return result;
   };
 
   // Payment form state
@@ -69,9 +121,19 @@ export function FeesContent() {
     remarks: '',
   });
 
+  // Update payment data when academic years load
+  useEffect(() => {
+    if (academicYears.length > 0 && !paymentData.academicYear) {
+      // Sort by ID descending to get the latest academic year
+      const sortedYears = [...academicYears].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+      setPaymentData(prev => ({ ...prev, academicYear: sortedYears[0].id.toString() }));
+    }
+  }, [academicYears, paymentData.academicYear]);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setAuthError(false);
         const [paymentsData, yearsData, feeStructuresData] = await Promise.all([
           feesApi.getPayments(),
           fetchAcademicYears(),
@@ -84,20 +146,37 @@ export function FeesContent() {
 
         // Set default academic year to current/latest
         if (yearsData.length > 0) {
-          setPaymentData(prev => ({ ...prev, academicYear: yearsData[0].id.toString() }));
+          // Sort by ID descending to get the latest academic year
+          const sortedYears = [...yearsData].sort((a, b) => parseInt(b.id) - parseInt(a.id));
+          setPaymentData(prev => ({ ...prev, academicYear: sortedYears[0].id.toString() }));
         }
-      } catch (error) {
-        toast.error(handleApiError(error));
+      } catch (error: any) {
+        const errorMessage = handleApiError(error);
+        console.error('API Error:', error);
+
+        // Check if it's an authentication error
+        if (errorMessage.includes('401') || errorMessage.includes('Unauthorized') || error?.status === 401) {
+          setAuthError(true);
+          toast.error('Your session has expired. Please log in again.');
+          // Logout user to clear invalid tokens
+          setTimeout(() => {
+            logout();
+          }, 2000);
+        } else {
+          toast.error(errorMessage);
+        }
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []);
+  }, [logout]);
 
   // Get current fee amount
-  const currentFeeAmount = getFeeAmount(paymentData.term, paymentData.academicYear);
+  const currentFeeAmount = paymentData.academicYear ?
+    getFeeAmount(paymentData.term, paymentData.academicYear) :
+    30000; // Default amount if no academic year selected
 
   // Flutterwave configuration
   const flutterwaveConfig = {
@@ -132,11 +211,19 @@ export function FeesContent() {
           const studentGrade = user?.profile?.current_class ?
             parseInt(user.profile.current_class.match(/Grade (\d+)/)?.[1] || '1') : 1;
 
-          const feeStructure = feeStructures.find(fs =>
-            fs.grade === studentGrade &&
-            fs.academicYearId === paymentData.academicYear &&
-            fs.feeType === 'tuition'
-          );
+          const feeStructure = feeStructures.find(fs => {
+            // Match grade and fee type
+            const gradeMatches = fs.grade === studentGrade;
+            const typeMatches = fs.feeType === 'tuition';
+
+            // Match academic year - try both string and number comparisons
+            const academicYearMatches =
+              fs.academicYearId === paymentData.academicYear ||
+              fs.academicYearId === parseInt(paymentData.academicYear) ||
+              String(fs.academicYearId) === paymentData.academicYear;
+
+            return gradeMatches && typeMatches && academicYearMatches;
+          });
 
           // Record the successful payment
           try {
@@ -239,6 +326,34 @@ export function FeesContent() {
     );
   }
 
+  // Show authentication error
+  if (authError) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">School Fees</h1>
+            <p className="text-muted-foreground">Manage your term-based fee payments</p>
+          </div>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-8">
+              <AlertCircle className="h-12 w-12 mx-auto mb-4 text-red-500" />
+              <h3 className="text-lg font-medium mb-2 text-red-600">Authentication Required</h3>
+              <p className="text-muted-foreground mb-4">
+                Your session has expired. You will be redirected to the login page shortly.
+              </p>
+              <Button onClick={logout} variant="outline">
+                Log In Again
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -309,9 +424,11 @@ export function FeesContent() {
                     ₦{currentFeeAmount.toLocaleString()}
                   </div>
                   <p className="text-xs text-green-600">
-                    {user?.profile?.current_class
+                    {paymentData.academicYear && user?.profile?.current_class
                       ? `Grade ${user.profile.current_class.match(/Grade (\d+)/)?.[1] || ''} tuition fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`
-                      : `Fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`}
+                      : paymentData.academicYear
+                        ? `Fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`
+                        : 'Select an academic year to see the fee amount'}
                   </p>
                 </div>
               </div>
