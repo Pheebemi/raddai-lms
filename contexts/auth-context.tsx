@@ -59,11 +59,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (storedUser && storedToken && storedRefreshToken) {
         try {
           const user = JSON.parse(storedUser);
-          setAuthState({
-            user,
-            isAuthenticated: true,
-            isLoading: false,
-          });
+          // Fetch fresh user profile data to ensure we have the latest profile info
+          try {
+            const freshUser = await authApi.getProfile();
+            setAuthState({
+              user: freshUser,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+            // Update stored user data
+            localStorage.setItem('edumanage_user', JSON.stringify(freshUser));
+          } catch (profileError) {
+            // If profile fetch fails, use stored data
+            console.warn('Failed to fetch fresh profile:', profileError);
+            setAuthState({
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            });
+          }
         } catch {
           // Invalid stored data, clear it
           localStorage.removeItem('edumanage_user');

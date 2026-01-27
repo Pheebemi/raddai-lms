@@ -61,6 +61,7 @@ const convertDjangoUser = (djangoUser: DjangoUser): User => {
     phone: djangoUser.phone_number,
     address: djangoUser.address,
     dateOfBirth: djangoUser.date_of_birth,
+    profile: djangoUser.profile, // Include profile data
     createdAt: new Date().toISOString(), // Django doesn't provide this in login response
     updatedAt: new Date().toISOString(),
   };
@@ -304,6 +305,70 @@ export const resultsApi = {
       }),
     });
     return handleApiResponse(response);
+  },
+};
+
+// Fee Structure API
+export const feeStructureApi = {
+  getAll: async (): Promise<any[]> => {
+    const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any[]>(response);
+
+    // Convert Django format to frontend format
+    return data.map(item => ({
+      id: item.id.toString(),
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year.toString(),
+      grade: item.grade,
+      feeType: item.fee_type,
+      amount: parseFloat(item.amount),
+      description: item.description,
+    }));
+  },
+
+  getByGradeAndYear: async (grade: number, academicYear: string): Promise<any[]> => {
+    const params = new URLSearchParams();
+    params.append('grade', grade.toString());
+    params.append('academic_year', academicYear);
+
+    const response = await fetch(`${API_BASE_URL}/fee-structures/?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any[]>(response);
+
+    // Convert Django format to frontend format
+    return data.map(item => ({
+      id: item.id.toString(),
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year.toString(),
+      grade: item.grade,
+      feeType: item.fee_type,
+      amount: parseFloat(item.amount),
+      description: item.description,
+    }));
+  },
+
+  getByAcademicYear: async (academicYear: string): Promise<any[]> => {
+    const params = new URLSearchParams();
+    params.append('academic_year', academicYear);
+
+    const response = await fetch(`${API_BASE_URL}/fee-structures/?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any[]>(response);
+
+    // Convert Django format to frontend format
+    return data.map(item => ({
+      id: item.id.toString(),
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year.toString(),
+      grade: item.grade,
+      feeType: item.fee_type,
+      amount: parseFloat(item.amount),
+      description: item.description,
+    }));
   },
 };
 

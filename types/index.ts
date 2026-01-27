@@ -13,6 +13,7 @@ export interface User {
   dateOfBirth?: string;
   createdAt: string;
   updatedAt: string;
+  profile?: any; // Student, Staff, or Parent profile data
 }
 
 export interface AuthState {
@@ -111,12 +112,12 @@ export interface ClassPerformance {
 // Fee Management Types
 export interface FeeStructure {
   id: string;
-  name: string;
+  academicYear: string;
+  academicYearId?: string;
+  grade: number;
+  feeType: 'tuition' | 'examination' | 'transport' | 'hostel' | 'other';
   amount: number;
-  frequency: 'monthly' | 'quarterly' | 'annually' | 'one-time';
-  class?: string;
   description: string;
-  dueDate: string;
 }
 
 export interface FeeTransaction {

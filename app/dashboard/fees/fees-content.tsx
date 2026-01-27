@@ -21,7 +21,7 @@ import {
 } from '@/components/ui/table';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { feesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
+import { feesApi, feeStructureApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
@@ -36,11 +36,30 @@ export function FeesContent() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fixed term amounts
-  const TERM_AMOUNTS = {
-    first: 30000,
-    second: 30000,
-    third: 30000,
+  // Get fee amount for student's grade and academic year
+  const getFeeAmount = (term: string, academicYear: string) => {
+    if (!user?.profile?.current_class) {
+      return 30000; // Fallback amount
+    }
+
+    // Get student's grade from their class
+    const studentClass = user.profile.current_class;
+    // Parse grade from class name (e.g., "Grade 10 A" -> 10)
+    const gradeMatch = studentClass.match(/Grade (\d+)/);
+    const grade = gradeMatch ? parseInt(gradeMatch[1]) : null;
+
+    if (!grade) {
+      return 30000; // Fallback amount
+    }
+
+    // Find tuition fee for this grade and academic year
+    const feeStructure = feeStructures.find(fs =>
+      fs.grade === grade &&
+      fs.academicYearId === academicYear &&
+      fs.feeType === 'tuition'
+    );
+
+    return feeStructure ? feeStructure.amount : 30000; // Fallback to default amount
   };
 
   // Payment form state
@@ -53,12 +72,15 @@ export function FeesContent() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [paymentsData, yearsData] = await Promise.all([
+        const [paymentsData, yearsData, feeStructuresData] = await Promise.all([
           feesApi.getPayments(),
           fetchAcademicYears(),
+          feeStructureApi.getAll(),
         ]);
+
         setPayments(paymentsData);
         setAcademicYears(yearsData);
+        setFeeStructures(feeStructuresData);
 
         // Set default academic year to current/latest
         if (yearsData.length > 0) {
@@ -74,11 +96,14 @@ export function FeesContent() {
     fetchData();
   }, []);
 
+  // Get current fee amount
+  const currentFeeAmount = getFeeAmount(paymentData.term, paymentData.academicYear);
+
   // Flutterwave configuration
   const flutterwaveConfig = {
-    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X', // Replace with your actual key
+    public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X',
     tx_ref: `school_fee_${user?.id}_${Date.now()}`,
-    amount: TERM_AMOUNTS[paymentData.term as keyof typeof TERM_AMOUNTS],
+    amount: currentFeeAmount,
     currency: 'NGN',
     payment_options: 'card,mobilemoney,ussd',
     customer: {
@@ -103,12 +128,22 @@ export function FeesContent() {
         console.log('Flutterwave response:', response);
 
         if (response.status === 'successful') {
+          // Find the appropriate fee structure
+          const studentGrade = user?.profile?.current_class ?
+            parseInt(user.profile.current_class.match(/Grade (\d+)/)?.[1] || '1') : 1;
+
+          const feeStructure = feeStructures.find(fs =>
+            fs.grade === studentGrade &&
+            fs.academicYearId === paymentData.academicYear &&
+            fs.feeType === 'tuition'
+          );
+
           // Record the successful payment
           try {
             await feesApi.createPayment({
               student: user.id,
-              fee_structure: 'school_fee', // Default fee structure
-              amount_paid: TERM_AMOUNTS[paymentData.term as keyof typeof TERM_AMOUNTS],
+              fee_structure: feeStructure?.id || 'school_fee', // Use actual fee structure ID if found
+              amount_paid: currentFeeAmount,
               payment_method: 'flutterwave',
               term: paymentData.term,
               academic_year: paymentData.academicYear,
@@ -211,31 +246,33 @@ export function FeesContent() {
           <h1 className="text-3xl font-bold tracking-tight">School Fees</h1>
           <p className="text-muted-foreground">Manage your term-based fee payments</p>
           <div className="mt-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-md inline-block">
-            💰 Fixed term fees: ₦30,000 per term (First, Second, Third)
+            💰 Term fees are set per grade/class in the Django admin panel
           </div>
         </div>
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
           <DialogTrigger asChild>
-            <Button>
-              <CreditCard className="mr-2 h-4 w-4" />
+            <Button size="lg" className="bg-green-600 hover:bg-green-700">
+              <CreditCard className="mr-2 h-5 w-5" />
               Pay School Fees
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Pay School Fees</DialogTitle>
-              <DialogDescription>
-                Complete payment for the selected term using Flutterwave.
+          <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
+            <DialogHeader className="text-center pb-2">
+              <DialogTitle className="text-2xl font-bold">Pay School Fees</DialogTitle>
+              <DialogDescription className="text-base">
+                Complete your term payment securely with Flutterwave
               </DialogDescription>
             </DialogHeader>
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="term" className="text-right">
-                  Term
+
+            <div className="space-y-6 py-4">
+              {/* Term Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="term" className="text-sm font-medium">
+                  Select Term
                 </Label>
                 <Select value={paymentData.term} onValueChange={(value) => setPaymentData(prev => ({ ...prev, term: value }))}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose a term" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="first">First Term</SelectItem>
@@ -244,13 +281,15 @@ export function FeesContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="academicYear" className="text-right">
+
+              {/* Academic Year Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="academicYear" className="text-sm font-medium">
                   Academic Year
                 </Label>
                 <Select value={paymentData.academicYear} onValueChange={(value) => setPaymentData(prev => ({ ...prev, academicYear: value }))}>
-                  <SelectTrigger className="col-span-3">
-                    <SelectValue />
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Choose academic year" />
                   </SelectTrigger>
                   <SelectContent>
                     {academicYears.map(year => (
@@ -261,44 +300,76 @@ export function FeesContent() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label className="text-right font-medium">
-                  Amount
-                </Label>
-                <div className="col-span-3">
-                  <div className="text-2xl font-bold text-green-600">
-                    ₦{TERM_AMOUNTS[paymentData.term as keyof typeof TERM_AMOUNTS].toLocaleString()}
+
+              {/* Amount Display */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                <div className="text-center">
+                  <p className="text-sm text-green-700 font-medium mb-1">Amount to Pay</p>
+                  <div className="text-3xl font-bold text-green-600 mb-1">
+                    ₦{currentFeeAmount.toLocaleString()}
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Fixed amount for {paymentData.term} term
+                  <p className="text-xs text-green-600">
+                    {user?.profile?.current_class
+                      ? `Grade ${user.profile.current_class.match(/Grade (\d+)/)?.[1] || ''} tuition fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`
+                      : `Fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`}
                   </p>
                 </div>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="remarks" className="text-right">
-                  Remarks
+
+              {/* Remarks */}
+              <div className="space-y-2">
+                <Label htmlFor="remarks" className="text-sm font-medium">
+                  Remarks (Optional)
                 </Label>
                 <Textarea
                   id="remarks"
-                  placeholder="Optional remarks"
-                  className="col-span-3"
+                  placeholder="Add any additional notes..."
+                  className="min-h-[80px] resize-none"
                   value={paymentData.remarks}
                   onChange={(e) => setPaymentData(prev => ({ ...prev, remarks: e.target.value }))}
                 />
               </div>
-              <div className="bg-blue-50 p-4 rounded-lg col-span-4">
-                <div className="flex items-center gap-2 text-blue-700">
-                  <CreditCard className="h-5 w-5" />
-                  <span className="font-medium">Payment Method: Flutterwave</span>
+
+              {/* Payment Method Info */}
+              <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
+                <div className="flex items-start gap-3">
+                  <div className="bg-blue-100 p-2 rounded-full">
+                    <CreditCard className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-blue-900 mb-1">Secure Payment</h4>
+                    <p className="text-sm text-blue-700 leading-relaxed">
+                      Your payment is processed securely through Flutterwave with multiple payment options including cards, mobile money, and USSD.
+                    </p>
+                  </div>
                 </div>
-                <p className="text-sm text-blue-600 mt-1">
-                  Secure payment processing with multiple options (Card, Mobile Money, USSD)
-                </p>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="submit" onClick={handlePaymentSubmit} disabled={isSubmitting}>
-                {isSubmitting ? 'Processing...' : 'Pay with Flutterwave'}
+
+            <DialogFooter className="flex-col gap-2 sm:flex-row sm:gap-0">
+              <Button
+                variant="outline"
+                onClick={() => setIsPaymentDialogOpen(false)}
+                className="w-full sm:w-auto order-2 sm:order-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handlePaymentSubmit}
+                disabled={isSubmitting}
+                className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Pay ₦{currentFeeAmount.toLocaleString()}
+                  </>
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
