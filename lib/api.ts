@@ -550,7 +550,18 @@ export const fetchClasses = async () => {
   const response = await fetch(`${API_BASE_URL}/classes/`, {
     headers: getAuthHeaders(),
   });
-  return handleApiResponse<any>(response);
+  const data = await handleApiResponse<any>(response);
+
+  // Ensure we return an array
+  if (Array.isArray(data)) {
+    return data;
+  } else if (data && typeof data === 'object' && data.results) {
+    // Paginated response
+    return data.results;
+  } else {
+    console.warn('fetchClasses returned unexpected format:', data);
+    return [];
+  }
 };
 
 export const fetchSubjects = async () => {
@@ -576,8 +587,8 @@ export const fetchAcademicYears = async () => {
     // Empty object response
     return [];
   } else {
-    console.error('Unexpected response format from academic-years API:', data);
-    throw new Error('Invalid response format from server');
+    console.warn('fetchAcademicYears returned unexpected format:', data);
+    return [];
   }
 };
 

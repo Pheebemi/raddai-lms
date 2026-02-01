@@ -46,7 +46,7 @@ export function ManagementDashboard() {
             Welcome back, {user.firstName}! 👋
           </h1>
           <p className="text-muted-foreground">
-            Here&apos;s your school management overview.
+            Here&apos;s your Raddai Metropolitan School management overview.
           </p>
         </div>
         <div className="flex gap-2">

@@ -70,7 +70,7 @@ export function AdminDashboard() {
             System Administration 👑
           </h1>
           <p className="text-muted-foreground">
-            Monitor and manage the EduManage Pro system.
+            Monitor and manage the Raddai Metropolitan School system.
           </p>
         </div>
         <div className="flex gap-2">

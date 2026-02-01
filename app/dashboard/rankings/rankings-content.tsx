@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -22,27 +22,33 @@ export function RankingsContent() {
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedTerm, setSelectedTerm] = useState<string>('first');
   const [selectedYear, setSelectedYear] = useState<string>('');
+  const [isLoadingRankings, setIsLoadingRankings] = useState(false);
+  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
         const [classesData, yearsData] = await Promise.all([
-          fetchClasses(),
-          fetchAcademicYears(),
+          fetchClasses().catch((error) => { console.error('Failed to fetch classes:', error); return []; }),
+          fetchAcademicYears().catch((error) => { console.error('Failed to fetch academic years:', error); return []; }),
         ]);
 
-        setClasses(classesData);
-        setAcademicYears(yearsData);
+        // Ensure classesData is an array
+        const safeClassesData = Array.isArray(classesData) ? classesData : [];
+        const safeYearsData = Array.isArray(yearsData) ? yearsData : [];
+
+        setClasses(safeClassesData);
+        setAcademicYears(safeYearsData);
 
         // Set defaults
-        if (yearsData.length > 0) {
-          const latestYear = yearsData.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0];
+        if (safeYearsData.length > 0) {
+          const latestYear = safeYearsData.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0];
           setSelectedYear(latestYear.id.toString());
         }
 
         // For students, auto-select their class
         if (user?.role === 'student' && user.profile?.current_class) {
-          const studentClass = classesData.find(c => c.id === user.profile.current_class);
+          const studentClass = safeClassesData.find(c => c.id === user.profile.current_class);
           if (studentClass) {
             setSelectedClass(studentClass.id.toString());
           }
@@ -61,8 +67,15 @@ export function RankingsContent() {
     const fetchRankings = async () => {
       if (!selectedClass || !selectedTerm || !selectedYear) return;
 
+      // Don't fetch if we're still loading initial data
+      if (classes.length === 0 || academicYears.length === 0) return;
+
+      // Don't fetch if already fetching
+      if (isFetchingRef.current) return;
+
       try {
-        setIsLoading(true);
+        isFetchingRef.current = true;
+        setIsLoadingRankings(true);
         const rankingsData = await rankingsApi.getClassRankings(selectedClass, selectedTerm, selectedYear);
         setRankings(rankingsData);
       } catch (error) {
@@ -70,11 +83,17 @@ export function RankingsContent() {
         toast.error('Failed to load rankings. Please check your selections.');
         setRankings(null);
       } finally {
-        setIsLoading(false);
+        setIsLoadingRankings(false);
+        isFetchingRef.current = false;
       }
     };
 
     fetchRankings();
+
+    // Cleanup function to reset ref if effect is cancelled
+    return () => {
+      isFetchingRef.current = false;
+    };
   }, [selectedClass, selectedTerm, selectedYear]);
 
   const getPositionIcon = (position: number) => {
@@ -181,16 +200,22 @@ export function RankingsContent() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium">Class</label>
-              <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <Select value={selectedClass} onValueChange={setSelectedClass} disabled={isLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a class" />
+                  <SelectValue placeholder={isLoading ? "Loading classes..." : "Select a class"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {classes.map(cls => (
-                    <SelectItem key={cls.id} value={cls.id.toString()}>
-                      {cls.name}
+                  {Array.isArray(classes) && classes.length > 0 ? (
+                    classes.map(cls => (
+                      <SelectItem key={cls.id} value={cls.id.toString()}>
+                        {cls.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      {isLoading ? "Loading..." : "No classes available"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -211,16 +236,22 @@ export function RankingsContent() {
 
             <div className="space-y-2">
               <label className="text-sm font-medium">Academic Year</label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <Select value={selectedYear} onValueChange={setSelectedYear} disabled={isLoading}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select academic year" />
+                  <SelectValue placeholder={isLoading ? "Loading years..." : "Select academic year"} />
                 </SelectTrigger>
                 <SelectContent>
-                  {academicYears.map(year => (
-                    <SelectItem key={year.id} value={year.id.toString()}>
-                      {year.name}
+                  {Array.isArray(academicYears) && academicYears.length > 0 ? (
+                    academicYears.map(year => (
+                      <SelectItem key={year.id} value={year.id.toString()}>
+                        {year.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="" disabled>
+                      {isLoading ? "Loading..." : "No academic years available"}
                     </SelectItem>
-                  ))}
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -229,7 +260,18 @@ export function RankingsContent() {
       </Card>
 
       {/* Rankings Display */}
-      {rankings ? (
+      {isLoadingRankings ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+                <p className="text-muted-foreground">Loading rankings...</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : rankings ? (
         <div className="space-y-6">
           {/* Summary Stats */}
           <div className="grid gap-4 md:grid-cols-4">

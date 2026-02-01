@@ -51,7 +51,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigationItems, user, 
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
           <GraduationCap className="h-6 w-6" />
-          <span>EduManage Pro</span>
+          <span>Raddai Metropolitan School</span>
         </Link>
       </div>
 

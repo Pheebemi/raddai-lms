@@ -5,7 +5,7 @@ export const mockUsers: User[] = [
   // Admin
   {
     id: 'admin-1',
-    email: 'admin@school.edu',
+    email: 'admin@raddaimetropolitanschool.edu.ng',
     firstName: 'System',
     lastName: 'Administrator',
     role: 'admin',
@@ -17,7 +17,7 @@ export const mockUsers: User[] = [
   // Management
   {
     id: 'mgmt-1',
-    email: 'principal@school.edu',
+    email: 'principal@raddaimetropolitanschool.edu.ng',
     firstName: 'John',
     lastName: 'Smith',
     role: 'management',
@@ -29,7 +29,7 @@ export const mockUsers: User[] = [
   // Staff
   {
     id: 'staff-1',
-    email: 'teacher1@school.edu',
+    email: 'teacher1@raddaimetropolitanschool.edu.ng',
     firstName: 'Sarah',
     lastName: 'Johnson',
     role: 'staff',
@@ -40,7 +40,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'staff-2',
-    email: 'teacher2@school.edu',
+    email: 'teacher2@raddaimetropolitanschool.edu.ng',
     firstName: 'Mike',
     lastName: 'Davis',
     role: 'staff',
@@ -52,7 +52,7 @@ export const mockUsers: User[] = [
   // Students
   {
     id: 'student-1',
-    email: 'alice.student@school.edu',
+    email: 'alice.student@raddaimetropolitanschool.edu.ng',
     firstName: 'Alice',
     lastName: 'Brown',
     role: 'student',
@@ -64,7 +64,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student-2',
-    email: 'bob.student@school.edu',
+    email: 'bob.student@raddaimetropolitanschool.edu.ng',
     firstName: 'Bob',
     lastName: 'Wilson',
     role: 'student',
@@ -76,7 +76,7 @@ export const mockUsers: User[] = [
   },
   {
     id: 'student-3',
-    email: 'charlie.student@school.edu',
+    email: 'charlie.student@raddaimetropolitanschool.edu.ng',
     firstName: 'Charlie',
     lastName: 'Miller',
     role: 'student',
@@ -421,10 +421,10 @@ export const mockAttendanceRecords: AttendanceRecord[] = [
 
 // Login credentials for testing
 export const mockCredentials = {
-  admin: { email: 'admin@school.edu', password: 'admin123' },
-  management: { email: 'principal@school.edu', password: 'principal123' },
-  staff: { email: 'teacher1@school.edu', password: 'teacher123' },
-  student: { email: 'alice.student@school.edu', password: 'student123' },
+  admin: { email: 'admin@raddaimetropolitanschool.edu.ng', password: 'admin123' },
+  management: { email: 'principal@raddaimetropolitanschool.edu.ng', password: 'principal123' },
+  staff: { email: 'teacher1@raddaimetropolitanschool.edu.ng', password: 'teacher123' },
+  student: { email: 'alice.student@raddaimetropolitanschool.edu.ng', password: 'student123' },
   parent: { email: 'parent1@email.com', password: 'parent123' },
 };
 

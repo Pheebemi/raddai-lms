@@ -24,7 +24,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 const roleOptions = [
   { value: 'admin' as UserRole, label: 'Administrator', icon: Shield, description: 'Full system access' },
-  { value: 'management' as UserRole, label: 'School Management', icon: Users, description: 'School administration' },
+  { value: 'management' as UserRole, label: 'School Management', icon: Users, description: 'Raddai Metropolitan School administration' },
   { value: 'staff' as UserRole, label: 'Staff/Teacher', icon: UserCheck, description: 'Teaching staff' },
   { value: 'student' as UserRole, label: 'Student', icon: GraduationCap, description: 'Student access' },
   { value: 'parent' as UserRole, label: 'Parent', icon: User, description: 'Parent access' },
@@ -73,9 +73,9 @@ export default function LoginPage() {
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
             <GraduationCap className="h-6 w-6 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">EduManage Pro</CardTitle>
+          <CardTitle className="text-2xl font-bold">Raddai Metropolitan School</CardTitle>
           <CardDescription>
-            School Management System
+            Excellence in Education - Jalingo, Taraba State
           </CardDescription>
         </CardHeader>
         <CardContent>
