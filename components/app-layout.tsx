@@ -208,7 +208,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Student Performance', href: '/staff/performance', icon: 'BarChart3' },
-      { title: 'Messages', href: '/messages', icon: 'MessageSquare' },
+      { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Profile', href: '/profile', icon: 'User' },
     ],
     student: [
@@ -228,7 +228,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
-      { title: 'Messages', href: '/messages', icon: 'MessageSquare' },
+      { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Profile', href: '/profile', icon: 'User' },
     ],
   };

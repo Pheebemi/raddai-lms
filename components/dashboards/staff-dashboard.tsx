@@ -38,6 +38,7 @@ function useStaffDashboardData() {
   const [staffProfile, setStaffProfile] = useState<Staff | null>(null);
   const [results, setResults] = useState<Result[]>([]);
   const [classRankings, setClassRankings] = useState<ClassRanking[]>([]);
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,15 +50,16 @@ function useStaffDashboardData() {
         setIsLoading(true);
         setError(null);
 
-        // Fetch staff profile, students, and results
+        // Fetch staff profile, students, results, and announcements
         console.log('Loading staff dashboard data...');
-        const [staffData, studentsData, resultsData] = await Promise.all([
+        const [staffData, studentsData, resultsData, announcementsData] = await Promise.all([
           usersApi.getStaff().catch((error) => { console.error('Failed to load staff:', error); return []; }),
           usersApi.getStudents().catch((error) => { console.error('Failed to load students:', error); return []; }),
           resultsApi.getList().catch((error) => { console.error('Failed to load results:', error); return []; }),
+          announcementsApi.getList().catch((error) => { console.error('Failed to load announcements:', error); return []; }),
         ]);
 
-        console.log(`Loaded: ${staffData.length} staff, ${studentsData.length} students, ${resultsData.length} results`);
+        console.log(`Loaded: ${staffData.length} staff, ${studentsData.length} students, ${resultsData.length} results, ${announcementsData.length} announcements`);
 
         // Find the current user's staff profile
         const currentStaff = staffData.find((s: Staff) => s.user.id === user.id);
@@ -65,6 +67,7 @@ function useStaffDashboardData() {
 
         setStudents(studentsData);
         setResults(resultsData);
+        setAnnouncements(announcementsData);
 
         // Load rankings for staff's classes
         if (staffData.length > 0 && studentsData.length > 0 && resultsData.length > 0) {
@@ -147,6 +150,7 @@ function useStaffDashboardData() {
     staffProfile,
     results,
     classRankings,
+    announcements,
     isLoading,
     error,
   };
@@ -154,7 +158,7 @@ function useStaffDashboardData() {
 
 export function StaffDashboard() {
   const { user } = useAuth();
-  const { students, staffProfile, results, classRankings, isLoading, error } = useStaffDashboardData();
+  const { students, staffProfile, results, classRankings, announcements, isLoading, error } = useStaffDashboardData();
 
   // Filter students for this staff member (students in their classes)
   const assignedStudents = useMemo(() => {
@@ -602,6 +606,52 @@ export function StaffDashboard() {
                 </div>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recent Announcements */}
+      {announcements.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Recent Announcements
+            </CardTitle>
+            <CardDescription>
+              Important notices and updates
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {announcements.slice(0, 3).map((announcement) => (
+                <div key={announcement.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                  <div className="mt-0.5">
+                    {announcement.priority === 'urgent' && <AlertTriangle className="h-4 w-4 text-red-600" />}
+                    {announcement.priority === 'high' && <AlertTriangle className="h-4 w-4 text-orange-600" />}
+                    {announcement.priority === 'medium' && <Clock className="h-4 w-4 text-blue-600" />}
+                    {announcement.priority === 'low' && <TrendingUp className="h-4 w-4 text-green-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-medium text-sm">{announcement.title}</h4>
+                    <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                      {announcement.content}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      {new Date(announcement.createdAt).toLocaleDateString()} • {announcement.createdBy}
+                    </p>
+                  </div>
+                </div>
+              ))}
+
+              {announcements.length > 3 && (
+                <div className="text-center pt-2">
+                  <Button variant="outline" size="sm">
+                    View All Announcements
+                  </Button>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
