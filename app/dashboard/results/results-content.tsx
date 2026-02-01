@@ -62,7 +62,7 @@ export function ResultsContent() {
     setFilteredResults(filtered);
   }, [results, selectedTerm, selectedYear]);
 
-  // Load class rankings when filters change
+  // Load class rankings when filters change (for PNG download)
   useEffect(() => {
     const loadRankings = async () => {
       if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class) {
@@ -74,10 +74,54 @@ export function ResultsContent() {
           );
           setClassRankings(rankings);
         } catch (error) {
+          console.error('Failed to load rankings for PNG download:', error);
+          setClassRankings(null);
+        }
+      } else {
+        setClassRankings(null);
+      }
+    };
+
+    loadRankings();
+  }, [selectedTerm, selectedYear, user?.profile?.current_class]);
+
+  // Load class rankings when filters change
+  useEffect(() => {
+    const loadRankings = async () => {
+      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class) {
+        try {
+          // Debug logging
+          console.log('Loading rankings for user:', user.id);
+          console.log('User profile:', user.profile);
+          console.log('Current class:', user.profile.current_class);
+          console.log('Class ID:', user.profile.current_class?.id);
+          console.log('Class ID type:', typeof user.profile.current_class?.id);
+          console.log('Full current_class object:', JSON.stringify(user.profile.current_class, null, 2));
+
+          const classId = user.profile.current_class.id?.toString();
+          if (!classId) {
+            console.error('No class ID found for user - cannot load rankings');
+            setClassRankings(null);
+            return;
+          }
+
+          console.log('Calling rankings API with:', { classId, selectedTerm, selectedYear });
+          const rankings = await rankingsApi.getClassRankings(
+            classId,
+            selectedTerm,
+            selectedYear
+          );
+          setClassRankings(rankings);
+        } catch (error) {
           console.error('Failed to load rankings:', error);
           setClassRankings(null);
         }
       } else {
+        console.log('Skipping rankings load - conditions not met:', {
+          selectedTerm,
+          selectedYear,
+          hasCurrentClass: !!user?.profile?.current_class
+        });
         setClassRankings(null);
       }
     };
@@ -120,15 +164,38 @@ export function ResultsContent() {
           studentClass = user.profile.current_class;
         }
 
-        // Get student position from rankings API
-        if (classRankings) {
-          const studentRanking = getStudentRanking();
-          if (studentRanking) {
-            const position = studentRanking.position;
-            studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
+        // Get student position from rankings API for the specific term and year
+        const academicYear = termResults[0]?.academicYear;
+        if (academicYear && user?.profile?.current_class) {
+          try {
+            const classId = user.profile.current_class.id?.toString();
+            console.log('PNG download - Class ID:', classId);
+            console.log('PNG download - Current class object:', user.profile.current_class);
+            if (!classId) {
+              console.error('No class ID available for PNG rankings');
+              studentPosition = 'N/A';
+            } else {
+              // Load rankings specifically for this term and year
+              console.log('Loading PNG rankings for:', { classId, term, academicYear });
+              const termRankings = await rankingsApi.getClassRankings(
+                classId,
+                term,
+                academicYear
+              );
+
+              const studentRanking = termRankings.rankings.find(ranking => ranking.student_id === user.id);
+              if (studentRanking) {
+                const position = studentRanking.position;
+                studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
+              } else {
+                studentPosition = 'N/A';
+              }
+            }
+          } catch (rankingError) {
+            console.log('Could not load rankings for PNG:', rankingError);
+            studentPosition = 'N/A';
           }
         } else {
-          // Fallback to N/A if rankings not loaded
           studentPosition = 'N/A';
         }
       } catch (error) {
