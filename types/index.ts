@@ -73,6 +73,18 @@ export interface Subject {
   description?: string;
 }
 
+export interface Class {
+  id: string;
+  name: string;
+  grade: number;
+  section: string;
+  academicYear: string;
+  academicYearId: string;
+  classTeacher?: string;
+  classTeacherName?: string;
+  studentCount?: number;
+}
+
 export interface Result {
   id: string;
   studentId: string;
@@ -124,8 +136,11 @@ export interface FeeStructure {
 export interface FeeTransaction {
   id: string;
   studentId: string;
+  studentName?: string;
   feeStructureId: string;
+  feeStructureName?: string;
   amount: number;
+  totalAmount?: number;
   status: 'paid' | 'pending' | 'overdue' | 'partial';
   paymentDate?: string;
   dueDate: string;

@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,25 +18,81 @@ import {
   CheckCircle,
   MessageSquare
 } from 'lucide-react';
-import { mockStudents, mockStaff, mockFeeTransactions, mockResults } from '@/lib/mock-data';
+import { dashboardApi, usersApi, feesApi, resultsApi, announcementsApi } from '@/lib/api';
+import { DashboardStats } from '@/types';
+import { toast } from 'sonner';
 
 export function ManagementDashboard() {
   const { user } = useAuth();
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setLoading(true);
+
+        // Fetch dashboard stats
+        const dashboardStats = await dashboardApi.getStats();
+        setStats(dashboardStats);
+
+        // Fetch recent fee transactions for the financial overview
+        try {
+          const payments = await feesApi.getPayments();
+          // Get the most recent 3 transactions
+          setRecentTransactions(payments.slice(0, 3));
+        } catch (error) {
+          console.error('Failed to fetch recent transactions:', error);
+          setRecentTransactions([]);
+        }
+
+      } catch (error) {
+        toast.error('Failed to load dashboard data');
+        console.error('Dashboard data error:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user) {
+      fetchDashboardData();
+    }
+  }, [user]);
 
   if (!user) return null;
 
-  // Calculate dashboard stats
-  const totalStudents = mockStudents.length;
-  const totalStaff = mockStaff.length;
-  const totalRevenue = mockFeeTransactions
-    .filter(ft => ft.status === 'paid')
-    .reduce((sum, ft) => sum + ft.amount, 0);
-  const pendingFees = mockFeeTransactions
-    .filter(ft => ft.status === 'pending' || ft.status === 'overdue')
-    .reduce((sum, ft) => sum + ft.amount, 0);
-  const averageAttendance = 89; // Mock data
-  const topPerformers = mockStudents.slice(0, 3); // Mock top performers
-  const recentResults = mockResults.slice(0, 5);
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading dashboard...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!stats) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">Failed to load dashboard data</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Extract stats for easier access
+  const totalStudents = stats.totalStudents || 0;
+  const totalStaff = stats.totalStaff || 0;
+  const totalRevenue = stats.totalRevenue || 0;
+  const pendingFees = stats.pendingFees || 0;
+  const averageAttendance = stats.averageAttendance || 0;
+  const topPerformers = stats.topPerformers || [];
+  const recentResults = stats.recentResults || [];
 
   return (
     <div className="space-y-6">
@@ -129,7 +186,7 @@ export function ManagementDashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">₦{(totalRevenue * 0.85).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-green-600">₦{totalRevenue.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Collected</p>
                 </div>
                 <div className="text-center">
@@ -145,43 +202,41 @@ export function ManagementDashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Collection Rate</span>
-                  <span>85%</span>
+                  <span>{totalRevenue + pendingFees > 0 ? Math.round((totalRevenue / (totalRevenue + pendingFees)) * 100) : 0}%</span>
                 </div>
-                <Progress value={85} className="h-2" />
+                <Progress value={totalRevenue + pendingFees > 0 ? (totalRevenue / (totalRevenue + pendingFees)) * 100 : 0} className="h-2" />
               </div>
 
               <div className="pt-4 border-t">
                 <h4 className="font-medium mb-3">Recent Transactions</h4>
                 <div className="space-y-2">
-                  {mockFeeTransactions.slice(0, 3).map((transaction) => {
-                    const student = mockStudents.find(s => s.id === transaction.studentId);
-                    return (
-                      <div key={transaction.id} className="flex items-center justify-between py-2">
-                        <div className="flex items-center gap-3">
-                          <Avatar className="h-8 w-8">
-                            <AvatarImage src={student?.user.avatar} />
-                            <AvatarFallback>
-                              {student?.user.firstName[0]}{student?.user.lastName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="text-sm font-medium">
-                              {student?.user.firstName} {student?.user.lastName}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {transaction.feeStructureId === 'fee-1' ? 'Tuition Fee' : 'Other'}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant={transaction.status === 'paid' ? 'default' : 'secondary'}>
-                            {transaction.status}
-                          </Badge>
-                          <p className="text-sm font-medium">₦{transaction.amount}</p>
+                  {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
+                    <div key={transaction.id} className="flex items-center justify-between py-2">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback>
+                            {transaction.studentName ? transaction.studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="text-sm font-medium">
+                            {transaction.studentName || 'Unknown Student'}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {transaction.feeStructureName || 'School Fee'} • {transaction.term || 'N/A'}
+                          </p>
                         </div>
                       </div>
-                    );
-                  })}
+                      <div className="text-right">
+                        <Badge variant={transaction.status === 'paid' ? 'default' : 'secondary'}>
+                          {transaction.status || 'pending'}
+                        </Badge>
+                        <p className="text-sm font-medium">₦{transaction.totalAmount || 0}</p>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-muted-foreground">No recent transactions</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -198,26 +253,27 @@ export function ManagementDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {topPerformers.map((student, index) => (
-                <div key={student.id} className="flex items-center gap-3">
+              {topPerformers.length > 0 ? topPerformers.map((performer: any, index: number) => (
+                <div key={performer.id} className="flex items-center gap-3">
                   <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-medium">
                     {index + 1}
                   </div>
                   <Avatar className="h-10 w-10">
-                    <AvatarImage src={student.user.avatar} />
                     <AvatarFallback>
-                      {student.user.firstName[0]}{student.user.lastName[0]}
+                      {performer.name ? performer.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="font-medium">{student.user.firstName} {student.user.lastName}</p>
+                    <p className="font-medium">{performer.name || 'Unknown Student'}</p>
                     <p className="text-sm text-muted-foreground">
-                      Class {student.class}-{student.section} • Roll {student.rollNumber}
+                      Class {performer.class || 'N/A'}
                     </p>
                   </div>
-                  <Badge variant="secondary">A+</Badge>
+                  <Badge variant="secondary">{performer.grade || 'A+'}</Badge>
                 </div>
-              ))}
+              )) : (
+                <p className="text-sm text-muted-foreground">No top performers data available</p>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -235,37 +291,31 @@ export function ManagementDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {recentResults.map((result) => {
-                const student = mockStudents.find(s => s.id === result.studentId);
-                const teacher = mockStaff.find(s => s.id === result.teacherId);
-
-                return (
-                  <div key={result.id} className="flex items-center gap-3 p-3 border rounded-lg">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={student?.user.avatar} />
-                      <AvatarFallback>
-                        {student?.user.firstName[0]}{student?.user.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <p className="font-medium">
-                        {student?.user.firstName} {student?.user.lastName}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {result.subjectId === 'sub-1' ? 'Mathematics' :
-                         result.subjectId === 'sub-2' ? 'Physics' : 'Chemistry'} •
-                        Class {student?.class} • {result.grade}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-medium">{result.marks}/{result.maxMarks}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {teacher?.user.firstName}
-                      </p>
-                    </div>
+              {recentResults.length > 0 ? recentResults.map((result: any) => (
+                <div key={result.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                  <Avatar className="h-10 w-10">
+                    <AvatarFallback>
+                      {result.studentName ? result.studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {result.studentName || 'Unknown Student'}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {result.subjectName || 'Unknown Subject'} • {result.term || 'N/A'} • {result.grade || 'N/A'}
+                    </p>
                   </div>
-                );
-              })}
+                  <div className="text-right">
+                    <p className="text-sm font-medium">{result.marksObtained || 0}/{result.totalMarks || 100}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {result.uploadedBy || 'System'}
+                    </p>
+                  </div>
+                </div>
+              )) : (
+                <p className="text-sm text-muted-foreground">No recent results available</p>
+              )}
             </div>
           </CardContent>
         </Card>

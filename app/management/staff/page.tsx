@@ -1,12 +1,14 @@
+'use client';
+
 import ProtectedRoute from '@/components/protected-route';
 import AppLayout from '@/components/app-layout';
-import { ManagementDashboard } from '@/components/dashboards/management-dashboard';
+import { StaffManagementContent } from '../../dashboard/management/staff/staff-content';
 
-export default function ManagementDashboardPage() {
+export default function StaffManagementPage() {
   return (
     <ProtectedRoute allowedRoles={['management', 'admin']}>
       <AppLayout>
-        <ManagementDashboard />
+        <StaffManagementContent />
       </AppLayout>
     </ProtectedRoute>
   );

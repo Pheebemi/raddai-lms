@@ -213,6 +213,7 @@ export const resultsApi = {
       teacherId: data.uploaded_by?.toString() || '',
       createdAt: data.upload_date,
       updatedAt: data.upload_date,
+      payment_status: data.payment_status || false,
     };
   },
 
@@ -258,6 +259,7 @@ export const resultsApi = {
       teacherId: data.uploaded_by?.toString() || '',
       createdAt: data.upload_date,
       updatedAt: data.upload_date,
+      payment_status: data.payment_status || false,
     };
   },
 
@@ -439,8 +441,11 @@ export const feesApi = {
     return items.map(item => ({
       id: item.id.toString(),
       studentId: item.student.toString(),
+      studentName: item.student_name,
       feeStructureId: item.fee_structure.toString(),
-      amount: parseFloat(item.amount_paid),
+      feeStructureName: item.fee_type_name,
+      amount: parseFloat(item.amount_paid || 0),
+      totalAmount: parseFloat(item.total_amount || item.amount_paid || 0),
       status: item.status as 'paid' | 'pending' | 'overdue' | 'partial',
       paymentDate: item.payment_date,
       dueDate: item.due_date,
@@ -667,6 +672,32 @@ export const usersApi = {
         rollNumber: 0,
         admissionDate: child.admission_date,
       })) || [],
+    }));
+  },
+};
+
+// Classes API
+export const classesApi = {
+  getAll: async (): Promise<Class[]> => {
+    const response = await fetch(`${API_BASE_URL}/classes/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    const results = data.results || data;
+
+    // Convert Django format to frontend format
+    return results.map((item: any) => ({
+      id: item.id.toString(),
+      name: item.name,
+      grade: item.grade,
+      section: item.section,
+      academicYear: item.academic_year_name,
+      academicYearId: item.academic_year.toString(),
+      classTeacher: item.class_teacher?.toString(),
+      classTeacherName: item.class_teacher_name,
+      studentCount: item.student_count || 0,
     }));
   },
 };
