@@ -235,7 +235,24 @@ export function StaffManagementContent() {
                 <div>
                   <p className="text-muted-foreground">Class Assignment</p>
                   <div className="flex items-center gap-2">
-                    <p className="font-medium">{staffMember.assignedClasses?.length || 0} classes</p>
+                    <div className="flex-1">
+                      {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {staffMember.assignedClasses.slice(0, 2).map((className, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {className}
+                            </Badge>
+                          ))}
+                          {staffMember.assignedClasses.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{staffMember.assignedClasses.length - 2} more
+                            </Badge>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="font-medium text-muted-foreground">No classes assigned</p>
+                      )}
+                    </div>
                     <Dialog>
                       <DialogTrigger asChild>
                         <Button size="sm" variant="outline" className="h-6 px-2">
