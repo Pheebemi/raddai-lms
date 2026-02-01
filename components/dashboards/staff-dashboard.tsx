@@ -27,8 +27,8 @@ import {
   GraduationCap,
   Trophy
 } from 'lucide-react';
-import { usersApi, resultsApi, rankingsApi, handleApiError } from '@/lib/api';
-import { Student, Result, Staff, ClassRanking, StudentRanking } from '@/types';
+import { usersApi, resultsApi, rankingsApi, announcementsApi, handleApiError } from '@/lib/api';
+import { Student, Result, Staff, ClassRanking, StudentRanking, Announcement } from '@/types';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 

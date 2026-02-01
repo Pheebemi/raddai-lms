@@ -166,7 +166,7 @@ export interface Announcement {
   title: string;
   content: string;
   type: 'general' | 'academic' | 'fee' | 'event' | 'emergency';
-  priority: 'low' | 'medium' | 'high';
+  priority: 'low' | 'medium' | 'high' | 'urgent';
   targetRoles: UserRole[];
   targetClasses?: string[];
   createdBy: string;

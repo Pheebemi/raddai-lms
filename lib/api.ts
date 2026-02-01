@@ -1,4 +1,4 @@
-import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, Student, Staff, Parent } from '@/types';
+import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, Student, Staff, Parent, Class } from '@/types';
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -112,21 +112,68 @@ export const announcementsApi = {
     const response = await fetch(`${API_BASE_URL}/announcements/`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Handle paginated response
+    let items: any[] = [];
+    if (Array.isArray(data)) {
+      items = data;
+    } else if (data && typeof data === 'object' && data.results) {
+      // Paginated response
+      items = data.results;
+    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
+      // Empty object response
+      items = [];
+    } else {
+      console.error('Unexpected response format from announcements API, got:', data);
+      throw new Error('Invalid response format from server');
+    }
 
     // Convert Django format to frontend format
-    return data.map(item => ({
+    return items.map(item => ({
       id: item.id.toString(),
       title: item.title,
       content: item.content,
       type: 'general' as const, // Django doesn't have type field
-      priority: item.priority as 'low' | 'medium' | 'high',
+      priority: item.priority as 'low' | 'medium' | 'high' | 'urgent',
       targetRoles: [] as UserRole[], // Would need to derive from Django fields
       createdBy: item.created_by_name,
       createdAt: item.created_at,
       expiresAt: item.expires_at,
       isRead: false, // Frontend state
     }));
+  },
+
+  create: async (announcementData: {
+    title: string;
+    content: string;
+    priority: string;
+    for_students: boolean;
+    for_parents: boolean;
+    for_staff: boolean;
+    for_management: boolean;
+    expires_at?: string;
+  }): Promise<Announcement> => {
+    const response = await fetch(`${API_BASE_URL}/announcements/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(announcementData),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    // Convert response to Announcement format
+    return {
+      id: data.id.toString(),
+      title: data.title,
+      content: data.content,
+      type: 'general' as const,
+      priority: data.priority as 'low' | 'medium' | 'high' | 'urgent',
+      targetRoles: [],
+      createdBy: data.created_by_name,
+      createdAt: data.created_at,
+      expiresAt: data.expires_at,
+      isRead: false,
+    };
   },
 };
 
