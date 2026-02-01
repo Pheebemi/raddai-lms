@@ -44,6 +44,10 @@ export function FinanceManagementContent() {
           feesApi.getPayments()
         ]);
 
+        console.log('Dashboard stats:', dashboardStats);
+        console.log('Total revenue:', dashboardStats.totalRevenue);
+        console.log('Pending fees:', dashboardStats.pendingFees);
+
         setStats(dashboardStats);
         setTransactions(feeTransactions);
       } catch (error) {
@@ -80,11 +84,28 @@ export function FinanceManagementContent() {
     );
   }
 
-  // Calculate financial metrics
-  const totalRevenue = stats.totalRevenue || 0;
-  const pendingFees = stats.pendingFees || 0;
+  // Calculate financial metrics from transactions data (more reliable)
+  const totalRevenueFromTransactions = transactions
+    .filter(t => t.status === 'paid')
+    .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
+
+  const pendingFeesFromTransactions = transactions
+    .filter(t => t.status === 'pending' || t.status === 'overdue')
+    .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
+
+  // Use transaction-based calculations as primary, fallback to dashboard stats
+  const totalRevenue = totalRevenueFromTransactions || Number(stats?.totalRevenue) || 0;
+  const pendingFees = pendingFeesFromTransactions || Number(stats?.pendingFees) || 0;
   const totalExpected = totalRevenue + pendingFees;
   const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
+
+  console.log('Financial calculations:', {
+    totalRevenueFromTransactions,
+    pendingFeesFromTransactions,
+    totalRevenue,
+    pendingFees,
+    statsRevenue: stats?.totalRevenue
+  });
 
   // Group transactions by status
   const paidTransactions = transactions.filter(t => t.status === 'paid');
@@ -151,7 +172,7 @@ export function FinanceManagementContent() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{(typeof totalRevenue === 'number' ? totalRevenue : 0).toLocaleString()}</div>
             <p className="text-xs text-muted-foreground flex items-center">
               <TrendingUp className="h-3 w-3 mr-1 text-green-600" />
               +12% from last month
