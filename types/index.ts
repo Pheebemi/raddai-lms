@@ -202,6 +202,27 @@ export interface NotificationItem {
   actionUrl?: string;
 }
 
+// Rankings Types
+export interface ClassRanking {
+  rankings: StudentRanking[];
+  total_students: number;
+  class_info: {
+    class_id: string;
+    term: string;
+    academic_year: string;
+  };
+}
+
+export interface StudentRanking {
+  student_id: string | number;
+  student_name: string;
+  position: number;
+  total_marks: number;
+  total_max_marks: number;
+  average_percentage: number;
+  subjects: { subject_name: string; percentage: number; grade: string }[];
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   data: T;

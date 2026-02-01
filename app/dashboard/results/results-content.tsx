@@ -132,7 +132,7 @@ export function ResultsContent() {
   // Get student's ranking position
   const getStudentRanking = (): StudentRanking | null => {
     if (!classRankings || !user) return null;
-    return classRankings.rankings.find(ranking => ranking.student_id === user.id) || null;
+    return classRankings.rankings.find((ranking: StudentRanking) => ranking.student_id === user.id) || null;
   };
 
   // Group results by term
@@ -165,31 +165,40 @@ export function ResultsContent() {
         }
 
         // Get student position from rankings API for the specific term and year
-        const academicYear = termResults[0]?.academicYear;
-        if (academicYear && user?.profile?.current_class) {
+        const academicYearId = termResults[0]?.academicYearId?.toString();
+        const classId = user?.profile?.current_class_id?.toString();
+        // Fallback: if current_class_id doesn't exist yet, try to get class ID from classes API by name
+        let finalClassId = classId;
+        if (!finalClassId && user?.profile?.current_class) {
           try {
-            const classId = user.profile.current_class.id?.toString();
-            console.log('PNG download - Class ID:', classId);
-            console.log('PNG download - Current class object:', user.profile.current_class);
-            if (!classId) {
-              console.error('No class ID available for PNG rankings');
-              studentPosition = 'N/A';
-            } else {
-              // Load rankings specifically for this term and year
-              console.log('Loading PNG rankings for:', { classId, term, academicYear });
-              const termRankings = await rankingsApi.getClassRankings(
-                classId,
-                term,
-                academicYear
-              );
+            // This is a temporary fallback - will be removed once backend is restarted
+            console.log('Fallback: current_class_id not available, using current_class name:', user.profile.current_class);
+            // For now, we'll skip rankings if current_class_id is not available
+            finalClassId = null;
+          } catch (e) {
+            console.log('Fallback failed:', e);
+            finalClassId = null;
+          }
+        }
 
-              const studentRanking = termRankings.rankings.find(ranking => ranking.student_id === user.id);
-              if (studentRanking) {
-                const position = studentRanking.position;
-                studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
-              } else {
-                studentPosition = 'N/A';
-              }
+        if (academicYearId && finalClassId) {
+          try {
+            const termRankings = await rankingsApi.getClassRankings(
+              classId,
+              term,
+              academicYearId
+            );
+
+            // Match by student profile ID (backend returns student.id which is the Student model ID)
+            const studentRanking = termRankings.rankings.find(
+              (r: StudentRanking) => String(r.student_id) === String(user.profile?.id) ||
+                     String(r.student_id) === String(user.id)
+            );
+            if (studentRanking) {
+              const position = studentRanking.position;
+              studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
+            } else {
+              studentPosition = 'N/A';
             }
           } catch (rankingError) {
             console.log('Could not load rankings for PNG:', rankingError);
@@ -487,7 +496,7 @@ export function ResultsContent() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {classRankings.rankings.slice(0, 10).map((ranking, index) => (
+              {classRankings.rankings.slice(0, 10).map((ranking: StudentRanking, index: number) => (
                 <div
                   key={ranking.student_id}
                   className={`flex items-center justify-between p-3 rounded-lg border ${
@@ -595,7 +604,9 @@ export function ResultsContent() {
                 <p className="text-muted-foreground">
                   {selectedTerm !== 'all' || selectedYear !== 'all'
                     ? 'Try adjusting your filters to see more results.'
-                    : 'Your academic results will appear here once they are published.'}
+                    : user?.role === 'student' || user?.role === 'parent'
+                      ? 'Your academic results will appear here once the school fees for that term have been paid and results are published.'
+                      : 'Your academic results will appear here once they are published.'}
                 </p>
               </div>
             </CardContent>
