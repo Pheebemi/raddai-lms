@@ -81,6 +81,7 @@ export interface Result {
   term: 'first' | 'second' | 'third' | 'final';
   academicYear: string;
   academicYearId?: string;
+  payment_status: boolean;
   // CA Scores (10 marks each)
   ca1_score: number;
   ca2_score: number;

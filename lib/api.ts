@@ -150,6 +150,7 @@ export const resultsApi = {
       term: item.term as 'first' | 'second' | 'third' | 'final',
       academicYear: item.academic_year_name,
       academicYearId: item.academic_year.toString(),
+      payment_status: item.payment_status || false,
       // CA Scores
       ca1_score: parseFloat(item.ca1_score) || 0,
       ca2_score: parseFloat(item.ca2_score) || 0,

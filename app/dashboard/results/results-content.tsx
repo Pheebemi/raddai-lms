@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, TrendingUp, Calendar, Download, Filter, Trophy } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock } from 'lucide-react';
 import { resultsApi, announcementsApi, usersApi, rankingsApi, handleApiError } from '@/lib/api';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
@@ -151,6 +151,12 @@ export function ResultsContent() {
   // Function to generate and download PNG result sheet
   const downloadResultAsPNG = async (term: string, termResults: Result[]) => {
     if (!user) return;
+
+    // Check if fees are paid for this term
+    if (!termResults.some(result => result.payment_status)) {
+      toast.error('You cannot download results for unpaid terms. Please pay your school fees first.');
+      return;
+    }
 
     setIsDownloading(term);
     try {
@@ -546,9 +552,10 @@ export function ResultsContent() {
                 <h2 className="text-2xl font-bold">{term.charAt(0).toUpperCase() + term.slice(1)} Term - {termResults[0]?.academicYear}</h2>
                 <Button
                   onClick={() => downloadResultAsPNG(term, termResults)}
-                  disabled={isDownloading === term}
+                  disabled={isDownloading === term || !termResults.some(result => result.payment_status)}
                   variant="outline"
                   size="sm"
+                  title={!termResults.some(result => result.payment_status) ? 'Pay fees to download results' : undefined}
                 >
                   <Download className="mr-2 h-4 w-4" />
                   {isDownloading === term ? 'Generating...' : 'Download PNG'}
@@ -556,7 +563,8 @@ export function ResultsContent() {
               </div>
               <Card>
                 <CardContent className="p-6">
-                  <Table>
+                  {termResults.some(result => result.payment_status) ? (
+                    <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead>Subject</TableHead>
@@ -591,6 +599,15 @@ export function ResultsContent() {
                       ))}
                     </TableBody>
                   </Table>
+                  ) : (
+                    <div className="text-center py-8">
+                      <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                      <h3 className="text-lg font-medium mb-2">Results Locked</h3>
+                      <p className="text-muted-foreground">
+                        You haven't paid the school fees for this term. Please pay your fees to view your results.
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -604,9 +621,7 @@ export function ResultsContent() {
                 <p className="text-muted-foreground">
                   {selectedTerm !== 'all' || selectedYear !== 'all'
                     ? 'Try adjusting your filters to see more results.'
-                    : user?.role === 'student' || user?.role === 'parent'
-                      ? 'Your academic results will appear here once the school fees for that term have been paid and results are published.'
-                      : 'Your academic results will appear here once they are published.'}
+                    : 'Your academic results will appear here once they are published.'}
                 </p>
               </div>
             </CardContent>
