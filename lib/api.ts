@@ -387,6 +387,30 @@ export const feeStructureApi = {
   },
 };
 
+// Rankings API
+export const rankingsApi = {
+  getClassRankings: async (classId: string, term: string, academicYear: string) => {
+    const params = new URLSearchParams({
+      class_id: classId,
+      term: term,
+      academic_year: academicYear,
+    });
+
+    const url = `${API_BASE_URL}/rankings/class/?${params}`;
+    console.log('Fetching rankings from:', url);
+
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+
+    console.log('Rankings API response status:', response.status);
+
+    const result = await handleApiResponse<any>(response);
+    console.log('Rankings API response data:', result);
+    return result;
+  },
+};
+
 // Fee API
 export const feesApi = {
   getPayments: async (): Promise<FeeTransaction[]> => {

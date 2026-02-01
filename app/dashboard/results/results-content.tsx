@@ -16,9 +16,9 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, TrendingUp, Calendar, Download, Filter } from 'lucide-react';
-import { resultsApi, announcementsApi, usersApi, handleApiError } from '@/lib/api';
-import { Result, Student } from '@/types';
+import { FileText, TrendingUp, Calendar, Download, Filter, Trophy } from 'lucide-react';
+import { resultsApi, announcementsApi, usersApi, rankingsApi, handleApiError } from '@/lib/api';
+import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 
 export function ResultsContent() {
@@ -29,6 +29,8 @@ export function ResultsContent() {
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const [classRankings, setClassRankings] = useState<ClassRanking | null>(null);
+  const [showRankings, setShowRankings] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -60,6 +62,35 @@ export function ResultsContent() {
     setFilteredResults(filtered);
   }, [results, selectedTerm, selectedYear]);
 
+  // Load class rankings when filters change
+  useEffect(() => {
+    const loadRankings = async () => {
+      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class) {
+        try {
+          const rankings = await rankingsApi.getClassRankings(
+            user.profile.current_class.id?.toString() || '',
+            selectedTerm,
+            selectedYear
+          );
+          setClassRankings(rankings);
+        } catch (error) {
+          console.error('Failed to load rankings:', error);
+          setClassRankings(null);
+        }
+      } else {
+        setClassRankings(null);
+      }
+    };
+
+    loadRankings();
+  }, [selectedTerm, selectedYear, user?.profile?.current_class]);
+
+  // Get student's ranking position
+  const getStudentRanking = (): StudentRanking | null => {
+    if (!classRankings || !user) return null;
+    return classRankings.rankings.find(ranking => ranking.student_id === user.id) || null;
+  };
+
   // Group results by term
   const resultsByTerm = filteredResults.reduce((acc, result) => {
     if (!acc[result.term]) {
@@ -79,59 +110,30 @@ export function ResultsContent() {
 
     setIsDownloading(term);
     try {
-      // Fetch student's class information
+      // Fetch student's class information and position
       let studentClass = 'Not Available';
       let studentPosition = 'N/A';
 
       try {
-        const students = await resultsApi.getList();
-        const currentStudentResults = students.filter(r => r.studentId === user.id && r.term === term && r.academicYear === termResults[0]?.academicYear);
+        // Get student class from profile
+        if (user?.profile?.current_class) {
+          studentClass = user.profile.current_class;
+        }
 
-        if (currentStudentResults.length > 0) {
-          // For now, we'll use a mock approach - in real implementation, we'd need to get all students in the same class
-          // and calculate position based on their average scores
-          const currentStudentAverage = currentStudentResults.reduce((sum, r) => sum + r.marks_obtained, 0) / currentStudentResults.length;
-
-          // Calculate actual position by comparing with all students in the same term
-          const allResults = await resultsApi.getList();
-          const termResultsAll = allResults.filter(r =>
-            r.term === term && r.academicYear === termResults[0]?.academicYear
-          );
-
-          // Group results by student and calculate averages
-          const studentAverages: { [key: string]: number } = {};
-          termResultsAll.forEach(result => {
-            if (!studentAverages[result.studentId]) {
-              studentAverages[result.studentId] = 0;
-            }
-            studentAverages[result.studentId] += result.marks_obtained;
-          });
-
-          // Calculate average for each student
-          Object.keys(studentAverages).forEach(studentId => {
-            const studentResults = termResultsAll.filter(r => r.studentId === studentId);
-            studentAverages[studentId] = studentAverages[studentId] / studentResults.length;
-          });
-
-          // Calculate current student's position
-          const sortedAverages = Object.values(studentAverages).sort((a, b) => b - a); // Descending order
-          const position = sortedAverages.indexOf(currentStudentAverage) + 1;
-          studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
-
-          // Mock class - in real app, this would come from student profile
-          // Get actual class from student data
-          try {
-            const allStudents = await usersApi.getStudents();
-            const currentStudent = allStudents.find(s => s.user.id === user.id);
-            if (currentStudent) {
-              studentClass = currentStudent.class;
-            }
-          } catch (error) {
-            console.log('Could not fetch student class:', error);
+        // Get student position from rankings API
+        if (classRankings) {
+          const studentRanking = getStudentRanking();
+          if (studentRanking) {
+            const position = studentRanking.position;
+            studentPosition = `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`;
           }
+        } else {
+          // Fallback to N/A if rankings not loaded
+          studentPosition = 'N/A';
         }
       } catch (error) {
-        console.log('Could not fetch student class data:', error);
+        console.log('Could not fetch student position data:', error);
+        studentPosition = 'N/A';
       }
       // Create canvas for the result sheet
       const canvas = document.createElement('canvas');
@@ -347,6 +349,14 @@ export function ResultsContent() {
           <p className="text-muted-foreground">View your academic performance across all subjects</p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setShowRankings(!showRankings)}
+            disabled={!classRankings}
+          >
+            <Trophy className="mr-2 h-4 w-4" />
+            {showRankings ? 'Hide Rankings' : 'Show Rankings'}
+          </Button>
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Download Report
@@ -395,6 +405,61 @@ export function ResultsContent() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Class Rankings */}
+      {showRankings && classRankings && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Class Rankings - {classRankings.class_info.term.charAt(0).toUpperCase() + classRankings.class_info.term.slice(1)} Term
+            </CardTitle>
+            <CardDescription>
+              Your position: {getStudentRanking()?.position || 'N/A'} out of {classRankings.total_students} students
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {classRankings.rankings.slice(0, 10).map((ranking, index) => (
+                <div
+                  key={ranking.student_id}
+                  className={`flex items-center justify-between p-3 rounded-lg border ${
+                    ranking.student_id === user?.id
+                      ? 'bg-blue-50 border-blue-200'
+                      : 'bg-gray-50 border-gray-200'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      ranking.position === 1 ? 'bg-yellow-500 text-white' :
+                      ranking.position === 2 ? 'bg-gray-400 text-white' :
+                      ranking.position === 3 ? 'bg-orange-500 text-white' :
+                      'bg-gray-200 text-gray-700'
+                    }`}>
+                      {ranking.position}
+                    </div>
+                    <div>
+                      <p className="font-medium">{ranking.student_name}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {ranking.subjects.length} subjects • {ranking.average_percentage.toFixed(1)}%
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold">{ranking.total_marks}/{ranking.total_max_marks}</p>
+                    <p className="text-sm text-muted-foreground">Total Marks</p>
+                  </div>
+                </div>
+              ))}
+              {classRankings.rankings.length > 10 && (
+                <p className="text-center text-sm text-muted-foreground">
+                  And {classRankings.rankings.length - 10} more students...
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Results by Term */}
       <div className="space-y-6">

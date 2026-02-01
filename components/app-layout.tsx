@@ -29,7 +29,8 @@ import {
   Upload,
   CreditCard,
   Receipt,
-  MessageSquare
+  MessageSquare,
+  Trophy
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { UserRole, NavItem } from '@/types';
@@ -198,6 +199,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       ...baseItems,
       { title: 'My Classes', href: '/staff/classes', icon: 'BookOpen' },
       { title: 'Upload Results', href: '/dashboard/results/upload', icon: 'Upload' },
+      { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Student Performance', href: '/staff/performance', icon: 'BarChart3' },
       { title: 'Messages', href: '/messages', icon: 'MessageSquare' },
@@ -206,6 +208,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     student: [
       ...baseItems,
       { title: 'My Results', href: '/dashboard/results', icon: 'FileText' },
+      { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Assignments', href: '/assignments', icon: 'BookOpen' },
@@ -216,6 +219,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       ...baseItems,
       { title: 'Children', href: '/parent/children', icon: 'Users' },
       { title: 'Results', href: '/dashboard/results', icon: 'FileText' },
+      { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Messages', href: '/messages', icon: 'MessageSquare' },
@@ -242,6 +246,7 @@ const iconMap = {
   Receipt,
   MessageSquare,
   User,
+  Trophy,
 };
 
 interface AppLayoutProps {

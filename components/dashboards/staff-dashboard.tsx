@@ -24,10 +24,11 @@ import {
   Clock,
   Calendar,
   AlertTriangle,
-  GraduationCap
+  GraduationCap,
+  Trophy
 } from 'lucide-react';
-import { usersApi, resultsApi, handleApiError } from '@/lib/api';
-import { Student, Result, Staff } from '@/types';
+import { usersApi, resultsApi, rankingsApi, handleApiError } from '@/lib/api';
+import { Student, Result, Staff, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 import { useState, useEffect } from 'react';
 
@@ -36,6 +37,7 @@ function useStaffDashboardData() {
   const [students, setStudents] = useState<Student[]>([]);
   const [staffProfile, setStaffProfile] = useState<Staff | null>(null);
   const [results, setResults] = useState<Result[]>([]);
+  const [classRankings, setClassRankings] = useState<ClassRanking[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,11 +50,14 @@ function useStaffDashboardData() {
         setError(null);
 
         // Fetch staff profile, students, and results
+        console.log('Loading staff dashboard data...');
         const [staffData, studentsData, resultsData] = await Promise.all([
-          usersApi.getStaff().catch(() => []),
-          usersApi.getStudents().catch(() => []),
-          resultsApi.getList().catch(() => []),
+          usersApi.getStaff().catch((error) => { console.error('Failed to load staff:', error); return []; }),
+          usersApi.getStudents().catch((error) => { console.error('Failed to load students:', error); return []; }),
+          resultsApi.getList().catch((error) => { console.error('Failed to load results:', error); return []; }),
         ]);
+
+        console.log(`Loaded: ${staffData.length} staff, ${studentsData.length} students, ${resultsData.length} results`);
 
         // Find the current user's staff profile
         const currentStaff = staffData.find((s: Staff) => s.user.id === user.id);
@@ -60,6 +65,73 @@ function useStaffDashboardData() {
 
         setStudents(studentsData);
         setResults(resultsData);
+
+        // Load rankings for staff's classes
+        if (staffData.length > 0 && studentsData.length > 0 && resultsData.length > 0) {
+          const currentStaff = staffData.find((s: Staff) => s.user.id === user.id);
+          if (currentStaff && currentStaff.assignedClasses && currentStaff.assignedClasses.length > 0) {
+            console.log('Staff assigned classes:', currentStaff.assignedClasses);
+            try {
+              // Get unique classes for this staff
+              const staffClasses = [...new Set(studentsData
+                .filter(student => currentStaff.assignedClasses!.some(assignedClass =>
+                  student.class.toLowerCase().includes(assignedClass.toLowerCase())
+                ))
+                .map(student => ({
+                  id: student.id,
+                  name: student.class
+                }))
+              )];
+
+              console.log('Found staff classes:', staffClasses);
+
+              if (staffClasses.length > 0) {
+                // Get the most recent academic year from results
+                const academicYears = [...new Set(resultsData.map(result => result.academicYearId))];
+                const latestYearId = academicYears.sort((a, b) => parseInt(b) - parseInt(a))[0];
+
+                console.log('Available academic year IDs:', academicYears);
+                console.log('Using latest year ID:', latestYearId);
+
+                if (latestYearId) {
+                  // Load rankings for each of the staff's classes
+                  const rankingsPromises = staffClasses.slice(0, 2).map(async (classInfo) => { // Limit to first 2 classes for performance
+                    try {
+                      console.log(`Loading rankings for class: ${classInfo.name} (ID: ${classInfo.id}) with academic year ID: ${latestYearId}`);
+                      const rankings = await rankingsApi.getClassRankings(classInfo.id.toString(), 'first', latestYearId.toString());
+                      console.log(`Successfully loaded rankings for ${classInfo.name}:`, rankings.rankings?.length || 0, 'students');
+                      return {
+                        ...rankings,
+                        class_info: {
+                          ...rankings.class_info,
+                          class_name: classInfo.name
+                        }
+                      };
+                    } catch (error) {
+                      console.error(`Failed to load rankings for class ${classInfo.name}:`, error);
+                      return null;
+                    }
+                  });
+
+                  const rankingsResults = await Promise.all(rankingsPromises);
+                  const validRankings = rankingsResults.filter(ranking => ranking !== null);
+                  console.log(`Loaded ${validRankings.length} class rankings for staff dashboard`);
+                  setClassRankings(validRankings as ClassRanking[]);
+                }
+              }
+            } catch (rankingError) {
+              console.error('Failed to load rankings for staff dashboard:', rankingError);
+              // Don't fail the entire dashboard load if rankings fail
+              setClassRankings([]);
+            }
+          } else {
+            console.log('Staff has no assigned classes or no students/results data');
+            setClassRankings([]);
+          }
+        } else {
+          console.log('No staff data available');
+          setClassRankings([]);
+        }
       } catch (err) {
         setError(handleApiError(err));
       } finally {
@@ -74,6 +146,7 @@ function useStaffDashboardData() {
     students,
     staffProfile,
     results,
+    classRankings,
     isLoading,
     error,
   };
@@ -81,7 +154,7 @@ function useStaffDashboardData() {
 
 export function StaffDashboard() {
   const { user } = useAuth();
-  const { students, staffProfile, results, isLoading, error } = useStaffDashboardData();
+  const { students, staffProfile, results, classRankings, isLoading, error } = useStaffDashboardData();
 
   // Filter students for this staff member (students in their classes)
   const assignedStudents = useMemo(() => {
@@ -214,6 +287,10 @@ export function StaffDashboard() {
           <Button>
             <Upload className="mr-2 h-4 w-4" />
             Upload Results
+          </Button>
+          <Button variant="outline">
+            <Trophy className="mr-2 h-4 w-4" />
+            View Rankings
           </Button>
           <Button variant="outline">
             <Calendar className="mr-2 h-4 w-4" />
@@ -463,6 +540,73 @@ export function StaffDashboard() {
         </CardContent>
       </Card>
 
+      {/* Class Rankings */}
+      {classRankings.length > 0 && classRankings.some(ranking => ranking.rankings.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trophy className="h-5 w-5" />
+              Class Rankings
+            </CardTitle>
+            <CardDescription>
+              Student performance rankings in your classes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {classRankings.map((ranking, index) => (
+                <div key={index}>
+                  <h3 className="text-lg font-semibold mb-4">
+                    {ranking.class_info.class_name || 'Class'} - {ranking.class_info.term.charAt(0).toUpperCase() + ranking.class_info.term.slice(1)} Term {ranking.class_info.academic_year}
+                  </h3>
+                  <div className="space-y-3">
+                  {ranking.rankings?.slice(0, 10).map((student, studentIndex) => (
+                    <div
+                      key={student.student_id}
+                      className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                          student.position === 1 ? 'bg-yellow-500 text-white' :
+                          student.position === 2 ? 'bg-gray-400 text-white' :
+                          student.position === 3 ? 'bg-orange-500 text-white' :
+                          'bg-gray-200 text-gray-700'
+                        }`}>
+                          {student.position}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm">{student.student_name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {student.subjects?.length || 0} subjects • {student.average_percentage?.toFixed(1) || '0.0'}%
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold">{student.total_marks || 0}/{student.total_max_marks || 0}</p>
+                        <p className="text-xs text-muted-foreground">Total Marks</p>
+                      </div>
+                    </div>
+                  ))}
+                  {(ranking.rankings?.length || 0) > 10 && (
+                    <p className="text-center text-sm text-muted-foreground">
+                      And {(ranking.rankings?.length || 0) - 10} more students...
+                    </p>
+                  )}
+                  {(ranking.rankings?.length || 0) === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <Trophy className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>No rankings available</p>
+                      <p className="text-sm">Add student results to see class rankings</p>
+                    </div>
+                  )}
+                </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Quick Actions */}
       <Card>
         <CardHeader>
@@ -478,16 +622,16 @@ export function StaffDashboard() {
               Upload Results
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2">
+              <Trophy className="h-6 w-6" />
+              Class Rankings
+            </Button>
+            <Button variant="outline" className="h-20 flex-col gap-2">
               <Users className="h-6 w-6" />
               View Students
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2">
               <Calendar className="h-6 w-6" />
               Mark Attendance
-            </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <BookOpen className="h-6 w-6" />
-              Lesson Plans
             </Button>
           </div>
         </CardContent>
