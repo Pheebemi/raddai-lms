@@ -30,7 +30,8 @@ import {
   CreditCard,
   Receipt,
   MessageSquare,
-  Trophy
+  Trophy,
+  Heart
 } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { UserRole, NavItem } from '@/types';
@@ -183,6 +184,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         icon: 'Users',
       },
       {
+        title: 'Parents',
+        href: '/management/parents',
+        icon: 'Heart',
+      },
+      {
         title: 'Finance',
         href: '/management/finance',
         icon: 'DollarSign',
@@ -247,6 +253,7 @@ const iconMap = {
   MessageSquare,
   User,
   Trophy,
+  Heart,
 };
 
 interface AppLayoutProps {
