@@ -848,6 +848,71 @@ export const usersApi = {
     }
   },
 
+  // Update an existing staff member (basic details + class assignments)
+  updateStaff: async (
+    id: string,
+    data: {
+      userId: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      staffId?: string;
+      designation?: string;
+      joiningDate?: string;
+      classIds?: string[];
+    }
+  ): Promise<Staff> => {
+    try {
+      // 1) Optionally update the linked auth user
+      const userPayload: any = {};
+      if (data.firstName !== undefined) userPayload.first_name = data.firstName;
+      if (data.lastName !== undefined) userPayload.last_name = data.lastName;
+      if (data.email !== undefined) userPayload.email = data.email;
+
+      if (Object.keys(userPayload).length > 0) {
+        const userResponse = await fetch(`${API_BASE_URL}/users/${data.userId}/`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(userPayload),
+        });
+        await handleApiResponse<any>(userResponse);
+      }
+
+      // 2) Update the staff profile
+      const staffPayload: any = {};
+      if (data.staffId !== undefined) staffPayload.staff_id = data.staffId;
+      if (data.designation !== undefined) staffPayload.designation = data.designation;
+      if (data.joiningDate !== undefined) staffPayload.joining_date = data.joiningDate;
+      if (data.classIds) {
+        staffPayload.assigned_classes = data.classIds;
+      }
+
+      const staffResponse = await fetch(`${API_BASE_URL}/staff/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(staffPayload),
+      });
+
+      const updatedStaff = await handleApiResponse<any>(staffResponse);
+
+      // Normalize into our Staff type
+      return {
+        id: updatedStaff.id.toString(),
+        user: convertDjangoUser(updatedStaff.user_details),
+        staffId: updatedStaff.staff_id,
+        designation: updatedStaff.designation,
+        department: updatedStaff.department || '',
+        assignedClasses: updatedStaff.assigned_classes?.map((c: any) => c.name) || [],
+        assignedSubjects: updatedStaff.subjects?.map((s: any) => s.name) || [],
+        joiningDate: updatedStaff.joining_date,
+        qualification: updatedStaff.qualification || '',
+      };
+    } catch (error) {
+      console.error('Error in updateStaff API:', error);
+      throw error;
+    }
+  },
+
   getStaff: async (): Promise<Staff[]> => {
     const response = await fetch(`${API_BASE_URL}/staff/`, {
       headers: getAuthHeaders(),

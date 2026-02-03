@@ -46,8 +46,6 @@ export function StaffManagementContent() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedDesignation, setSelectedDesignation] = useState<string>('all');
-  const [selectedStaffForAssignment, setSelectedStaffForAssignment] = useState<Staff | null>(null);
-  const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -60,6 +58,19 @@ export function StaffManagementContent() {
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0], // Today's date
+    classIds: [] as string[],
+  });
+
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingStaff, setEditingStaff] = useState<Staff | null>(null);
+  const [editStaffForm, setEditStaffForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    staffId: '',
+    designation: 'teacher',
+    joiningDate: new Date().toISOString().split('T')[0],
     classIds: [] as string[],
   });
 
@@ -144,6 +155,61 @@ export function StaffManagementContent() {
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const openEditDialog = (staffMember: Staff) => {
+    // Map assigned class names back to their IDs for the multiselect
+    const classIds = classes
+      .filter((cls) => staffMember.assignedClasses?.includes(cls.name))
+      .map((cls) => cls.id);
+
+    setEditingStaff(staffMember);
+    setEditStaffForm({
+      firstName: staffMember.user.firstName,
+      lastName: staffMember.user.lastName,
+      email: staffMember.user.email,
+      staffId: staffMember.staffId,
+      designation: staffMember.designation || 'teacher',
+      joiningDate: staffMember.joiningDate
+        ? staffMember.joiningDate.split('T')[0]
+        : new Date().toISOString().split('T')[0],
+      classIds,
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateStaff = async () => {
+    if (!editingStaff) return;
+
+    if (!editStaffForm.firstName || !editStaffForm.lastName || !editStaffForm.staffId) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const updated = await usersApi.updateStaff(editingStaff.id, {
+        userId: editingStaff.user.id,
+        firstName: editStaffForm.firstName,
+        lastName: editStaffForm.lastName,
+        email: editStaffForm.email || undefined,
+        staffId: editStaffForm.staffId,
+        designation: editStaffForm.designation,
+        joiningDate: editStaffForm.joiningDate,
+        classIds: editStaffForm.classIds,
+      });
+
+      setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setIsEditOpen(false);
+      setEditingStaff(null);
+      toast.success('Staff member updated successfully.');
+    } catch (error: any) {
+      console.error('Failed to update staff:', error);
+      const errorMessage = error?.message || 'Failed to update staff member.';
+      toast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -450,6 +516,147 @@ export function StaffManagementContent() {
         </CardContent>
       </Card>
 
+      {/* Edit Staff Dialog */}
+      <Dialog open={isEditOpen} onOpenChange={(open) => {
+        setIsEditOpen(open);
+        if (!open) {
+          setEditingStaff(null);
+        }
+      }}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Edit Staff Member</DialogTitle>
+            <DialogDescription>
+              Update staff member details and class assignments.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">First Name *</label>
+                <Input
+                  value={editStaffForm.firstName}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, firstName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last Name *</label>
+                <Input
+                  value={editStaffForm.lastName}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={editStaffForm.email}
+                onChange={(e) => setEditStaffForm((s) => ({ ...s, email: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Staff ID *</label>
+                <Input
+                  value={editStaffForm.staffId}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, staffId: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Designation *</label>
+                <Select
+                  value={editStaffForm.designation}
+                  onValueChange={(value) => setEditStaffForm((s) => ({ ...s, designation: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select designation" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="teacher">Teacher</SelectItem>
+                    <SelectItem value="principal">Principal</SelectItem>
+                    <SelectItem value="vice_principal">Vice Principal</SelectItem>
+                    <SelectItem value="administrator">Administrator</SelectItem>
+                    <SelectItem value="librarian">Librarian</SelectItem>
+                    <SelectItem value="counselor">Counselor</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Joining Date</label>
+                <Input
+                  type="date"
+                  value={editStaffForm.joiningDate}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, joiningDate: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Assign to Classes</label>
+                <div className="max-h-40 overflow-y-auto rounded-md border px-3 py-2 space-y-1">
+                  {classes.length === 0 && (
+                    <p className="text-xs text-muted-foreground">No classes available.</p>
+                  )}
+                  {classes.map((cls) => {
+                    const checked = editStaffForm.classIds.includes(cls.id);
+                    return (
+                      <label
+                        key={cls.id}
+                        className="flex items-center justify-between gap-2 text-xs cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            className="h-3 w-3"
+                            checked={checked}
+                            onChange={(e) => {
+                              const isChecked = e.target.checked;
+                              setEditStaffForm((s) => ({
+                                ...s,
+                                classIds: isChecked
+                                  ? [...s.classIds, cls.id]
+                                  : s.classIds.filter((id) => id !== cls.id),
+                              }));
+                            }}
+                          />
+                          <span>
+                            {cls.name} • {cls.academicYear}
+                          </span>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Update the classes this staff member is assigned to.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditOpen(false);
+                setEditingStaff(null);
+              }}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateStaff} disabled={isUpdating || !editingStaff}>
+              {isUpdating ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Staff Table */}
       <Card>
         <CardHeader>
@@ -546,7 +753,12 @@ export function StaffManagementContent() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openEditDialog(staffMember);
+                          }}
+                        >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit Staff
                         </DropdownMenuItem>
