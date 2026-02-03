@@ -129,13 +129,13 @@ export function RankingsContent() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `class-rankings-${selectedTerm}-term-${selectedYear}.csv`;
+    a.download = `rankings-${selectedTerm}-term-${selectedYear}.csv`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
 
-    toast.success('Rankings exported successfully!');
+    toast.success(`${selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1)} term rankings exported successfully!`);
   };
 
   if (isLoading && !rankings) {
@@ -179,7 +179,7 @@ export function RankingsContent() {
           {rankings && (
             <Button variant="outline" onClick={exportRankings}>
               <Download className="mr-2 h-4 w-4" />
-              Export CSV
+              Export Rankings CSV
             </Button>
           )}
         </div>

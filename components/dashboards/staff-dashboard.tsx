@@ -20,7 +20,6 @@ import {
   Users,
   BookOpen,
   Upload,
-  Download,
   TrendingUp,
   Clock,
   Calendar,
@@ -227,25 +226,6 @@ export function StaffDashboard() {
     ? Math.round(results.reduce((sum, r) => sum + r.percentage, 0) / results.length)
     : 0;
 
-  // Export all results that this staff member can access
-  const exportAllResults = async () => {
-    try {
-      const blob = await resultsApi.exportResults();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `all-results-export-${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-
-      toast.success('All results exported successfully!');
-    } catch (error) {
-      console.error('Export failed:', error);
-      toast.error('Failed to export results.');
-    }
-  };
 
   if (!user) return null;
 
@@ -312,10 +292,6 @@ export function StaffDashboard() {
           <Button>
             <Upload className="mr-2 h-4 w-4" />
             Upload Results
-          </Button>
-          <Button variant="outline" onClick={exportAllResults}>
-            <Download className="mr-2 h-4 w-4" />
-            Export Results
           </Button>
           <Button variant="outline">
             <Trophy className="mr-2 h-4 w-4" />

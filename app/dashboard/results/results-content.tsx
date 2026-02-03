@@ -161,23 +161,29 @@ export function ResultsContent() {
       return;
     }
 
+    if (selectedTerm === 'all') {
+      toast.error('Please select a specific term to export results.');
+      return;
+    }
+
     setIsExporting(true);
     try {
-      const filters: any = {};
-      if (selectedTerm !== 'all') filters.term = selectedTerm;
+      const filters: any = {
+        term: selectedTerm
+      };
       if (selectedYear !== 'all') filters.academic_year = selectedYear;
 
       const blob = await resultsApi.exportResults(filters);
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `results-export-${new Date().toISOString().split('T')[0]}.csv`;
+      a.download = `${selectedTerm}-term-results-export-${new Date().toISOString().split('T')[0]}.csv`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
 
-      toast.success('Results exported successfully!');
+      toast.success(`${selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1)} term results exported successfully!`);
     } catch (error) {
       console.error('Export failed:', error);
       toast.error('Failed to export results.');
@@ -494,10 +500,10 @@ export function ResultsContent() {
             <Button
               variant="outline"
               onClick={exportResultsAsCSV}
-              disabled={isExporting}
+              disabled={isExporting || selectedTerm === 'all'}
             >
               <Download className="mr-2 h-4 w-4" />
-              {isExporting ? 'Exporting...' : 'Export Results CSV'}
+              {isExporting ? 'Exporting...' : `Export ${selectedTerm === 'all' ? 'Results' : selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1) + ' Term'} CSV`}
             </Button>
           )}
           <Button variant="outline">
