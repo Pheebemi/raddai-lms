@@ -9,6 +9,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Users,
   Search,
   Filter,
@@ -17,7 +31,10 @@ import {
   Phone,
   BookOpen,
   UserCheck,
-  Settings
+  Settings,
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { usersApi, classesApi } from '@/lib/api';
 import { Staff, Class } from '@/types';

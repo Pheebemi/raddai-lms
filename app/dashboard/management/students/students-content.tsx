@@ -17,6 +17,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   GraduationCap,
   Search,
   Filter,
@@ -381,7 +395,7 @@ export function StudentsManagementContent() {
         </CardContent>
       </Card>
 
-      {/* Students Grid */}
+      {/* Students Table */}
       {selectedClass === 'all' ? (
         <Card>
           <CardContent className="pt-6">
@@ -396,59 +410,92 @@ export function StudentsManagementContent() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-          {filteredStudents.map((student) => (
-            <Card key={student.id} className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
-              <CardHeader className="pb-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarImage src={student.user.avatar} />
-                    <AvatarFallback className="text-lg">
-                      {student.user.firstName[0]}{student.user.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-xl truncate">
-                      {student.user.firstName} {student.user.lastName}
-                    </CardTitle>
-                    <Badge variant="outline" className="mt-2 text-xs">
-                      {student.class}-{student.section}
-                    </Badge>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 text-sm">
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Student ID</span>
-                    <span className="font-medium">{student.studentId}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Roll Number</span>
-                    <span className="font-medium">{student.rollNumber || 'N/A'}</span>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Admission Date</span>
-                    <span className="font-medium text-right">
-                      {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex gap-3 pt-2">
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Mail className="h-3 w-3 mr-2" />
-                    Email
-                  </Button>
-                  <Button size="sm" variant="outline" className="flex-1">
-                    <Phone className="h-3 w-3 mr-2" />
-                    Call
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Students in {selectedClass}</CardTitle>
+            <CardDescription>
+              {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} enrolled
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Student</TableHead>
+                  <TableHead>Student ID</TableHead>
+                  <TableHead>Class</TableHead>
+                  <TableHead>Admission Date</TableHead>
+                  <TableHead>Contact</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredStudents.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarImage src={student.user.avatar} />
+                          <AvatarFallback>
+                            {student.user.firstName[0]}{student.user.lastName[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <div className="font-medium">
+                            {student.user.firstName} {student.user.lastName}
+                          </div>
+                          <div className="text-sm text-muted-foreground">
+                            Roll: {student.rollNumber || 'N/A'}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="font-mono">{student.studentId}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {student.class}-{student.section}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {student.admissionDate
+                        ? new Date(student.admissionDate).toLocaleDateString()
+                        : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                          <Phone className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>
+                            <Edit className="mr-2 h-4 w-4" />
+                            Edit Student
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Remove Student
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       )}
 
       {selectedClass !== 'all' && filteredStudents.length === 0 && (
