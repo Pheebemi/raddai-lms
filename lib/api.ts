@@ -75,7 +75,24 @@ export const authApi = {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
     });
-    return handleApiResponse<LoginResponse>(response);
+    // Custom handling so invalid credentials show a friendly message
+    if (!response.ok) {
+      let errorText = 'Invalid username or password';
+
+      try {
+        const data = await response.json();
+        // If backend sends a more specific error, we can use it, but only if it's user-friendly
+        if (Array.isArray(data?.non_field_errors) && data.non_field_errors.length > 0) {
+          errorText = data.non_field_errors[0];
+        }
+      } catch {
+        // Ignore JSON parse errors and fall back to generic message
+      }
+
+      throw new Error(errorText);
+    }
+
+    return response.json();
   },
 
   refreshToken: async (refreshToken: string): Promise<{ access: string }> => {
