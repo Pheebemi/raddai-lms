@@ -38,12 +38,13 @@ export function FeesContent() {
   const [authError, setAuthError] = useState(false);
 
   // Get fee amount for student's grade and academic year
-  const getFeeAmount = (term: string, academicYear: string) => {
+  // Returns null when we cannot reliably determine the configured fee
+  const getFeeAmount = (term: string, academicYear: string): number | null => {
     console.log('🔍 getFeeAmount:', { term, academicYear, studentClass: user?.profile?.current_class });
 
     if (!user?.profile?.current_class) {
       console.log('❌ No current class found');
-      return 30000; // Fallback amount
+      return null;
     }
 
     // Get student's grade from their class
@@ -82,7 +83,7 @@ export function FeesContent() {
 
     if (!grade) {
       console.log('❌ Could not parse grade from class name');
-      return 30000; // Fallback amount
+      return null;
     }
 
     console.log('💰 Available fee structures:', feeStructures.map(fs => ({
@@ -109,8 +110,13 @@ export function FeesContent() {
       return matches;
     });
 
-    const result = feeStructure ? feeStructure.amount : 30000;
-    console.log('💵 Final amount:', result, feeStructure ? '(from fee structure)' : '(fallback)');
+    if (!feeStructure) {
+      console.log('❌ No matching fee structure found for computed grade/year');
+      return null;
+    }
+
+    const result = feeStructure.amount;
+    console.log('💵 Final amount:', result, '(from fee structure)');
     return result;
   };
 
@@ -175,9 +181,9 @@ export function FeesContent() {
   }, [logout]);
 
   // Get current full fee amount for the term (target total for that term)
-  const currentFeeAmount = paymentData.academicYear
+  const currentFeeAmount: number | null = paymentData.academicYear
     ? getFeeAmount(paymentData.term, paymentData.academicYear)
-    : 30000; // Default amount if no academic year selected
+    : null;
 
   // Existing payment record for the selected term/year (if any)
   const currentTermPayment = payments.find(
@@ -187,9 +193,11 @@ export function FeesContent() {
   );
 
   const alreadyPaid = currentTermPayment?.amount ?? 0;
-  const remainingAmount = Math.max(currentFeeAmount - alreadyPaid, 0);
+  const remainingAmount =
+    currentFeeAmount !== null ? Math.max(currentFeeAmount - alreadyPaid, 0) : null;
 
   const isPaymentTooHigh =
+    remainingAmount !== null &&
     typeof paymentAmount === 'number' &&
     paymentAmount > 0 &&
     paymentAmount > remainingAmount;
@@ -201,7 +209,12 @@ export function FeesContent() {
   const flutterwaveConfig = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X',
     tx_ref: `school_fee_${user?.id}_${Date.now()}`,
-    amount: typeof paymentAmount === 'number' && paymentAmount > 0 ? paymentAmount : remainingAmount || currentFeeAmount,
+    amount:
+      typeof paymentAmount === 'number' && paymentAmount > 0
+        ? paymentAmount
+        : remainingAmount && remainingAmount > 0
+        ? remainingAmount
+        : 0,
     currency: 'NGN',
     payment_options: 'card,mobilemoney,ussd',
     customer: {
@@ -221,10 +234,15 @@ export function FeesContent() {
   const handlePaymentSubmit = () => {
     if (!user) return;
 
+    if (currentFeeAmount === null || remainingAmount === null) {
+      toast.error('Unable to determine the correct fee amount yet. Please wait a moment or refresh.');
+      return;
+    }
+
     const effectiveAmount =
       typeof paymentAmount === 'number' && paymentAmount > 0
         ? paymentAmount
-        : remainingAmount || currentFeeAmount;
+        : remainingAmount;
 
     if (effectiveAmount <= 0) {
       toast.error('Payment amount must be greater than zero.');
@@ -536,7 +554,9 @@ export function FeesContent() {
                       Full Fee for This Term
                     </p>
                     <div className="text-3xl font-bold text-green-600 mb-1">
-                      ₦{currentFeeAmount.toLocaleString()}
+                      {currentFeeAmount !== null
+                        ? `₦${currentFeeAmount.toLocaleString()}`
+                        : '—'}
                     </div>
                     <p className="text-xs text-green-600">
                       {paymentData.academicYear && user?.profile?.current_class
@@ -564,7 +584,9 @@ export function FeesContent() {
                   <div className="rounded-lg border bg-muted/40 p-3">
                     <p className="text-xs text-muted-foreground">Remaining Balance</p>
                     <p className="font-semibold">
-                      ₦{remainingAmount.toLocaleString()}
+                      {remainingAmount !== null
+                        ? `₦${remainingAmount.toLocaleString()}`
+                        : '—'}
                     </p>
                   </div>
                 </div>
@@ -578,7 +600,7 @@ export function FeesContent() {
                     id="paymentAmount"
                     type="number"
                     min={0}
-                    max={remainingAmount || currentFeeAmount}
+                    max={remainingAmount ?? undefined}
                     value={paymentAmount === '' ? '' : paymentAmount}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -589,7 +611,11 @@ export function FeesContent() {
                         setPaymentAmount(num);
                       }
                     }}
-                    placeholder={`₦${remainingAmount.toLocaleString()}`}
+                    placeholder={
+                      remainingAmount !== null
+                        ? `₦${remainingAmount.toLocaleString()}`
+                        : 'Enter amount'
+                    }
                   />
                   <p className="text-xs text-muted-foreground">
                     You can pay in parts. Results for a term will only unlock when the full fee for
@@ -643,7 +669,14 @@ export function FeesContent() {
               </Button>
               <Button
                 onClick={handlePaymentSubmit}
-                disabled={isSubmitting || isCurrentTermPaid || isPaymentTooHigh}
+                disabled={
+                  isSubmitting ||
+                  isCurrentTermPaid ||
+                  isPaymentTooHigh ||
+                  currentFeeAmount === null ||
+                  remainingAmount === null ||
+                  remainingAmount === 0
+                }
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2 disabled:bg-gray-400"
               >
                 {isSubmitting ? (
@@ -659,7 +692,9 @@ export function FeesContent() {
                 ) : (
                   <>
                     <CreditCard className="mr-2 h-4 w-4" />
-                    Pay ₦{currentFeeAmount.toLocaleString()}
+                    {currentFeeAmount !== null
+                      ? `Pay ₦${currentFeeAmount.toLocaleString()}`
+                      : 'Pay Fee'}
                   </>
                 )}
               </Button>
