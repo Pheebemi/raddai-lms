@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock } from 'lucide-react';
-import { resultsApi, announcementsApi, usersApi, rankingsApi, handleApiError } from '@/lib/api';
+import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, handleApiError } from '@/lib/api';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 
@@ -65,10 +65,10 @@ export function ResultsContent() {
   // Load class rankings when filters change (for PNG download)
   useEffect(() => {
     const loadRankings = async () => {
-      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class) {
+      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class_id) {
         try {
           const rankings = await rankingsApi.getClassRankings(
-            user.profile.current_class.id?.toString() || '',
+            String(user.profile.current_class_id),
             selectedTerm,
             selectedYear
           );
@@ -83,22 +83,22 @@ export function ResultsContent() {
     };
 
     loadRankings();
-  }, [selectedTerm, selectedYear, user?.profile?.current_class]);
+  }, [selectedTerm, selectedYear, user?.profile?.current_class_id]);
 
   // Load class rankings when filters change
   useEffect(() => {
     const loadRankings = async () => {
-      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class) {
+      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class_id) {
         try {
           // Debug logging
           console.log('Loading rankings for user:', user.id);
           console.log('User profile:', user.profile);
-          console.log('Current class:', user.profile.current_class);
-          console.log('Class ID:', user.profile.current_class?.id);
-          console.log('Class ID type:', typeof user.profile.current_class?.id);
-          console.log('Full current_class object:', JSON.stringify(user.profile.current_class, null, 2));
+          console.log('Current class name:', user.profile.current_class);
+          console.log('Current class ID (from profile):', user.profile.current_class_id);
 
-          const classId = user.profile.current_class.id?.toString();
+          const classId = user.profile.current_class_id
+            ? String(user.profile.current_class_id)
+            : undefined;
           if (!classId) {
             console.error('No class ID found for user - cannot load rankings');
             setClassRankings(null);
@@ -117,11 +117,11 @@ export function ResultsContent() {
           setClassRankings(null);
         }
       } else {
-        console.log('Skipping rankings load - conditions not met:', {
-          selectedTerm,
-          selectedYear,
-          hasCurrentClass: !!user?.profile?.current_class
-        });
+          console.log('Skipping rankings load - conditions not met:', {
+            selectedTerm,
+            selectedYear,
+            hasCurrentClassId: !!user?.profile?.current_class_id,
+          });
         setClassRankings(null);
       }
     };
@@ -129,10 +129,15 @@ export function ResultsContent() {
     loadRankings();
   }, [selectedTerm, selectedYear, user?.profile?.current_class]);
 
-  // Get student's ranking position
+  // Get student's ranking position (match by Student profile ID)
   const getStudentRanking = (): StudentRanking | null => {
-    if (!classRankings || !user) return null;
-    return classRankings.rankings.find((ranking: StudentRanking) => ranking.student_id === user.id) || null;
+    if (!classRankings || !user?.profile?.id) return null;
+    return (
+      classRankings.rankings.find(
+        (ranking: StudentRanking) =>
+          String(ranking.student_id) === String(user.profile?.id)
+      ) || null
+    );
   };
 
   // Group results by term
@@ -172,22 +177,36 @@ export function ResultsContent() {
 
         // Get student position from rankings API for the specific term and year
         const academicYearId = termResults[0]?.academicYearId?.toString();
-        const classId = user?.profile?.current_class_id?.toString();
-        // Fallback: if current_class_id doesn't exist yet, try to get class ID from classes API by name
-        let finalClassId = classId;
-        if (!finalClassId && user?.profile?.current_class) {
+
+        // Resolve class ID from class name + academic year using classes API
+        let classId: string | null = null;
+        if (user?.profile?.current_class) {
           try {
-            // This is a temporary fallback - will be removed once backend is restarted
-            console.log('Fallback: current_class_id not available, using current_class name:', user.profile.current_class);
-            // For now, we'll skip rankings if current_class_id is not available
-            finalClassId = null;
+            const allClasses = await classesApi.getAll();
+            const academicYearName = termResults[0]?.academicYear;
+
+            const matchingClass =
+              allClasses.find(
+                (c: any) =>
+                  c.name === user.profile.current_class &&
+                  c.academicYear === academicYearName
+              ) ||
+              allClasses.find(
+                (c: any) => c.name === user.profile.current_class
+              );
+
+            if (matchingClass) {
+              classId = matchingClass.id.toString();
+              console.log('Resolved class for rankings:', matchingClass);
+            } else {
+              console.warn('Could not resolve class from classes API for rankings.');
+            }
           } catch (e) {
-            console.log('Fallback failed:', e);
-            finalClassId = null;
+            console.warn('Failed to load classes for rankings:', e);
           }
         }
 
-        if (academicYearId && finalClassId) {
+        if (academicYearId && classId) {
           try {
             const termRankings = await rankingsApi.getClassRankings(
               classId,
@@ -197,8 +216,7 @@ export function ResultsContent() {
 
             // Match by student profile ID (backend returns student.id which is the Student model ID)
             const studentRanking = termRankings.rankings.find(
-              (r: StudentRanking) => String(r.student_id) === String(user.profile?.id) ||
-                     String(r.student_id) === String(user.id)
+              (r: StudentRanking) => String(r.student_id) === String(user.profile?.id)
             );
             if (studentRanking) {
               const position = studentRanking.position;
