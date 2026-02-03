@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter } from 'lucide-react';
+import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { feesApi, feeStructureApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
@@ -201,6 +201,141 @@ export function FeesContent() {
     typeof paymentAmount === 'number' &&
     paymentAmount > 0 &&
     paymentAmount > remainingAmount;
+
+  // Download a payment receipt as PNG for a single fee transaction
+  const downloadReceiptAsPNG = async (payment: FeeTransaction) => {
+    if (!user) return;
+
+    try {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      if (!ctx) throw new Error('Canvas context not available');
+
+      // A5-like size
+      const width = 1748; // ~5.8in * 300dpi
+      const height = 2480; // ~8.27in * 300dpi
+      canvas.width = width;
+      canvas.height = height;
+
+      // Background
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, width, height);
+
+      ctx.fillStyle = '#000000';
+      ctx.textAlign = 'center';
+
+      let y = 120;
+
+      // School header
+      ctx.font = 'bold 60px Arial';
+      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y);
+      y += 60;
+      ctx.font = '40px Arial';
+      ctx.fillText('JALINGO', width / 2, y);
+      y += 80;
+
+      // Title
+      ctx.font = 'bold 50px Arial';
+      ctx.fillStyle = '#1a365d';
+      ctx.fillText('SCHOOL FEES RECEIPT', width / 2, y);
+      y += 60;
+
+      ctx.font = '32px Arial';
+      ctx.fillStyle = '#000000';
+      const termLabel = payment.term
+        ? `${payment.term.charAt(0).toUpperCase() + payment.term.slice(1)} Term`
+        : 'Term';
+      ctx.fillText(`${termLabel} • ${payment.academicYear || 'Session'}`, width / 2, y);
+      y += 80;
+
+      // Student and payment info box
+      ctx.textAlign = 'left';
+      const leftX = 120;
+      const rightX = width - 120;
+
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#000000';
+      ctx.strokeRect(leftX, y - 40, rightX - leftX, 260);
+
+      ctx.font = 'bold 30px Arial';
+      ctx.fillText('Student Name:', leftX + 20, y);
+      ctx.fillText('Student ID:', leftX + 20, y + 50);
+      ctx.fillText('Class:', leftX + 20, y + 100);
+      ctx.fillText('Payment Date:', leftX + 20, y + 150);
+
+      const paymentDate = payment.paymentDate
+        ? new Date(payment.paymentDate).toLocaleString()
+        : 'N/A';
+
+      ctx.font = '30px Arial';
+      ctx.fillText(`${user.firstName} ${user.lastName}`, leftX + 260, y);
+      ctx.fillText(user.id, leftX + 260, y + 50);
+      ctx.fillText(user.profile?.current_class || 'Not Available', leftX + 260, y + 100);
+      ctx.fillText(paymentDate, leftX + 260, y + 150);
+
+      y += 260 + 80;
+
+      // Amount and status
+      ctx.font = 'bold 34px Arial';
+      ctx.fillText('Payment Details', leftX + 20, y);
+      y += 40;
+
+      ctx.font = '30px Arial';
+      const perTermTotal = payment.totalAmount ?? payment.amount;
+      const outstandingForThisRecord = Math.max(perTermTotal - payment.amount, 0);
+
+      const lines = [
+        `Amount Paid: ₦${payment.amount.toLocaleString()}`,
+        `Total Fee for This Term: ₦${perTermTotal.toLocaleString()}`,
+        `Outstanding for This Term: ₦${outstandingForThisRecord.toLocaleString()}`,
+        `Status: ${payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}`,
+        `Payment Method: ${payment.paymentMethod || 'N/A'}`,
+        `Transaction ID: ${payment.transactionId || 'N/A'}`,
+      ];
+
+      for (const line of lines) {
+        ctx.fillText(line, leftX + 20, y);
+        y += 45;
+      }
+
+      y += 60;
+
+      // Footer / disclaimer
+      ctx.textAlign = 'center';
+      ctx.font = '22px Arial';
+      ctx.fillStyle = '#555555';
+      ctx.fillText(
+        'Thank you for your payment. Please keep this receipt for your records.',
+        width / 2,
+        y
+      );
+      y += 40;
+      ctx.fillText(
+        `Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
+        width / 2,
+        y
+      );
+
+      // Download PNG
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `Raddai_Fees_Receipt_${termLabel.replace(' ', '_')}_${
+            payment.academicYear || 'session'
+          }.png`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          toast.success('Receipt downloaded successfully!');
+        }
+      }, 'image/png');
+    } catch (error) {
+      toast.error('Failed to generate receipt: ' + handleApiError(error));
+    }
+  };
 
   // Check if current term/academic year combination is already fully paid
   const isCurrentTermPaid = currentTermPayment?.status === 'paid';
@@ -885,6 +1020,7 @@ export function FeesContent() {
                         <TableHead>Payment Method</TableHead>
                         <TableHead>Due Date</TableHead>
                         <TableHead>Remarks</TableHead>
+                        <TableHead className="text-right">Receipt</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -906,6 +1042,16 @@ export function FeesContent() {
                           <TableCell>{payment.paymentMethod || 'N/A'}</TableCell>
                           <TableCell>{new Date(payment.dueDate).toLocaleDateString()}</TableCell>
                           <TableCell>{payment.remarks || '-'}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadReceiptAsPNG(payment)}
+                            >
+                              <Download className="mr-2 h-4 w-4" />
+                              Receipt
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
