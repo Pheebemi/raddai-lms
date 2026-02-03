@@ -73,6 +73,8 @@ export function FinanceManagementContent() {
         console.log('Dashboard stats:', dashboardStats);
         console.log('Total revenue:', dashboardStats.totalRevenue);
         console.log('Pending fees:', dashboardStats.pendingFees);
+        console.log('Fee transactions loaded:', feeTransactions.length);
+        console.log('Fee structures loaded:', feeStructuresData.length);
 
         setStats(dashboardStats);
         setTransactions(feeTransactions);
@@ -235,18 +237,19 @@ export function FinanceManagementContent() {
     );
   }
 
-  // Calculate financial metrics from transactions data (more reliable)
+  // Calculate financial metrics from transactions data (matching Django backend logic)
   const totalRevenueFromTransactions = transactions
     .filter(t => t.status === 'paid')
     .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
 
+  // Django calculates pending fees as sum of total_amount for pending/overdue payments
   const pendingFeesFromTransactions = transactions
     .filter(t => t.status === 'pending' || t.status === 'overdue')
     .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
 
-  // Use transaction-based calculations as primary, fallback to dashboard stats
-  const totalRevenue = totalRevenueFromTransactions || Number(stats?.totalRevenue) || 0;
-  const pendingFees = pendingFeesFromTransactions || Number(stats?.pendingFees) || 0;
+  // Use dashboard stats as primary (they come from Django backend), fallback to our calculations
+  const totalRevenue = Number(stats?.totalRevenue) || totalRevenueFromTransactions || 0;
+  const pendingFees = Number(stats?.pendingFees) || pendingFeesFromTransactions || 0;
   const totalExpected = totalRevenue + pendingFees;
   const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
 
@@ -255,7 +258,12 @@ export function FinanceManagementContent() {
     pendingFeesFromTransactions,
     totalRevenue,
     pendingFees,
-    statsRevenue: stats?.totalRevenue
+    statsRevenue: stats?.totalRevenue,
+    statsPendingFees: stats?.pendingFees,
+    transactionCount: transactions.length,
+    paidTransactions: transactions.filter(t => t.status === 'paid').length,
+    pendingTransactions: transactions.filter(t => t.status === 'pending').length,
+    overdueTransactions: transactions.filter(t => t.status === 'overdue').length,
   });
 
   // Group transactions by status
