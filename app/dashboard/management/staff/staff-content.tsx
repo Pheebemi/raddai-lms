@@ -74,6 +74,10 @@ export function StaffManagementContent() {
     classId: '' as string,
   });
 
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [staffToDelete, setStaffToDelete] = useState<Staff | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -209,6 +213,30 @@ export function StaffManagementContent() {
       toast.error(errorMessage);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const openDeleteDialog = (staffMember: Staff) => {
+    setStaffToDelete(staffMember);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteStaff = async () => {
+    if (!staffToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await usersApi.deleteStaff(staffToDelete.id);
+      setStaff((prev) => prev.filter((s) => s.id !== staffToDelete.id));
+      toast.success('Staff member deleted successfully.');
+      setIsDeleteOpen(false);
+      setStaffToDelete(null);
+    } catch (error: any) {
+      console.error('Failed to delete staff member:', error);
+      const errorMessage = error?.message || 'Failed to delete staff member.';
+      toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -618,6 +646,52 @@ export function StaffManagementContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Staff Dialog */}
+      <Dialog
+        open={isDeleteOpen}
+        onOpenChange={(open) => {
+          setIsDeleteOpen(open);
+          if (!open) {
+            setStaffToDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Delete Staff Member</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently remove the staff member
+              {staffToDelete ? ` "${staffToDelete.user.firstName} ${staffToDelete.user.lastName}"` : ''}{' '}
+              and their profile from the system.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            Are you sure you want to delete this staff account?
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteOpen(false);
+                setStaffToDelete(null);
+              }}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteStaff}
+              disabled={isDeleting || !staffToDelete}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Staff'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Staff Table */}
       <Card>
         <CardHeader>
@@ -727,7 +801,13 @@ export function StaffManagementContent() {
                           <Settings className="mr-2 h-4 w-4" />
                           Manage Classes
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="text-red-600">
+                        <DropdownMenuItem
+                          className="text-red-600"
+                          onSelect={(e) => {
+                            e.preventDefault();
+                            openDeleteDialog(staffMember);
+                          }}
+                        >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Remove Staff
                         </DropdownMenuItem>

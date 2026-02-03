@@ -834,6 +834,19 @@ export const usersApi = {
     }
   },
 
+  // Delete a student (management only)
+  deleteStudent: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/students/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to delete student' }));
+      throw new Error(errorData.message || `HTTP ${response.status}`);
+    }
+  },
+
   // Create a new staff user + profile and assign initial details
   createStaff: async (data: {
     username: string;
@@ -994,6 +1007,19 @@ export const usersApi = {
     } catch (error) {
       console.error('Error in updateStaff API:', error);
       throw error;
+    }
+  },
+
+  // Delete a staff member (management only)
+  deleteStaff: async (id: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/staff/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({ message: 'Failed to delete staff member' }));
+      throw new Error(errorData.message || `HTTP ${response.status}`);
     }
   },
 

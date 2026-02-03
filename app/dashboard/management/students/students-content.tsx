@@ -77,6 +77,10 @@ export function StudentsManagementContent() {
     classId: '',
   });
 
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -153,6 +157,30 @@ export function StudentsManagementContent() {
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const openDeleteDialog = (student: Student) => {
+    setStudentToDelete(student);
+    setIsDeleteOpen(true);
+  };
+
+  const handleDeleteStudent = async () => {
+    if (!studentToDelete) return;
+
+    try {
+      setIsDeleting(true);
+      await usersApi.deleteStudent(studentToDelete.id);
+      setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
+      toast.success('Student deleted successfully.');
+      setIsDeleteOpen(false);
+      setStudentToDelete(null);
+    } catch (error: any) {
+      console.error('Failed to delete student:', error);
+      const errorMessage = error?.message || 'Failed to delete student.';
+      toast.error(errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -545,6 +573,52 @@ export function StudentsManagementContent() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete Student Dialog */}
+      <Dialog
+        open={isDeleteOpen}
+        onOpenChange={(open) => {
+          setIsDeleteOpen(open);
+          if (!open) {
+            setStudentToDelete(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Delete Student</DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently remove the student
+              {studentToDelete ? ` "${studentToDelete.user.firstName} ${studentToDelete.user.lastName}"` : ''}{' '}
+              and their profile from the system.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+            Are you sure you want to delete this student account?
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsDeleteOpen(false);
+                setStudentToDelete(null);
+              }}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDeleteStudent}
+              disabled={isDeleting || !studentToDelete}
+            >
+              {isDeleting ? 'Deleting...' : 'Delete Student'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Students Table */}
       {selectedClass === 'all' ? (
         <Card>
@@ -638,7 +712,13 @@ export function StudentsManagementContent() {
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Student
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="text-red-600">
+                          <DropdownMenuItem
+                            className="text-red-600"
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openDeleteDialog(student);
+                            }}
+                          >
                             <Trash2 className="mr-2 h-4 w-4" />
                             Remove Student
                           </DropdownMenuItem>
