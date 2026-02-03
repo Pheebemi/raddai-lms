@@ -217,70 +217,110 @@ export function FeesContent() {
       canvas.width = width;
       canvas.height = height;
 
-      // Background
-      ctx.fillStyle = '#ffffff';
+      // Background gradient for a modern look
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, '#f3f4ff');
+      gradient.addColorStop(0.4, '#ffffff');
+      gradient.addColorStop(1, '#f9fafb');
+      ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, width, height);
 
-      ctx.fillStyle = '#000000';
+      ctx.fillStyle = '#0f172a';
       ctx.textAlign = 'center';
 
       let y = 120;
 
-      // School header
+      // Card-style header
+      const cardPaddingX = 120;
+      const cardWidth = width - cardPaddingX * 2;
+      const headerHeight = 260;
+
+      // Header card shadow
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillRect(cardPaddingX - 8, y - 40, cardWidth + 16, headerHeight + 16);
+
+      // Header card background
+      const headerGradient = ctx.createLinearGradient(
+        cardPaddingX,
+        y - 40,
+        cardPaddingX + cardWidth,
+        y + headerHeight
+      );
+      headerGradient.addColorStop(0, '#111827');
+      headerGradient.addColorStop(1, '#1f2937');
+      ctx.fillStyle = headerGradient;
+      ctx.fillRect(cardPaddingX, y - 40, cardWidth, headerHeight);
+
+      // School header text
+      ctx.fillStyle = '#e5e7eb';
       ctx.font = 'bold 60px Arial';
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y);
-      y += 60;
-      ctx.font = '40px Arial';
-      ctx.fillText('JALINGO', width / 2, y);
-      y += 80;
-
-      // Title
-      ctx.font = 'bold 50px Arial';
-      ctx.fillStyle = '#1a365d';
-      ctx.fillText('SCHOOL FEES RECEIPT', width / 2, y);
+      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y + 10);
       y += 60;
 
-      ctx.font = '32px Arial';
-      ctx.fillStyle = '#000000';
+      ctx.font = '36px Arial';
+      ctx.fillStyle = '#9ca3af';
+      ctx.fillText('JALINGO', width / 2, y + 6);
+      y += 70;
+
+      // Receipt title + badge
+      ctx.font = 'bold 46px Arial';
+      ctx.fillStyle = '#e5e7eb';
+      ctx.fillText('SCHOOL FEES RECEIPT', width / 2, y + 10);
+      y += 70;
+
+      // Term/session pill
+      ctx.font = '28px Arial';
+      ctx.fillStyle = '#d1d5db';
       const termLabel = payment.term
         ? `${payment.term.charAt(0).toUpperCase() + payment.term.slice(1)} Term`
         : 'Term';
-      ctx.fillText(`${termLabel} • ${payment.academicYear || 'Session'}`, width / 2, y);
-      y += 80;
+      const sessionText = `${termLabel} • ${payment.academicYear || 'Session'}`;
+      ctx.fillText(sessionText, width / 2, y + 4);
+      y += headerHeight + 40;
 
       // Student and payment info box
       ctx.textAlign = 'left';
-      const leftX = 120;
-      const rightX = width - 120;
+      const leftX = cardPaddingX;
+      const rightX = width - cardPaddingX;
 
+      // Info card background
+      ctx.fillStyle = '#ffffff';
+      ctx.strokeStyle = '#e5e7eb';
       ctx.lineWidth = 2;
-      ctx.strokeStyle = '#000000';
-      ctx.strokeRect(leftX, y - 40, rightX - leftX, 260);
+      ctx.beginPath();
+      ctx.roundRect(leftX, y - 30, rightX - leftX, 260, 16);
+      ctx.fill();
+      ctx.stroke();
 
       ctx.font = 'bold 30px Arial';
-      ctx.fillText('Student Name:', leftX + 20, y);
-      ctx.fillText('Student ID:', leftX + 20, y + 50);
-      ctx.fillText('Class:', leftX + 20, y + 100);
-      ctx.fillText('Payment Date:', leftX + 20, y + 150);
+      ctx.fillStyle = '#111827';
+      ctx.fillText('Student Name', leftX + 32, y);
+      ctx.fillText('Student ID', leftX + 32, y + 55);
+      ctx.fillText('Class', leftX + 32, y + 110);
+      ctx.fillText('Payment Date', leftX + 32, y + 165);
 
       const paymentDate = payment.paymentDate
         ? new Date(payment.paymentDate).toLocaleString()
         : 'N/A';
 
       ctx.font = '30px Arial';
-      ctx.fillText(`${user.firstName} ${user.lastName}`, leftX + 260, y);
-      ctx.fillText(user.id, leftX + 260, y + 50);
-      ctx.fillText(user.profile?.current_class || 'Not Available', leftX + 260, y + 100);
-      ctx.fillText(paymentDate, leftX + 260, y + 150);
+      ctx.fillStyle = '#374151';
+      const infoValueX = leftX + 280;
+      ctx.fillText(`${user.firstName} ${user.lastName}`, infoValueX, y);
+      ctx.fillText(user.id, infoValueX, y + 55);
+      ctx.fillText(user.profile?.current_class || 'Not Available', infoValueX, y + 110);
+      ctx.fillText(paymentDate, infoValueX, y + 165);
 
-      y += 260 + 80;
+      y += 260 + 60;
 
-      // Amount and status
+      // Amount and status section
       ctx.font = 'bold 34px Arial';
-      ctx.fillText('Payment Details', leftX + 20, y);
+      ctx.fillStyle = '#111827';
+      ctx.fillText('Payment Details', leftX, y);
       y += 40;
 
       ctx.font = '30px Arial';
+      ctx.fillStyle = '#374151';
       const perTermTotal = payment.totalAmount ?? payment.amount;
       const outstandingForThisRecord = Math.max(perTermTotal - payment.amount, 0);
 
@@ -294,16 +334,60 @@ export function FeesContent() {
       ];
 
       for (const line of lines) {
-        ctx.fillText(line, leftX + 20, y);
+        ctx.fillText(line, leftX, y);
         y += 45;
       }
 
-      y += 60;
+      y += 80;
+
+      // Signature fields row (Principal & Bursar)
+      const sigTop = y;
+      const sigHeight = 180;
+      const sigGap = 40;
+      const sigWidth = (cardWidth - sigGap) / 2;
+
+      ctx.strokeStyle = '#d1d5db';
+      ctx.lineWidth = 2;
+      ctx.font = '24px Arial';
+      ctx.fillStyle = '#4b5563';
+
+      // Principal signature box
+      ctx.beginPath();
+      ctx.roundRect(cardPaddingX, sigTop, sigWidth, sigHeight, 12);
+      ctx.stroke();
+      // Line
+      ctx.beginPath();
+      ctx.moveTo(cardPaddingX + 40, sigTop + sigHeight - 60);
+      ctx.lineTo(cardPaddingX + sigWidth - 40, sigTop + sigHeight - 60);
+      ctx.stroke();
+      ctx.textAlign = 'center';
+      ctx.fillText(
+        'Principal',
+        cardPaddingX + sigWidth / 2,
+        sigTop + sigHeight - 20
+      );
+
+      // Bursar signature box
+      const bursarLeft = cardPaddingX + sigWidth + sigGap;
+      ctx.beginPath();
+      ctx.roundRect(bursarLeft, sigTop, sigWidth, sigHeight, 12);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(bursarLeft + 40, sigTop + sigHeight - 60);
+      ctx.lineTo(bursarLeft + sigWidth - 40, sigTop + sigHeight - 60);
+      ctx.stroke();
+      ctx.fillText(
+        'Bursar',
+        bursarLeft + sigWidth / 2,
+        sigTop + sigHeight - 20
+      );
+
+      y = sigTop + sigHeight + 80;
 
       // Footer / disclaimer
       ctx.textAlign = 'center';
       ctx.font = '22px Arial';
-      ctx.fillStyle = '#555555';
+      ctx.fillStyle = '#6b7280';
       ctx.fillText(
         'Thank you for your payment. Please keep this receipt for your records.',
         width / 2,
@@ -838,9 +922,7 @@ export function FeesContent() {
                 ) : (
                   <>
                     <CreditCard className="mr-2 h-4 w-4" />
-                    {currentFeeAmount !== null
-                      ? `Pay ₦${currentFeeAmount.toLocaleString()}`
-                      : 'Pay Fee'}
+                    Pay
                   </>
                 )}
               </Button>
