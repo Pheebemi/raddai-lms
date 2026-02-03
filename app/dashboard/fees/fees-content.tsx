@@ -49,6 +49,11 @@ export function FeesContent() {
 
     // Get student's grade from their class
     const studentClass = user.profile.current_class;
+    console.log('🏫 Student class details:', {
+      className: studentClass,
+      classType: typeof studentClass,
+      classKeys: typeof studentClass === 'object' ? Object.keys(studentClass) : 'not object'
+    });
 
     // Try multiple ways to parse grade from class name
     let grade = null;
@@ -96,7 +101,26 @@ export function FeesContent() {
     })));
 
     // Find tuition fee for this grade and academic year
+    console.log('🔍 Looking for fee structure with:', { grade, academicYear, academicYearType: typeof academicYear });
+
     const feeStructure = feeStructures.find(fs => {
+      console.log('🔍 Checking fee structure:', {
+        fs_id: fs.id,
+        fs_grade: fs.grade,
+        fs_feeType: fs.feeType,
+        fs_academicYearId: fs.academicYearId,
+        fs_academicYearIdType: typeof fs.academicYearId,
+        fs_academicYear: fs.academicYear,
+        lookingFor: academicYear,
+        matches: {
+          grade: fs.grade === grade,
+          feeType: fs.feeType === 'tuition',
+          academicYearId_exact: fs.academicYearId === academicYear,
+          academicYearId_parsed: fs.academicYearId === parseInt(academicYear),
+          academicYearId_string: String(fs.academicYearId) === academicYear
+        }
+      });
+
       const matches = fs.grade === grade &&
         fs.feeType === 'tuition' &&
         (fs.academicYearId === academicYear ||
@@ -109,6 +133,8 @@ export function FeesContent() {
 
       return matches;
     });
+
+    console.log('🎯 Fee structure search result:', feeStructure ? `Found ID ${feeStructure.id} with amount ${feeStructure.amount}` : 'NOT FOUND');
 
     if (!feeStructure) {
       console.log('❌ No matching fee structure found for computed grade/year');
@@ -133,7 +159,9 @@ export function FeesContent() {
     if (academicYears.length > 0 && !paymentData.academicYear) {
       // Sort by ID descending to get the latest academic year
       const sortedYears = [...academicYears].sort((a, b) => parseInt(b.id) - parseInt(a.id));
-      setPaymentData(prev => ({ ...prev, academicYear: sortedYears[0].id.toString() }));
+      const selectedYear = sortedYears[0];
+      console.log('🎓 Selected academic year:', selectedYear);
+      setPaymentData(prev => ({ ...prev, academicYear: selectedYear.id.toString() }));
     }
   }, [academicYears, paymentData.academicYear]);
 
@@ -150,6 +178,9 @@ export function FeesContent() {
         setPayments(paymentsData);
         setAcademicYears(yearsData);
         setFeeStructures(feeStructuresData);
+
+        console.log('📊 Fee structures loaded:', feeStructuresData);
+        console.log('📅 Academic years loaded:', yearsData);
 
         // Set default academic year to current/latest
         if (yearsData.length > 0) {
@@ -184,6 +215,12 @@ export function FeesContent() {
   const currentFeeAmount: number | null = paymentData.academicYear
     ? getFeeAmount(paymentData.term, paymentData.academicYear)
     : null;
+
+  console.log('💰 Current fee calculation:', {
+    paymentData_academicYear: paymentData.academicYear,
+    currentFeeAmount,
+    term: paymentData.term
+  });
 
   // Existing payment record for the selected term/year (if any)
   const currentTermPayment = payments.find(
@@ -493,6 +530,19 @@ export function FeesContent() {
               fs.academicYearId === parseInt(paymentData.academicYear) ||
               String(fs.academicYearId) === paymentData.academicYear;
 
+            console.log('🔍 Payment fee structure check:', {
+              fs_id: fs.id,
+              fs_grade: fs.grade,
+              fs_feeType: fs.feeType,
+              fs_academicYearId: fs.academicYearId,
+              studentGrade,
+              paymentData_academicYear: paymentData.academicYear,
+              gradeMatches,
+              typeMatches,
+              academicYearMatches,
+              overallMatch: gradeMatches && typeMatches && academicYearMatches
+            });
+
             return gradeMatches && typeMatches && academicYearMatches;
           });
 
@@ -537,7 +587,13 @@ export function FeesContent() {
               due_date: dueDateString,
               payment_method: 'flutterwave',
               transaction_id: response.transaction_id,
-              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`
+              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`,
+              debug: {
+                currentFeeAmount,
+                effectiveAmount,
+                feeStructure_amount: feeStructure.amount,
+                remainingAmount
+              }
             });
 
             const paymentPayload = {
