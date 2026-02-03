@@ -58,7 +58,7 @@ export function StaffManagementContent() {
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0], // Today's date
-    classIds: [] as string[],
+    classId: '' as string,
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -71,7 +71,7 @@ export function StaffManagementContent() {
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0],
-    classIds: [] as string[],
+    classId: '' as string,
   });
 
   useEffect(() => {
@@ -112,7 +112,7 @@ export function StaffManagementContent() {
         staffId: newStaff.staffId,
         designation: newStaff.designation,
         joiningDate: newStaff.joiningDate,
-        classIds: newStaff.classIds,
+        classId: newStaff.classId || undefined,
       });
 
       setStaff(prev => [created, ...prev]);
@@ -126,7 +126,7 @@ export function StaffManagementContent() {
         staffId: '',
         designation: 'teacher',
         joiningDate: new Date().toISOString().split('T')[0],
-        classIds: [],
+        classId: '',
       });
       toast.success('Staff member created successfully.');
     } catch (error: any) {
@@ -159,10 +159,9 @@ export function StaffManagementContent() {
   };
 
   const openEditDialog = (staffMember: Staff) => {
-    // Map assigned class names back to their IDs for the multiselect
-    const classIds = classes
-      .filter((cls) => staffMember.assignedClasses?.includes(cls.name))
-      .map((cls) => cls.id);
+    // Map assigned class name back to its ID (only one class can have this staff as class teacher)
+    const assignedClassName = staffMember.assignedClasses?.[0];
+    const assignedClass = classes.find((cls) => cls.name === assignedClassName);
 
     setEditingStaff(staffMember);
     setEditStaffForm({
@@ -174,7 +173,7 @@ export function StaffManagementContent() {
       joiningDate: staffMember.joiningDate
         ? staffMember.joiningDate.split('T')[0]
         : new Date().toISOString().split('T')[0],
-      classIds,
+      classId: assignedClass ? assignedClass.id : '',
     });
     setIsEditOpen(true);
   };
@@ -197,7 +196,7 @@ export function StaffManagementContent() {
         staffId: editStaffForm.staffId,
         designation: editStaffForm.designation,
         joiningDate: editStaffForm.joiningDate,
-        classIds: editStaffForm.classIds,
+        classId: editStaffForm.classId || null,
       });
 
       setStaff((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -350,43 +349,24 @@ export function StaffManagementContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-sm font-medium">Assign to Classes</label>
-                    <div className="max-h-40 overflow-y-auto rounded-md border px-3 py-2 space-y-1">
-                      {classes.length === 0 && (
-                        <p className="text-xs text-muted-foreground">No classes available.</p>
-                      )}
-                      {classes.map((cls) => {
-                        const checked = newStaff.classIds.includes(cls.id);
-                        return (
-                          <label
-                            key={cls.id}
-                            className="flex items-center justify-between gap-2 text-xs cursor-pointer"
-                          >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                className="h-3 w-3"
-                                checked={checked}
-                                onChange={(e) => {
-                                  const isChecked = e.target.checked;
-                                  setNewStaff((s) => ({
-                                    ...s,
-                                    classIds: isChecked
-                                      ? [...s.classIds, cls.id]
-                                      : s.classIds.filter((id) => id !== cls.id),
-                                  }));
-                                }}
-                              />
-                              <span>
-                                {cls.name} • {cls.academicYear}
-                              </span>
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
+                    <label className="text-sm font-medium">Assign as Class Teacher (optional)</label>
+                    <Select
+                      value={newStaff.classId}
+                      onValueChange={(value) => setNewStaff((s) => ({ ...s, classId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classes.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name} • {cls.academicYear}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <p className="text-xs text-muted-foreground">
-                      Optional: select one or more classes this staff member should be assigned to.
+                      This will set the staff as class teacher for the selected class.
                     </p>
                   </div>
                 </div>
@@ -597,43 +577,24 @@ export function StaffManagementContent() {
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assign to Classes</label>
-                <div className="max-h-40 overflow-y-auto rounded-md border px-3 py-2 space-y-1">
-                  {classes.length === 0 && (
-                    <p className="text-xs text-muted-foreground">No classes available.</p>
-                  )}
-                  {classes.map((cls) => {
-                    const checked = editStaffForm.classIds.includes(cls.id);
-                    return (
-                      <label
-                        key={cls.id}
-                        className="flex items-center justify-between gap-2 text-xs cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            className="h-3 w-3"
-                            checked={checked}
-                            onChange={(e) => {
-                              const isChecked = e.target.checked;
-                              setEditStaffForm((s) => ({
-                                ...s,
-                                classIds: isChecked
-                                  ? [...s.classIds, cls.id]
-                                  : s.classIds.filter((id) => id !== cls.id),
-                              }));
-                            }}
-                          />
-                          <span>
-                            {cls.name} • {cls.academicYear}
-                          </span>
-                        </div>
-                      </label>
-                    );
-                  })}
-                </div>
+                <label className="text-sm font-medium">Assign as Class Teacher (optional)</label>
+                <Select
+                  value={editStaffForm.classId}
+                  onValueChange={(value) => setEditStaffForm((s) => ({ ...s, classId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classes.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name} • {cls.academicYear}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <p className="text-xs text-muted-foreground">
-                  Update the classes this staff member is assigned to.
+                  Update which class this staff member is set as class teacher for.
                 </p>
               </div>
             </div>

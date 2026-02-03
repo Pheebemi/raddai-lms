@@ -783,7 +783,7 @@ export const usersApi = {
     staffId: string;
     designation: string;
     joiningDate?: string;
-    classIds?: string[];
+    classId?: string;
   }): Promise<Staff> => {
     try {
       // 1) Create the auth user with role=staff
@@ -813,10 +813,6 @@ export const usersApi = {
         staff_id: data.staffId,
         designation: data.designation,
         joining_date: data.joiningDate || new Date().toISOString().split('T')[0], // Today's date if not provided
-        // Optional: assign to classes on creation
-        ...(data.classIds && data.classIds.length > 0
-          ? { assigned_classes: data.classIds }
-          : {}),
       };
 
       console.log('Creating staff profile with payload:', staffPayload);
@@ -830,7 +826,21 @@ export const usersApi = {
       const createdStaff = await handleApiResponse<any>(staffResponse);
       console.log('Staff profile created successfully:', createdStaff);
 
-      // 3) Normalize into our Staff type
+      // 3) Optionally assign this staff as class teacher for a class
+      if (data.classId) {
+        try {
+          await fetch(`${API_BASE_URL}/staff/${createdStaff.id}/assign-class/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ class_id: data.classId }),
+          });
+        } catch (assignError) {
+          console.error('Failed to assign class to staff on create:', assignError);
+          // Don't block staff creation if class assignment fails
+        }
+      }
+
+      // 4) Normalize into our Staff type
       return {
         id: createdStaff.id.toString(),
         user: convertDjangoUser(createdStaff.user_details),
@@ -859,7 +869,7 @@ export const usersApi = {
       staffId?: string;
       designation?: string;
       joiningDate?: string;
-      classIds?: string[];
+      classId?: string | null;
     }
   ): Promise<Staff> => {
     try {
@@ -883,9 +893,7 @@ export const usersApi = {
       if (data.staffId !== undefined) staffPayload.staff_id = data.staffId;
       if (data.designation !== undefined) staffPayload.designation = data.designation;
       if (data.joiningDate !== undefined) staffPayload.joining_date = data.joiningDate;
-      if (data.classIds) {
-        staffPayload.assigned_classes = data.classIds;
-      }
+      // Class assignment is handled via a dedicated endpoint, not via staff payload
 
       const staffResponse = await fetch(`${API_BASE_URL}/staff/${id}/`, {
         method: 'PATCH',
@@ -893,9 +901,24 @@ export const usersApi = {
         body: JSON.stringify(staffPayload),
       });
 
-      const updatedStaff = await handleApiResponse<any>(staffResponse);
+      let updatedStaff = await handleApiResponse<any>(staffResponse);
 
-      // Normalize into our Staff type
+      // 3) Optionally assign/unassign class teacher for this staff
+      if (data.classId !== undefined) {
+        try {
+          const assignResponse = await fetch(`${API_BASE_URL}/staff/${id}/assign-class/`, {
+            method: 'POST',
+            headers: getAuthHeaders(),
+            body: JSON.stringify({ class_id: data.classId }),
+          });
+          updatedStaff = await handleApiResponse<any>(assignResponse);
+        } catch (assignError) {
+          console.error('Failed to assign class to staff on update:', assignError);
+          // Fall through and still return staff with old assignment
+        }
+      }
+
+      // Normalize into our Staff type using the latest representation
       return {
         id: updatedStaff.id.toString(),
         user: convertDjangoUser(updatedStaff.user_details),
