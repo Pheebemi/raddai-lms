@@ -24,7 +24,10 @@ import {
   Mail,
   Phone,
   Calendar,
-  BookOpen
+  BookOpen,
+  MoreHorizontal,
+  Edit,
+  Trash2
 } from 'lucide-react';
 import { usersApi, classesApi } from '@/lib/api';
 import { Class, Student } from '@/types';
@@ -129,15 +132,16 @@ export function StudentsManagementContent() {
   };
 
   // Filter students based on search and class
-  const filteredStudents = students.filter(student => {
+  // Only show students when a specific class is selected (not "all")
+  const filteredStudents = selectedClass !== 'all' ? students.filter(student => {
     const matchesSearch = student.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesClass = selectedClass === 'all' || student.class === selectedClass;
+    const matchesClass = student.class === selectedClass;
 
     return matchesSearch && matchesClass;
-  });
+  }) : [];
 
   // Get unique classes for filter
   const classes = Array.from(new Set(students.map(s => s.class)));
@@ -378,71 +382,85 @@ export function StudentsManagementContent() {
       </Card>
 
       {/* Students Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredStudents.map((student) => (
-          <Card key={student.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={student.user.avatar} />
-                  <AvatarFallback>
-                    {student.user.firstName[0]}{student.user.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <CardTitle className="text-lg">
-                    {student.user.firstName} {student.user.lastName}
-                  </CardTitle>
-                  <Badge variant="outline" className="mt-1">
-                    {student.class}-{student.section}
-                  </Badge>
+      {selectedClass === 'all' ? (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center py-12">
+              <GraduationCap className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-medium mb-2">Select a Class to View Students</h3>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Please select a specific class from the filters above to view and manage students.
+                This helps load data faster and provides better organization.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+          {filteredStudents.map((student) => (
+            <Card key={student.id} className="hover:shadow-lg transition-all duration-200 hover:scale-[1.02]">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-16 w-16">
+                    <AvatarImage src={student.user.avatar} />
+                    <AvatarFallback className="text-lg">
+                      {student.user.firstName[0]}{student.user.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex-1 min-w-0">
+                    <CardTitle className="text-xl truncate">
+                      {student.user.firstName} {student.user.lastName}
+                    </CardTitle>
+                    <Badge variant="outline" className="mt-2 text-xs">
+                      {student.class}-{student.section}
+                    </Badge>
+                  </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Student ID</p>
-                  <p className="font-medium">{student.studentId}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 text-sm">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Student ID</span>
+                    <span className="font-medium">{student.studentId}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Roll Number</span>
+                    <span className="font-medium">{student.rollNumber || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Admission Date</span>
+                    <span className="font-medium text-right">
+                      {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-muted-foreground">Roll No</p>
-                  <p className="font-medium">{student.rollNumber || 'N/A'}</p>
+
+                <div className="flex gap-3 pt-2">
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Mail className="h-3 w-3 mr-2" />
+                    Email
+                  </Button>
+                  <Button size="sm" variant="outline" className="flex-1">
+                    <Phone className="h-3 w-3 mr-2" />
+                    Call
+                  </Button>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
-              <div className="text-sm">
-                <p className="text-muted-foreground">Admission Date</p>
-                <p className="font-medium">
-                  {student.admissionDate ? new Date(student.admissionDate).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Mail className="h-3 w-3 mr-1" />
-                  Email
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Phone className="h-3 w-3 mr-1" />
-                  Call
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {filteredStudents.length === 0 && (
+      {selectedClass !== 'all' && filteredStudents.length === 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
               <GraduationCap className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <h3 className="text-lg font-medium mb-2">No Students Found</h3>
               <p className="text-muted-foreground">
-                {searchTerm || selectedClass !== 'all'
-                  ? 'Try adjusting your filters to see more students.'
-                  : 'No students are currently enrolled.'}
+                {searchTerm
+                  ? 'No students match your search criteria in this class.'
+                  : `No students are currently enrolled in ${selectedClass}.`}
               </p>
             </div>
           </CardContent>
