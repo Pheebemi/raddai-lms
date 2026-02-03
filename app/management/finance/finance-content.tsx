@@ -8,6 +8,17 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   DollarSign,
   TrendingUp,
@@ -23,8 +34,8 @@ import {
   BarChart3,
   Receipt
 } from 'lucide-react';
-import { dashboardApi, feesApi } from '@/lib/api';
-import { DashboardStats, FeeTransaction } from '@/types';
+import { dashboardApi, feesApi, feeStructureApi, fetchAcademicYears, handleApiError } from '@/lib/api';
+import { DashboardStats, FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
 export function FinanceManagementContent() {
@@ -32,16 +43,31 @@ export function FinanceManagementContent() {
   const [transactions, setTransactions] = useState<FeeTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<string>('this_month');
+  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
+  const [academicYears, setAcademicYears] = useState<any[]>([]);
+
+  const [isStructureDialogOpen, setIsStructureDialogOpen] = useState(false);
+  const [isSavingStructure, setIsSavingStructure] = useState(false);
+  const [editingStructure, setEditingStructure] = useState<FeeStructure | null>(null);
+  const [structureForm, setStructureForm] = useState({
+    academicYearId: '',
+    grade: '',
+    feeType: 'tuition' as FeeStructure['feeType'],
+    amount: '',
+    description: '',
+  });
 
   useEffect(() => {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
 
-        // Fetch dashboard stats and fee transactions
-        const [dashboardStats, feeTransactions] = await Promise.all([
+        // Fetch dashboard stats, fee transactions, fee structures, and academic years
+        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData] = await Promise.all([
           dashboardApi.getStats(),
-          feesApi.getPayments()
+          feesApi.getPayments(),
+          feeStructureApi.getAll(),
+          fetchAcademicYears(),
         ]);
 
         console.log('Dashboard stats:', dashboardStats);
@@ -50,8 +76,11 @@ export function FinanceManagementContent() {
 
         setStats(dashboardStats);
         setTransactions(feeTransactions);
-      } catch (error) {
-        toast.error('Failed to load financial data');
+        setFeeStructures(feeStructuresData);
+        setAcademicYears(academicYearsData);
+      } catch (error: any) {
+        const message = handleApiError(error);
+        toast.error(message || 'Failed to load financial data');
         console.error('Finance data error:', error);
       } finally {
         setLoading(false);
@@ -60,6 +89,128 @@ export function FinanceManagementContent() {
 
     fetchFinanceData();
   }, []);
+
+  const openCreateStructureDialog = () => {
+    setEditingStructure(null);
+    setStructureForm({
+      academicYearId: '',
+      grade: '',
+      feeType: 'tuition',
+      amount: '',
+      description: '',
+    });
+    setIsStructureDialogOpen(true);
+  };
+
+  const openEditStructureDialog = (structure: FeeStructure) => {
+    setEditingStructure(structure);
+    setStructureForm({
+      academicYearId: structure.academicYearId || '',
+      grade: String(structure.grade || ''),
+      feeType: structure.feeType,
+      amount: String(structure.amount),
+      description: structure.description || '',
+    });
+    setIsStructureDialogOpen(true);
+  };
+
+  const handleSaveStructure = async () => {
+    if (!structureForm.academicYearId || !structureForm.grade || !structureForm.amount) {
+      toast.error('Please fill in academic year, grade, and amount.');
+      return;
+    }
+
+    try {
+      setIsSavingStructure(true);
+      const payload = {
+        academic_year: structureForm.academicYearId,
+        grade: parseInt(structureForm.grade, 10),
+        fee_type: structureForm.feeType,
+        amount: parseFloat(structureForm.amount),
+        description: structureForm.description,
+      };
+
+      let saved: FeeStructure;
+      if (editingStructure) {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/${editingStructure.id}/`,
+          {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }
+        );
+        const data = await response.json();
+        saved = {
+          id: data.id.toString(),
+          academicYear: data.academic_year_name,
+          academicYearId: data.academic_year.toString(),
+          grade: data.grade,
+          feeType: data.fee_type,
+          amount: parseFloat(data.amount),
+          description: data.description,
+        };
+      } else {
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          }
+        );
+        const data = await response.json();
+        saved = {
+          id: data.id.toString(),
+          academicYear: data.academic_year_name,
+          academicYearId: data.academic_year.toString(),
+          grade: data.grade,
+          feeType: data.fee_type,
+          amount: parseFloat(data.amount),
+          description: data.description,
+        };
+      }
+
+      setFeeStructures((prev) =>
+        editingStructure ? prev.map((fs) => (fs.id === saved.id ? saved : fs)) : [saved, ...prev]
+      );
+
+      toast.success(editingStructure ? 'Fee structure updated.' : 'Fee structure created.');
+      setIsStructureDialogOpen(false);
+      setEditingStructure(null);
+    } catch (error) {
+      console.error('Failed to save fee structure:', error);
+      toast.error('Failed to save fee structure.');
+    } finally {
+      setIsSavingStructure(false);
+    }
+  };
+
+  const handleDeleteStructure = async (structure: FeeStructure) => {
+    if (!window.confirm(`Delete fee structure for Grade ${structure.grade} (${structure.academicYear})?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/${structure.id}/`,
+        {
+          method: 'DELETE',
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Failed to delete fee structure' }));
+        throw new Error(errorData.message || `HTTP ${response.status}`);
+      }
+
+      setFeeStructures((prev) => prev.filter((fs) => fs.id !== structure.id));
+      toast.success('Fee structure deleted.');
+    } catch (error) {
+      console.error('Failed to delete fee structure:', error);
+      toast.error('Failed to delete fee structure.');
+    }
+  };
 
   if (loading) {
     return (
@@ -221,10 +372,11 @@ export function FinanceManagementContent() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+          <TabsTrigger value="fee_structures">Fee Structures</TabsTrigger>
+          <TabsTrigger value="fee_payments">Fee Payments</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -383,35 +535,261 @@ export function FinanceManagementContent() {
           </Card>
         </TabsContent>
 
-        {/* Analytics Tab */}
-        <TabsContent value="analytics" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <Card>
-              <CardHeader>
-                <CardTitle>Monthly Trends</CardTitle>
-                <CardDescription>Revenue trends over time</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  <BarChart3 className="h-8 w-8 mr-2" />
-                  Chart visualization would go here
-                </div>
-              </CardContent>
-            </Card>
+        {/* Fee Structures Tab */}
+        <TabsContent value="fee_structures" className="space-y-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Fee Structures</CardTitle>
+                <CardDescription>Configure tuition and other fees by grade and academic year.</CardDescription>
+              </div>
+              <Button onClick={openCreateStructureDialog}>
+                <DollarSign className="mr-2 h-4 w-4" />
+                Add Fee Structure
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Academic Year</TableHead>
+                      <TableHead>Grade</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Description</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {feeStructures.map((fs) => (
+                      <TableRow key={fs.id}>
+                        <TableCell>{fs.academicYear}</TableCell>
+                        <TableCell>Grade {fs.grade}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{fs.feeType}</Badge>
+                        </TableCell>
+                        <TableCell>₦{fs.amount.toLocaleString()}</TableCell>
+                        <TableCell>{fs.description || '-'}</TableCell>
+                        <TableCell className="text-right space-x-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => openEditStructureDialog(fs)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            onClick={() => handleDeleteStructure(fs)}
+                          >
+                            Delete
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {feeStructures.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                          No fee structures defined yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle>Fee Collection Analysis</CardTitle>
-                <CardDescription>Analysis of collection patterns</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-64 flex items-center justify-center text-muted-foreground">
-                  <PieChart className="h-8 w-8 mr-2" />
-                  Analytics visualization would go here
+          {/* Create/Edit Structure Dialog */}
+          <Dialog open={isStructureDialogOpen} onOpenChange={setIsStructureDialogOpen}>
+            <DialogContent className="sm:max-w-[520px]">
+              <DialogHeader>
+                <DialogTitle>
+                  {editingStructure ? 'Edit Fee Structure' : 'Add Fee Structure'}
+                </DialogTitle>
+                <DialogDescription>
+                  {editingStructure
+                    ? 'Update the selected fee structure.'
+                    : 'Create a new fee structure for a grade and academic year.'}
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="space-y-2">
+                  <Label>Academic Year *</Label>
+                  <Select
+                    value={structureForm.academicYearId}
+                    onValueChange={(value) =>
+                      setStructureForm((s) => ({ ...s, academicYearId: value }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select academic year" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {academicYears.map((year: any) => (
+                        <SelectItem key={year.id} value={year.id.toString()}>
+                          {year.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-              </CardContent>
-            </Card>
-          </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Grade *</Label>
+                    <Input
+                      type="number"
+                      value={structureForm.grade}
+                      onChange={(e) =>
+                        setStructureForm((s) => ({ ...s, grade: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Fee Type *</Label>
+                    <Select
+                      value={structureForm.feeType}
+                      onValueChange={(value) =>
+                        setStructureForm((s) => ({
+                          ...s,
+                          feeType: value as FeeStructure['feeType'],
+                        }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tuition">Tuition</SelectItem>
+                        <SelectItem value="examination">Examination</SelectItem>
+                        <SelectItem value="transport">Transport</SelectItem>
+                        <SelectItem value="hostel">Hostel</SelectItem>
+                        <SelectItem value="other">Other</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Amount (₦) *</Label>
+                  <Input
+                    type="number"
+                    value={structureForm.amount}
+                    onChange={(e) =>
+                      setStructureForm((s) => ({ ...s, amount: e.target.value }))
+                    }
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input
+                    value={structureForm.description}
+                    onChange={(e) =>
+                      setStructureForm((s) => ({ ...s, description: e.target.value }))
+                    }
+                    placeholder="Optional description"
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setIsStructureDialogOpen(false);
+                    setEditingStructure(null);
+                  }}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveStructure} disabled={isSavingStructure}>
+                  {isSavingStructure
+                    ? 'Saving...'
+                    : editingStructure
+                    ? 'Save Changes'
+                    : 'Create'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </TabsContent>
+
+        {/* Fee Payments Tab (management view of all payments) */}
+        <TabsContent value="fee_payments" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Fee Payments</CardTitle>
+              <CardDescription>
+                All recorded fee payments from students (online and manual).
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Student</TableHead>
+                      <TableHead>Fee Type</TableHead>
+                      <TableHead>Term</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Payment Date</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {transactions.map((t) => (
+                      <TableRow key={t.id}>
+                        <TableCell>{t.studentName || t.studentId}</TableCell>
+                        <TableCell>{t.feeStructureName || 'School Fee'}</TableCell>
+                        <TableCell className="capitalize">{t.term || '-'}</TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              t.status === 'paid'
+                                ? 'default'
+                                : t.status === 'overdue'
+                                ? 'destructive'
+                                : 'secondary'
+                            }
+                          >
+                            {t.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          ₦{(t.totalAmount ?? t.amount).toLocaleString()}
+                        </TableCell>
+                        <TableCell>
+                          {t.paymentDate
+                            ? new Date(t.paymentDate).toLocaleDateString()
+                            : 'N/A'}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {/* For now management can only view; deletions are risky because of reconciliation */}
+                          <span className="text-xs text-muted-foreground">
+                            View-only
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {transactions.length === 0 && (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
+                          No fee payments recorded yet.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Reports Tab */}
