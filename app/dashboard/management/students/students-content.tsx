@@ -8,6 +8,15 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
   GraduationCap,
   Search,
   Filter,
@@ -17,8 +26,8 @@ import {
   Calendar,
   BookOpen
 } from 'lucide-react';
-import { usersApi } from '@/lib/api';
-import { Student } from '@/types';
+import { usersApi, classesApi } from '@/lib/api';
+import { Class, Student } from '@/types';
 import { toast } from 'sonner';
 
 export function StudentsManagementContent() {
@@ -26,6 +35,19 @@ export function StudentsManagementContent() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [classesData, setClassesData] = useState<Class[]>([]);
+
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newStudent, setNewStudent] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    password: '',
+    email: '',
+    studentId: '',
+    classId: '',
+  });
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -33,6 +55,9 @@ export function StudentsManagementContent() {
         setLoading(true);
         const studentsData = await usersApi.getStudents();
         setStudents(studentsData);
+
+        const classes = await classesApi.getAll();
+        setClassesData(classes);
       } catch (error) {
         toast.error('Failed to load students data');
         console.error('Error fetching students:', error);
@@ -43,6 +68,65 @@ export function StudentsManagementContent() {
 
     fetchStudents();
   }, []);
+
+  const handleCreateStudent = async () => {
+    if (!newStudent.firstName || !newStudent.lastName || !newStudent.username || !newStudent.password || !newStudent.studentId || !newStudent.classId) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const created = await usersApi.createStudent({
+        username: newStudent.username,
+        password: newStudent.password,
+        firstName: newStudent.firstName,
+        lastName: newStudent.lastName,
+        email: newStudent.email || undefined,
+        studentId: newStudent.studentId,
+        classId: newStudent.classId,
+      });
+
+      setStudents(prev => [created, ...prev]);
+      setIsCreateOpen(false);
+      setNewStudent({
+        firstName: '',
+        lastName: '',
+        username: '',
+        password: '',
+        email: '',
+        studentId: '',
+        classId: '',
+      });
+      toast.success('Student created successfully.');
+    } catch (error: any) {
+      console.error('Failed to create student:', error);
+
+      // Handle specific error cases
+      let errorMessage = 'Failed to create student.';
+
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.response?.data) {
+        const data = error.response.data;
+
+        // Handle username already exists
+        if (data.username && Array.isArray(data.username)) {
+          errorMessage = `Username "${newStudent.username}" already exists. Please choose a different username.`;
+        } else if (data.student_id && Array.isArray(data.student_id)) {
+          errorMessage = `Student ID "${newStudent.studentId}" already exists. Please choose a different ID.`;
+        } else if (data.detail) {
+          errorMessage = data.detail;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   // Filter students based on search and class
   const filteredStudents = students.filter(student => {
@@ -82,10 +166,110 @@ export function StudentsManagementContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Student
-          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Student
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[520px]">
+              <DialogHeader>
+                <DialogTitle>Add New Student</DialogTitle>
+                <DialogDescription>
+                  Create a login account and assign the student to a class.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">First Name *</label>
+                    <Input
+                      value={newStudent.firstName}
+                      onChange={(e) => setNewStudent(s => ({ ...s, firstName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Last Name *</label>
+                    <Input
+                      value={newStudent.lastName}
+                      onChange={(e) => setNewStudent(s => ({ ...s, lastName: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Username *</label>
+                    <Input
+                      value={newStudent.username}
+                      onChange={(e) => setNewStudent(s => ({ ...s, username: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Password *</label>
+                    <Input
+                      type="password"
+                      value={newStudent.password}
+                      onChange={(e) => setNewStudent(s => ({ ...s, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    value={newStudent.email}
+                    onChange={(e) => setNewStudent(s => ({ ...s, email: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Student ID *</label>
+                    <Input
+                      value={newStudent.studentId}
+                      onChange={(e) => setNewStudent(s => ({ ...s, studentId: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Class *</label>
+                    <Select
+                      value={newStudent.classId}
+                      onValueChange={(value) => setNewStudent(s => ({ ...s, classId: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {classesData.map((cls) => (
+                          <SelectItem key={cls.id} value={cls.id}>
+                            {cls.name} • {cls.academicYear}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateStudent} disabled={isCreating}>
+                  {isCreating ? 'Creating...' : 'Create Student'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Button variant="outline">
             <Plus className="mr-2 h-4 w-4" />
             Bulk Import

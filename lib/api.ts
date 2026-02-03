@@ -703,6 +703,76 @@ export const usersApi = {
     });
   },
 
+  // Create a new student user + profile and assign to a class
+  createStudent: async (data: {
+    username: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    studentId: string;
+    classId: string;
+  }): Promise<Student> => {
+    try {
+      // 1) Create the auth user with role=student
+      const userPayload = {
+        username: data.username,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email || '',  // Send empty string instead of undefined
+        role: 'student',
+      };
+
+      console.log('Creating user with payload:', userPayload);
+
+      const userResponse = await fetch(`${API_BASE_URL}/users/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(userPayload),
+      });
+
+      const createdUser = await handleApiResponse<any>(userResponse);
+      console.log('User created successfully:', createdUser);
+
+      // 2) Create the student profile linked to that user
+      const studentPayload = {
+        user: createdUser.id,
+        student_id: data.studentId,
+        current_class: data.classId,
+      };
+
+      console.log('Creating student with payload:', studentPayload);
+
+      const studentResponse = await fetch(`${API_BASE_URL}/students/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(studentPayload),
+      });
+
+      const createdStudent = await handleApiResponse<any>(studentResponse);
+      console.log('Student created successfully:', createdStudent);
+
+    // 3) Normalize into our Student type
+    const className = createdStudent.current_class_name || '';
+    const classParts = className.split(' ');
+    const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+
+    return {
+      id: createdStudent.id.toString(),
+      user: convertDjangoUser(createdStudent.user_details),
+      studentId: createdStudent.student_id,
+      class: className,
+      section,
+      rollNumber: 0,
+      admissionDate: createdStudent.admission_date,
+    };
+    } catch (error) {
+      console.error('Error in createStudent API:', error);
+      throw error; // Re-throw to let the calling code handle it
+    }
+  },
+
   getStaff: async (): Promise<Staff[]> => {
     const response = await fetch(`${API_BASE_URL}/staff/`, {
       headers: getAuthHeaders(),
