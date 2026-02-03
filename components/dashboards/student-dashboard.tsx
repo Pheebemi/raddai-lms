@@ -22,7 +22,8 @@ import {
   FileText,
   TrendingUp,
   Clock,
-  AlertCircle
+  AlertCircle,
+  Lock,
 } from 'lucide-react';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 
@@ -195,40 +196,60 @@ export function StudentDashboard() {
               {Object.keys(resultsByTerm).length > 0 ? (
                 Object.entries(resultsByTerm).map(([term, termResults]) => (
                   <div key={term} className="space-y-2">
-                    <h3 className="font-semibold text-lg">{term} - {termResults[0]?.academicYear}</h3>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Subject</TableHead>
-                          <TableHead className="text-center">CA1</TableHead>
-                          <TableHead className="text-center">CA2</TableHead>
-                          <TableHead className="text-center">CA3</TableHead>
-                          <TableHead className="text-center">CA4</TableHead>
-                          <TableHead className="text-center">Exam</TableHead>
-                          <TableHead className="text-center">Grade</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {termResults.map((result) => (
-                        <TableRow key={result.id}>
-                          <TableCell className="font-medium">{result.subject_name || result.subjectId}</TableCell>
-                            <TableCell className="text-center">{result.ca1_score}</TableCell>
-                            <TableCell className="text-center">{result.ca2_score}</TableCell>
-                            <TableCell className="text-center">{result.ca3_score}</TableCell>
-                            <TableCell className="text-center">{result.ca4_score}</TableCell>
-                            <TableCell className="text-center">{result.exam_score}</TableCell>
-                            <TableCell className="text-center">
-                              <Badge variant={
-                                result.grade.startsWith('A') ? 'default' :
-                                result.grade.startsWith('B') ? 'secondary' : 'outline'
-                              }>
-                                {result.grade}
-                              </Badge>
-                            </TableCell>
+                    <h3 className="font-semibold text-lg">
+                      {term} - {termResults[0]?.academicYear}
+                    </h3>
+                    {termResults.some((result) => result.payment_status) ? (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Subject</TableHead>
+                            <TableHead className="text-center">CA1</TableHead>
+                            <TableHead className="text-center">CA2</TableHead>
+                            <TableHead className="text-center">CA3</TableHead>
+                            <TableHead className="text-center">CA4</TableHead>
+                            <TableHead className="text-center">Exam</TableHead>
+                            <TableHead className="text-center">Grade</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {termResults.map((result) => (
+                            <TableRow key={result.id}>
+                              <TableCell className="font-medium">
+                                {result.subject_name || result.subjectId}
+                              </TableCell>
+                              <TableCell className="text-center">{result.ca1_score}</TableCell>
+                              <TableCell className="text-center">{result.ca2_score}</TableCell>
+                              <TableCell className="text-center">{result.ca3_score}</TableCell>
+                              <TableCell className="text-center">{result.ca4_score}</TableCell>
+                              <TableCell className="text-center">{result.exam_score}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge
+                                  variant={
+                                    result.grade.startsWith('A')
+                                      ? 'default'
+                                      : result.grade.startsWith('B')
+                                      ? 'secondary'
+                                      : 'outline'
+                                  }
+                                >
+                                  {result.grade}
+                                </Badge>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    ) : (
+                      <div className="text-center py-8">
+                        <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                        <p className="text-lg font-medium mb-2">Results Locked</p>
+                        <p className="text-muted-foreground">
+                          You haven&apos;t paid the school fees for this term. Please pay your fees
+                          to view your results.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))
               ) : (
