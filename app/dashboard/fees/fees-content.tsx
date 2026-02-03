@@ -120,6 +120,7 @@ export function FeesContent() {
     academicYear: '',
     remarks: '',
   });
+  const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
 
   // Update payment data when academic years load
   useEffect(() => {
@@ -173,23 +174,34 @@ export function FeesContent() {
     fetchData();
   }, [logout]);
 
-  // Get current fee amount
-  const currentFeeAmount = paymentData.academicYear ?
-    getFeeAmount(paymentData.term, paymentData.academicYear) :
-    30000; // Default amount if no academic year selected
+  // Get current full fee amount for the term (target total for that term)
+  const currentFeeAmount = paymentData.academicYear
+    ? getFeeAmount(paymentData.term, paymentData.academicYear)
+    : 30000; // Default amount if no academic year selected
 
-  // Check if current term/academic year combination is already paid
-  const isCurrentTermPaid = payments.some(payment =>
-    payment.term === paymentData.term &&
-    payment.academicYearId === paymentData.academicYear &&
-    payment.status === 'paid'
+  // Existing payment record for the selected term/year (if any)
+  const currentTermPayment = payments.find(
+    (payment) =>
+      payment.term === paymentData.term &&
+      payment.academicYearId === paymentData.academicYear
   );
 
-  // Flutterwave configuration
+  const alreadyPaid = currentTermPayment?.amount ?? 0;
+  const remainingAmount = Math.max(currentFeeAmount - alreadyPaid, 0);
+
+  const isPaymentTooHigh =
+    typeof paymentAmount === 'number' &&
+    paymentAmount > 0 &&
+    paymentAmount > remainingAmount;
+
+  // Check if current term/academic year combination is already fully paid
+  const isCurrentTermPaid = currentTermPayment?.status === 'paid';
+
+  // Flutterwave configuration (amount is the part payment the user is making now)
   const flutterwaveConfig = {
     public_key: process.env.NEXT_PUBLIC_FLUTTERWAVE_PUBLIC_KEY || 'FLWPUBK_TEST-xxxxxxxxxxxxxxxxxxxxx-X',
     tx_ref: `school_fee_${user?.id}_${Date.now()}`,
-    amount: currentFeeAmount,
+    amount: typeof paymentAmount === 'number' && paymentAmount > 0 ? paymentAmount : remainingAmount || currentFeeAmount,
     currency: 'NGN',
     payment_options: 'card,mobilemoney,ussd',
     customer: {
@@ -208,6 +220,21 @@ export function FeesContent() {
 
   const handlePaymentSubmit = () => {
     if (!user) return;
+
+    const effectiveAmount =
+      typeof paymentAmount === 'number' && paymentAmount > 0
+        ? paymentAmount
+        : remainingAmount || currentFeeAmount;
+
+    if (effectiveAmount <= 0) {
+      toast.error('Payment amount must be greater than zero.');
+      return;
+    }
+
+    if (effectiveAmount > remainingAmount) {
+      toast.error('You cannot pay more than the remaining balance for this term.');
+      return;
+    }
 
     handleFlutterwavePayment({
       callback: async (response) => {
@@ -268,8 +295,8 @@ export function FeesContent() {
             console.log('💳 Recording payment with data:', {
               student: numericStudentId,
               fee_structure: parseInt(feeStructure.id.toString()),
-              amount_paid: currentFeeAmount,
-              total_amount: currentFeeAmount, // Same as amount_paid for full payment
+              amount_paid: effectiveAmount,
+              total_amount: currentFeeAmount, // Full fee for the term
               due_date: dueDateString,
               payment_method: 'flutterwave',
               transaction_id: response.transaction_id,
@@ -281,10 +308,10 @@ export function FeesContent() {
               fee_structure: parseInt(feeStructure.id.toString()), // Ensure fee structure ID is numeric
               academic_year: paymentData.academicYear, // Academic year ID
               term: paymentData.term, // Term (first, second, third)
-              amount_paid: currentFeeAmount,
-              total_amount: currentFeeAmount, // Same as amount_paid for full payment
+              amount_paid: effectiveAmount, // Part payment
+              total_amount: currentFeeAmount, // Full fee for the term
               due_date: dueDateString,
-              status: 'paid', // Set status to paid for successful Flutterwave payments
+              // Backend will compute status (pending/partial/paid) based on cumulative amount
               payment_method: 'flutterwave',
               transaction_id: response.transaction_id,
               remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`,
@@ -345,17 +372,18 @@ export function FeesContent() {
   }, {} as Record<string, FeeTransaction[]>);
 
   // Calculate summary statistics
-  const totalPaid = filteredPayments
-    .filter(p => p.status === 'paid')
-    .reduce((sum, p) => sum + p.amount, 0);
+  const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
 
-  const totalPending = filteredPayments
-    .filter(p => p.status === 'pending')
-    .reduce((sum, p) => sum + p.amount, 0);
+  // Total outstanding = sum of (totalAmount - amount) for all records (never negative)
+  const totalOutstanding = filteredPayments.reduce((sum, p) => {
+    const total = p.totalAmount ?? p.amount;
+    const outstanding = Math.max(total - p.amount, 0);
+    return sum + outstanding;
+  }, 0);
 
   const totalOverdue = filteredPayments
     .filter(p => p.status === 'overdue')
-    .reduce((sum, p) => sum + p.amount, 0);
+    .reduce((sum, p) => sum + (p.totalAmount ? Math.max(p.totalAmount - p.amount, 0) : 0), 0);
 
   // Get unique terms and years for filters
   const availableTerms = Array.from(new Set(payments.map(p => p.term).filter(Boolean)));
@@ -500,20 +528,78 @@ export function FeesContent() {
                 </Select>
               </div>
 
-              {/* Amount Display */}
-              <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
-                <div className="text-center">
-                  <p className="text-sm text-green-700 font-medium mb-1">Amount to Pay</p>
-                  <div className="text-3xl font-bold text-green-600 mb-1">
-                    ₦{currentFeeAmount.toLocaleString()}
-                  </div>
-                  <p className="text-xs text-green-600">
-                    {paymentData.academicYear && user?.profile?.current_class
-                      ? `Grade ${user.profile.current_class.match(/Grade (\d+)/)?.[1] || ''} tuition fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`
-                      : paymentData.academicYear
-                        ? `Fee for ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term`
+              {/* Amount Display + Part Payment Info */}
+              <div className="space-y-3">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border border-green-200">
+                  <div className="text-center">
+                    <p className="text-sm text-green-700 font-medium mb-1">
+                      Full Fee for This Term
+                    </p>
+                    <div className="text-3xl font-bold text-green-600 mb-1">
+                      ₦{currentFeeAmount.toLocaleString()}
+                    </div>
+                    <p className="text-xs text-green-600">
+                      {paymentData.academicYear && user?.profile?.current_class
+                        ? `Grade ${
+                            user.profile.current_class.match(/Grade (\d+)/)?.[1] || ''
+                          } tuition fee for ${
+                            paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)
+                          } Term`
+                        : paymentData.academicYear
+                        ? `Fee for ${
+                            paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)
+                          } Term`
                         : 'Select an academic year to see the fee amount'}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="rounded-lg border bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground">Already Paid</p>
+                    <p className="font-semibold">
+                      ₦{alreadyPaid.toLocaleString()}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border bg-muted/40 p-3">
+                    <p className="text-xs text-muted-foreground">Remaining Balance</p>
+                    <p className="font-semibold">
+                      ₦{remainingAmount.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Part payment input */}
+                <div className="space-y-2">
+                  <Label htmlFor="paymentAmount" className="text-sm font-medium">
+                    Amount to Pay Now (Part Payment Allowed)
+                  </Label>
+                  <Input
+                    id="paymentAmount"
+                    type="number"
+                    min={0}
+                    max={remainingAmount || currentFeeAmount}
+                    value={paymentAmount === '' ? '' : paymentAmount}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const num = Number(value);
+                      if (value === '') {
+                        setPaymentAmount('');
+                      } else if (!Number.isNaN(num)) {
+                        setPaymentAmount(num);
+                      }
+                    }}
+                    placeholder={`₦${remainingAmount.toLocaleString()}`}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can pay in parts. Results for a term will only unlock when the full fee for
+                    that term has been paid.
                   </p>
+                  {isPaymentTooHigh && (
+                    <p className="text-xs text-red-600">
+                      Amount exceeds remaining balance (₦{remainingAmount.toLocaleString()}).
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -557,7 +643,7 @@ export function FeesContent() {
               </Button>
               <Button
                 onClick={handlePaymentSubmit}
-                disabled={isSubmitting || isCurrentTermPaid}
+                disabled={isSubmitting || isCurrentTermPaid || isPaymentTooHigh}
                 className="w-full sm:w-auto bg-green-600 hover:bg-green-700 order-1 sm:order-2 disabled:bg-gray-400"
               >
                 {isSubmitting ? (
@@ -653,8 +739,8 @@ export function FeesContent() {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">₦{totalPending.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Awaiting payment</p>
+            <div className="text-2xl font-bold text-yellow-600">₦{totalOutstanding.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Outstanding across selected terms/years</p>
           </CardContent>
         </Card>
 

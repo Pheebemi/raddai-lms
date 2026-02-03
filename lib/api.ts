@@ -102,7 +102,19 @@ export const dashboardApi = {
     const response = await fetch(`${API_BASE_URL}/dashboard/stats/`, {
       headers: getAuthHeaders(),
     });
-    return handleApiResponse<DashboardStats>(response);
+    const data = await handleApiResponse<any>(response);
+
+    // Map Django snake_case keys to our DashboardStats shape (camelCase)
+    return {
+      totalStudents: data.total_students,
+      totalStaff: data.total_staff,
+      totalRevenue: data.total_revenue,
+      pendingFees: data.pending_fees,
+      averageAttendance: data.average_attendance,
+      topPerformers: data.top_performers,
+      recentResults: data.recent_results,
+      upcomingEvents: data.upcoming_events,
+    };
   },
 };
 

@@ -29,7 +29,7 @@ import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 export function StudentDashboard() {
   const { user } = useAuth();
-  const { results, feeTransactions, announcements, studentProfile, isLoading, error } = useDashboardData();
+  const { dashboardStats, results, feeTransactions, announcements, studentProfile, isLoading, error } = useDashboardData();
 
   if (!user) return null;
 
@@ -37,9 +37,8 @@ export function StudentDashboard() {
   const attendancePercentage = 87;
 
   // Calculate fee summary
-  const totalDue = feeTransactions
-    .filter(ft => ft.status === 'pending' || ft.status === 'overdue')
-    .reduce((sum, ft) => sum + ft.amount, 0);
+  // Prefer backend-computed pending fees for the current academic session if available.
+  const backendPendingFees = dashboardStats?.pendingFees ?? 0;
 
   // Group results by term
   const resultsByTerm = results.reduce((acc, result) => {
@@ -159,7 +158,7 @@ export function StudentDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{totalDue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">₦{backendPendingFees.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
               {feeTransactions.filter(ft => ft.status === 'overdue').length} overdue
             </p>
