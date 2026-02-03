@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import {
   Table,
   TableBody,
@@ -49,6 +49,19 @@ export function StaffManagementContent() {
   const [selectedStaffForAssignment, setSelectedStaffForAssignment] = useState<Staff | null>(null);
   const [assignedClasses, setAssignedClasses] = useState<string[]>([]);
 
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [newStaff, setNewStaff] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    password: '',
+    email: '',
+    staffId: '',
+    designation: 'teacher',
+    joiningDate: new Date().toISOString().split('T')[0], // Today's date
+  });
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -69,6 +82,67 @@ export function StaffManagementContent() {
 
     fetchData();
   }, []);
+
+  const handleCreateStaff = async () => {
+    if (!newStaff.firstName || !newStaff.lastName || !newStaff.username || !newStaff.password || !newStaff.staffId) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+      const created = await usersApi.createStaff({
+        username: newStaff.username,
+        password: newStaff.password,
+        firstName: newStaff.firstName,
+        lastName: newStaff.lastName,
+        email: newStaff.email || undefined,
+        staffId: newStaff.staffId,
+        designation: newStaff.designation,
+        joiningDate: newStaff.joiningDate,
+      });
+
+      setStaff(prev => [created, ...prev]);
+      setIsCreateOpen(false);
+      setNewStaff({
+        firstName: '',
+        lastName: '',
+        username: '',
+        password: '',
+        email: '',
+        staffId: '',
+        designation: 'teacher',
+        joiningDate: new Date().toISOString().split('T')[0],
+      });
+      toast.success('Staff member created successfully.');
+    } catch (error: any) {
+      console.error('Failed to create staff:', error);
+
+      // Handle specific error cases
+      let errorMessage = 'Failed to create staff member.';
+
+      if (error?.message) {
+        errorMessage = error.message;
+      } else if (error?.response?.data) {
+        const data = error.response.data;
+
+        // Handle username already exists
+        if (data.username && Array.isArray(data.username)) {
+          errorMessage = `Username "${newStaff.username}" already exists. Please choose a different username.`;
+        } else if (data.staff_id && Array.isArray(data.staff_id)) {
+          errorMessage = `Staff ID "${newStaff.staffId}" already exists. Please choose a different ID.`;
+        } else if (data.detail) {
+          errorMessage = data.detail;
+        } else if (typeof data === 'string') {
+          errorMessage = data;
+        }
+      }
+
+      toast.error(errorMessage);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   // Filter staff based on search and designation
   const filteredStaff = staff.filter(staffMember => {
@@ -108,10 +182,120 @@ export function StaffManagementContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Staff Member
-          </Button>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Staff Member
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-[520px]">
+              <DialogHeader>
+                <DialogTitle>Add New Staff Member</DialogTitle>
+                <DialogDescription>
+                  Create a login account and set up staff member details.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="grid gap-4 py-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">First Name *</label>
+                    <Input
+                      value={newStaff.firstName}
+                      onChange={(e) => setNewStaff(s => ({ ...s, firstName: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Last Name *</label>
+                    <Input
+                      value={newStaff.lastName}
+                      onChange={(e) => setNewStaff(s => ({ ...s, lastName: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Username *</label>
+                    <Input
+                      value={newStaff.username}
+                      onChange={(e) => setNewStaff(s => ({ ...s, username: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Password *</label>
+                    <Input
+                      type="password"
+                      value={newStaff.password}
+                      onChange={(e) => setNewStaff(s => ({ ...s, password: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Email</label>
+                  <Input
+                    type="email"
+                    value={newStaff.email}
+                    onChange={(e) => setNewStaff(s => ({ ...s, email: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Staff ID *</label>
+                    <Input
+                      value={newStaff.staffId}
+                      onChange={(e) => setNewStaff(s => ({ ...s, staffId: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Designation *</label>
+                    <Select
+                      value={newStaff.designation}
+                      onValueChange={(value) => setNewStaff(s => ({ ...s, designation: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select designation" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="teacher">Teacher</SelectItem>
+                        <SelectItem value="principal">Principal</SelectItem>
+                        <SelectItem value="vice_principal">Vice Principal</SelectItem>
+                        <SelectItem value="administrator">Administrator</SelectItem>
+                        <SelectItem value="librarian">Librarian</SelectItem>
+                        <SelectItem value="counselor">Counselor</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Joining Date</label>
+                  <Input
+                    type="date"
+                    value={newStaff.joiningDate}
+                    onChange={(e) => setNewStaff(s => ({ ...s, joiningDate: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setIsCreateOpen(false)}
+                  type="button"
+                >
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateStaff} disabled={isCreating}>
+                  {isCreating ? 'Creating...' : 'Create Staff Member'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Button variant="outline">
             <Plus className="mr-2 h-4 w-4" />
             Bulk Import
@@ -221,134 +405,123 @@ export function StaffManagementContent() {
         </CardContent>
       </Card>
 
-      {/* Staff Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {filteredStaff.map((staffMember) => (
-          <Card key={staffMember.id} className="hover:shadow-md transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={staffMember.user.avatar} />
-                  <AvatarFallback>
-                    {staffMember.user.firstName[0]}{staffMember.user.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <CardTitle className="text-lg">
-                    {staffMember.user.firstName} {staffMember.user.lastName}
-                  </CardTitle>
-                  <Badge variant="secondary" className="mt-1">
-                    {staffMember.designation}
-                  </Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Staff ID</p>
-                  <p className="font-medium">{staffMember.staffId}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Class Assignment</p>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1">
-                      {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {staffMember.assignedClasses.slice(0, 2).map((className, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              {className}
-                            </Badge>
-                          ))}
-                          {staffMember.assignedClasses.length > 2 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{staffMember.assignedClasses.length - 2} more
-                            </Badge>
-                          )}
+      {/* Staff Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff Members</CardTitle>
+          <CardDescription>
+            {filteredStaff.length} staff member{filteredStaff.length !== 1 ? 's' : ''} registered
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Staff Member</TableHead>
+                <TableHead>Staff ID</TableHead>
+                <TableHead>Designation</TableHead>
+                <TableHead>Assigned Classes</TableHead>
+                <TableHead>Subjects</TableHead>
+                <TableHead>Joining Date</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStaff.map((staffMember) => (
+                <TableRow key={staffMember.id}>
+                  <TableCell>
+                    <div className="flex items-center gap-3">
+                      <Avatar className="h-10 w-10">
+                        <AvatarImage src={staffMember.user.avatar} />
+                        <AvatarFallback>
+                          {staffMember.user.firstName[0]}{staffMember.user.lastName[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="font-medium">
+                          {staffMember.user.firstName} {staffMember.user.lastName}
                         </div>
-                      ) : (
-                        <p className="font-medium text-muted-foreground">No classes assigned</p>
-                      )}
+                        <div className="text-sm text-muted-foreground">
+                          {staffMember.user.email || 'No email'}
+                        </div>
+                      </div>
                     </div>
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button size="sm" variant="outline" className="h-6 px-2">
-                          <Settings className="h-3 w-3" />
+                  </TableCell>
+                  <TableCell className="font-mono">{staffMember.staffId}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{staffMember.designation}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 ? (
+                      <div className="flex flex-wrap gap-1">
+                        {staffMember.assignedClasses.slice(0, 2).map((className, index) => (
+                          <Badge key={index} variant="outline" className="text-xs">
+                            {className}
+                          </Badge>
+                        ))}
+                        {staffMember.assignedClasses.length > 2 && (
+                          <Badge variant="outline" className="text-xs">
+                            +{staffMember.assignedClasses.length - 2}
+                          </Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">None assigned</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <div className="text-sm">
+                      {staffMember.assignedSubjects?.length ?
+                        staffMember.assignedSubjects.slice(0, 2).join(', ') +
+                        (staffMember.assignedSubjects.length > 2 ? '...' : '')
+                        : 'None assigned'}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {staffMember.joiningDate
+                      ? new Date(staffMember.joiningDate).toLocaleDateString()
+                      : 'N/A'}
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0">
+                        <Phone className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
                         </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Assign Classes to {staffMember.user.firstName}</DialogTitle>
-                          <DialogDescription>
-                            Select classes to assign to this teacher
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                            {classes.map((cls) => (
-                              <div key={cls.id} className="flex items-center space-x-2">
-                                <input
-                                  type="checkbox"
-                                  id={`class-${cls.id}`}
-                                  checked={staffMember.assignedClasses?.includes(cls.name) || false}
-                                  className="rounded"
-                                  disabled
-                                />
-                                <label
-                                  htmlFor={`class-${cls.id}`}
-                                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                                >
-                                  {cls.name}
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="flex gap-2 pt-4">
-                            <Button className="flex-1">
-                              Update Assignment
-                            </Button>
-                            <Button variant="outline" className="flex-1">
-                              Cancel
-                            </Button>
-                          </div>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  </div>
-                </div>
-              </div>
-
-              <div className="text-sm">
-                <p className="text-muted-foreground">Subjects</p>
-                <p className="font-medium">
-                  {staffMember.assignedSubjects?.length ?
-                    staffMember.assignedSubjects.slice(0, 3).join(', ') +
-                    (staffMember.assignedSubjects.length > 3 ? '...' : '')
-                    : 'None assigned'}
-                </p>
-              </div>
-
-              <div className="text-sm">
-                <p className="text-muted-foreground">Joining Date</p>
-                <p className="font-medium">
-                  {staffMember.joiningDate ? new Date(staffMember.joiningDate).toLocaleDateString() : 'N/A'}
-                </p>
-              </div>
-
-              <div className="flex gap-2">
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Mail className="h-3 w-3 mr-1" />
-                  Email
-                </Button>
-                <Button size="sm" variant="outline" className="flex-1">
-                  <Phone className="h-3 w-3 mr-1" />
-                  Call
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Staff
+                        </DropdownMenuItem>
+                        <DropdownMenuItem>
+                          <Settings className="mr-2 h-4 w-4" />
+                          Manage Classes
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-red-600">
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Remove Staff
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {filteredStaff.length === 0 && (
         <Card>

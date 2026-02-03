@@ -773,6 +773,76 @@ export const usersApi = {
     }
   },
 
+  // Create a new staff user + profile and assign initial details
+  createStaff: async (data: {
+    username: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    email?: string;
+    staffId: string;
+    designation: string;
+    joiningDate?: string;
+  }): Promise<Staff> => {
+    try {
+      // 1) Create the auth user with role=staff
+      const userPayload = {
+        username: data.username,
+        password: data.password,
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email || '',  // Send empty string instead of undefined
+        role: 'staff',
+      };
+
+      console.log('Creating staff user with payload:', userPayload);
+
+      const userResponse = await fetch(`${API_BASE_URL}/users/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(userPayload),
+      });
+
+      const createdUser = await handleApiResponse<any>(userResponse);
+      console.log('Staff user created successfully:', createdUser);
+
+      // 2) Create the staff profile linked to that user
+      const staffPayload = {
+        user: createdUser.id,
+        staff_id: data.staffId,
+        designation: data.designation,
+        joining_date: data.joiningDate || new Date().toISOString().split('T')[0], // Today's date if not provided
+      };
+
+      console.log('Creating staff profile with payload:', staffPayload);
+
+      const staffResponse = await fetch(`${API_BASE_URL}/staff/`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(staffPayload),
+      });
+
+      const createdStaff = await handleApiResponse<any>(staffResponse);
+      console.log('Staff profile created successfully:', createdStaff);
+
+      // 3) Normalize into our Staff type
+      return {
+        id: createdStaff.id.toString(),
+        user: convertDjangoUser(createdStaff.user_details),
+        staffId: createdStaff.staff_id,
+        designation: createdStaff.designation,
+        department: createdStaff.department || '',
+        assignedClasses: createdStaff.assigned_classes?.map((c: any) => c.name) || [],
+        assignedSubjects: createdStaff.subjects?.map((s: any) => s.name) || [],
+        joiningDate: createdStaff.joining_date,
+        qualification: createdStaff.qualification || '',
+      };
+    } catch (error) {
+      console.error('Error in createStaff API:', error);
+      throw error; // Re-throw to let the calling code handle it
+    }
+  },
+
   getStaff: async (): Promise<Staff[]> => {
     const response = await fetch(`${API_BASE_URL}/staff/`, {
       headers: getAuthHeaders(),
