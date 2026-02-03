@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { Upload, Save, X, Plus } from 'lucide-react';
+import { Upload, Save, X, Plus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchClasses, fetchSubjects, fetchAcademicYears, usersApi, resultsApi } from '@/lib/api';
 
@@ -299,6 +299,26 @@ export default function UploadResultsPage() {
     return 'F';
   };
 
+  // Export results for a specific term that this staff member can access
+  const exportResultsByTerm = async (term: 'first' | 'second' | 'third') => {
+    try {
+      const blob = await resultsApi.exportResults({ term });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${term}-term-results-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`${term.charAt(0).toUpperCase() + term.slice(1)} term results exported successfully!`);
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export results.');
+    }
+  };
+
   if (isInitialLoading) {
     return (
       <ProtectedRoute allowedRoles={['staff']}>
@@ -325,10 +345,24 @@ export default function UploadResultsPage() {
     <ProtectedRoute allowedRoles={['staff']}>
       <AppLayout>
         <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Upload Results</h1>
           <p className="text-muted-foreground">Enter student results for the selected class and subject</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => exportResultsByTerm('first')}>
+            <Download className="mr-2 h-4 w-4" />
+            Export 1st Term
+          </Button>
+          <Button variant="outline" onClick={() => exportResultsByTerm('second')}>
+            <Download className="mr-2 h-4 w-4" />
+            Export 2nd Term
+          </Button>
+          <Button variant="outline" onClick={() => exportResultsByTerm('third')}>
+            <Download className="mr-2 h-4 w-4" />
+            Export 3rd Term
+          </Button>
         </div>
       </div>
 
