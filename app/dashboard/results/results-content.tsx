@@ -31,6 +31,7 @@ export function ResultsContent() {
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [classRankings, setClassRankings] = useState<ClassRanking | null>(null);
   const [showRankings, setShowRankings] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -152,6 +153,38 @@ export function ResultsContent() {
   // Get unique terms and years for filters
   const availableTerms = Array.from(new Set(results.map(r => r.term)));
   const availableYears = Array.from(new Set(results.map(r => r.academicYear)));
+
+  // Export results as CSV for staff users
+  const exportResultsAsCSV = async () => {
+    if (user?.role !== 'staff') {
+      toast.error('Only staff members can export results.');
+      return;
+    }
+
+    setIsExporting(true);
+    try {
+      const filters: any = {};
+      if (selectedTerm !== 'all') filters.term = selectedTerm;
+      if (selectedYear !== 'all') filters.academic_year = selectedYear;
+
+      const blob = await resultsApi.exportResults(filters);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `results-export-${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success('Results exported successfully!');
+    } catch (error) {
+      console.error('Export failed:', error);
+      toast.error('Failed to export results.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Function to generate and download PNG result sheet
   const downloadResultAsPNG = async (term: string, termResults: Result[]) => {
@@ -457,6 +490,16 @@ export function ResultsContent() {
             <Trophy className="mr-2 h-4 w-4" />
             {showRankings ? 'Hide Rankings' : 'Show Rankings'}
           </Button>
+          {user?.role === 'staff' && (
+            <Button
+              variant="outline"
+              onClick={exportResultsAsCSV}
+              disabled={isExporting}
+            >
+              <Download className="mr-2 h-4 w-4" />
+              {isExporting ? 'Exporting...' : 'Export Results CSV'}
+            </Button>
+          )}
           <Button variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Download Report

@@ -385,6 +385,30 @@ export const resultsApi = {
     });
     return handleApiResponse(response);
   },
+
+  // Export all results that the current staff member can access
+  exportResults: async (filters?: {
+    class_id?: string;
+    term?: string;
+    academic_year?: string;
+  }): Promise<Blob> => {
+    const params = new URLSearchParams();
+    if (filters?.class_id) params.append('class_id', filters.class_id);
+    if (filters?.term) params.append('term', filters.term);
+    if (filters?.academic_year) params.append('academic_year', filters.academic_year);
+
+    const response = await fetch(`${API_BASE_URL}/results/export/?${params}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('edumanage_token')}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Export failed: ${response.status}`);
+    }
+
+    return response.blob();
+  },
 };
 
 // Fee Structure API
