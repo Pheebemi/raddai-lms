@@ -392,16 +392,27 @@ export function FeesContent() {
   // Calculate summary statistics
   const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
 
-  // Total outstanding = sum of (totalAmount - amount) for all records (never negative)
-  const totalOutstanding = filteredPayments.reduce((sum, p) => {
-    const total = p.totalAmount ?? p.amount;
-    const outstanding = Math.max(total - p.amount, 0);
-    return sum + outstanding;
-  }, 0);
+  // Session-level pending fees for the currently selected / latest academic year:
+  // (per-term fee * 3 terms) - total amount paid in that academic year.
+  const selectedAcademicYearId = paymentData.academicYear;
 
+  const totalPaidInSession = payments
+    .filter(p => !selectedAcademicYearId || p.academicYearId === selectedAcademicYearId)
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const sessionPendingAmount =
+    currentFeeAmount !== null
+      ? Math.max(currentFeeAmount * 3 - totalPaidInSession, 0)
+      : 0;
+
+  // Overdue amount across filtered payments, based on remaining per record
   const totalOverdue = filteredPayments
     .filter(p => p.status === 'overdue')
-    .reduce((sum, p) => sum + (p.totalAmount ? Math.max(p.totalAmount - p.amount, 0) : 0), 0);
+    .reduce((sum, p) => {
+      const total = p.totalAmount ?? p.amount;
+      const outstanding = Math.max(total - p.amount, 0);
+      return sum + outstanding;
+    }, 0);
 
   // Get unique terms and years for filters
   const availableTerms = Array.from(new Set(payments.map(p => p.term).filter(Boolean)));
@@ -774,8 +785,10 @@ export function FeesContent() {
             <Clock className="h-4 w-4 text-yellow-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-yellow-600">₦{totalOutstanding.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">Outstanding across selected terms/years</p>
+            <div className="text-2xl font-bold text-yellow-600">₦{sessionPendingAmount.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">
+              Remaining for the current academic session (3 terms)
+            </p>
           </CardContent>
         </Card>
 
