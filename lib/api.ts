@@ -773,6 +773,67 @@ export const usersApi = {
     }
   },
 
+  // Update an existing student (basic details + class assignment)
+  updateStudent: async (
+    id: string,
+    data: {
+      userId: string;
+      firstName?: string;
+      lastName?: string;
+      email?: string;
+      studentId?: string;
+      classId?: string;
+    }
+  ): Promise<Student> => {
+    try {
+      // 1) Optionally update the linked auth user
+      const userPayload: any = {};
+      if (data.firstName !== undefined) userPayload.first_name = data.firstName;
+      if (data.lastName !== undefined) userPayload.last_name = data.lastName;
+      if (data.email !== undefined) userPayload.email = data.email;
+
+      if (Object.keys(userPayload).length > 0) {
+        const userResponse = await fetch(`${API_BASE_URL}/users/${data.userId}/`, {
+          method: 'PATCH',
+          headers: getAuthHeaders(),
+          body: JSON.stringify(userPayload),
+        });
+        await handleApiResponse<any>(userResponse);
+      }
+
+      // 2) Update the student profile
+      const studentPayload: any = {};
+      if (data.studentId !== undefined) studentPayload.student_id = data.studentId;
+      if (data.classId !== undefined) studentPayload.current_class = data.classId;
+
+      const studentResponse = await fetch(`${API_BASE_URL}/students/${id}/`, {
+        method: 'PATCH',
+        headers: getAuthHeaders(),
+        body: JSON.stringify(studentPayload),
+      });
+
+      const updatedStudent = await handleApiResponse<any>(studentResponse);
+
+      // 3) Normalize into our Student type (same mapping as getStudents/createStudent)
+      const className = updatedStudent.current_class_name || '';
+      const classParts = className.split(' ');
+      const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+
+      return {
+        id: updatedStudent.id.toString(),
+        user: convertDjangoUser(updatedStudent.user_details),
+        studentId: updatedStudent.student_id,
+        class: className,
+        section,
+        rollNumber: 0,
+        admissionDate: updatedStudent.admission_date,
+      };
+    } catch (error) {
+      console.error('Error in updateStudent API:', error);
+      throw error;
+    }
+  },
+
   // Create a new staff user + profile and assign initial details
   createStaff: async (data: {
     username: string;

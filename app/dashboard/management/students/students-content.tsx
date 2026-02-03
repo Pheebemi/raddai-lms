@@ -66,6 +66,17 @@ export function StudentsManagementContent() {
     classId: '',
   });
 
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [editingStudent, setEditingStudent] = useState<Student | null>(null);
+  const [editStudentForm, setEditStudentForm] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    studentId: '',
+    classId: '',
+  });
+
   useEffect(() => {
     const fetchStudents = async () => {
       try {
@@ -142,6 +153,53 @@ export function StudentsManagementContent() {
       toast.error(errorMessage);
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const openEditDialog = (student: Student) => {
+    // Find the matching class by name to get its ID
+    const cls = classesData.find((c) => c.name === student.class);
+
+    setEditingStudent(student);
+    setEditStudentForm({
+      firstName: student.user.firstName,
+      lastName: student.user.lastName,
+      email: student.user.email,
+      studentId: student.studentId,
+      classId: cls ? cls.id : '',
+    });
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateStudent = async () => {
+    if (!editingStudent) return;
+
+    if (!editStudentForm.firstName || !editStudentForm.lastName || !editStudentForm.studentId || !editStudentForm.classId) {
+      toast.error('Please fill in all required fields.');
+      return;
+    }
+
+    try {
+      setIsUpdating(true);
+      const updated = await usersApi.updateStudent(editingStudent.id, {
+        userId: editingStudent.user.id,
+        firstName: editStudentForm.firstName,
+        lastName: editStudentForm.lastName,
+        email: editStudentForm.email || undefined,
+        studentId: editStudentForm.studentId,
+        classId: editStudentForm.classId,
+      });
+
+      setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
+      setIsEditOpen(false);
+      setEditingStudent(null);
+      toast.success('Student updated successfully.');
+    } catch (error: any) {
+      console.error('Failed to update student:', error);
+      const errorMessage = error?.message || 'Failed to update student.';
+      toast.error(errorMessage);
+    } finally {
+      setIsUpdating(false);
     }
   };
 
@@ -395,6 +453,98 @@ export function StudentsManagementContent() {
         </CardContent>
       </Card>
 
+      {/* Edit Student Dialog */}
+      <Dialog
+        open={isEditOpen}
+        onOpenChange={(open) => {
+          setIsEditOpen(open);
+          if (!open) {
+            setEditingStudent(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Edit Student</DialogTitle>
+            <DialogDescription>
+              Update student details and change their assigned class.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">First Name *</label>
+                <Input
+                  value={editStudentForm.firstName}
+                  onChange={(e) => setEditStudentForm((s) => ({ ...s, firstName: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Last Name *</label>
+                <Input
+                  value={editStudentForm.lastName}
+                  onChange={(e) => setEditStudentForm((s) => ({ ...s, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Email</label>
+              <Input
+                type="email"
+                value={editStudentForm.email}
+                onChange={(e) => setEditStudentForm((s) => ({ ...s, email: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Student ID *</label>
+                <Input
+                  value={editStudentForm.studentId}
+                  onChange={(e) => setEditStudentForm((s) => ({ ...s, studentId: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Class *</label>
+                <Select
+                  value={editStudentForm.classId}
+                  onValueChange={(value) => setEditStudentForm((s) => ({ ...s, classId: value }))}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select class" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {classesData.map((cls) => (
+                      <SelectItem key={cls.id} value={cls.id}>
+                        {cls.name} • {cls.academicYear}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditOpen(false);
+                setEditingStudent(null);
+              }}
+              type="button"
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateStudent} disabled={isUpdating || !editingStudent}>
+              {isUpdating ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Students Table */}
       {selectedClass === 'all' ? (
         <Card>
@@ -479,7 +629,12 @@ export function StudentsManagementContent() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>
+                          <DropdownMenuItem
+                            onSelect={(e) => {
+                              e.preventDefault();
+                              openEditDialog(student);
+                            }}
+                          >
                             <Edit className="mr-2 h-4 w-4" />
                             Edit Student
                           </DropdownMenuItem>
