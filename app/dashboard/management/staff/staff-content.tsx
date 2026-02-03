@@ -60,6 +60,7 @@ export function StaffManagementContent() {
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0], // Today's date
+    classIds: [] as string[],
   });
 
   useEffect(() => {
@@ -100,6 +101,7 @@ export function StaffManagementContent() {
         staffId: newStaff.staffId,
         designation: newStaff.designation,
         joiningDate: newStaff.joiningDate,
+        classIds: newStaff.classIds,
       });
 
       setStaff(prev => [created, ...prev]);
@@ -113,6 +115,7 @@ export function StaffManagementContent() {
         staffId: '',
         designation: 'teacher',
         joiningDate: new Date().toISOString().split('T')[0],
+        classIds: [],
       });
       toast.success('Staff member created successfully.');
     } catch (error: any) {
@@ -271,13 +274,55 @@ export function StaffManagementContent() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Joining Date</label>
-                  <Input
-                    type="date"
-                    value={newStaff.joiningDate}
-                    onChange={(e) => setNewStaff(s => ({ ...s, joiningDate: e.target.value }))}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Joining Date</label>
+                    <Input
+                      type="date"
+                      value={newStaff.joiningDate}
+                      onChange={(e) => setNewStaff(s => ({ ...s, joiningDate: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Assign to Classes</label>
+                    <div className="max-h-40 overflow-y-auto rounded-md border px-3 py-2 space-y-1">
+                      {classes.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No classes available.</p>
+                      )}
+                      {classes.map((cls) => {
+                        const checked = newStaff.classIds.includes(cls.id);
+                        return (
+                          <label
+                            key={cls.id}
+                            className="flex items-center justify-between gap-2 text-xs cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                className="h-3 w-3"
+                                checked={checked}
+                                onChange={(e) => {
+                                  const isChecked = e.target.checked;
+                                  setNewStaff((s) => ({
+                                    ...s,
+                                    classIds: isChecked
+                                      ? [...s.classIds, cls.id]
+                                      : s.classIds.filter((id) => id !== cls.id),
+                                  }));
+                                }}
+                              />
+                              <span>
+                                {cls.name} • {cls.academicYear}
+                              </span>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Optional: select one or more classes this staff member should be assigned to.
+                    </p>
+                  </div>
                 </div>
               </div>
 

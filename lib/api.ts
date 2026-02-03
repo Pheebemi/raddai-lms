@@ -783,6 +783,7 @@ export const usersApi = {
     staffId: string;
     designation: string;
     joiningDate?: string;
+    classIds?: string[];
   }): Promise<Staff> => {
     try {
       // 1) Create the auth user with role=staff
@@ -812,6 +813,10 @@ export const usersApi = {
         staff_id: data.staffId,
         designation: data.designation,
         joining_date: data.joiningDate || new Date().toISOString().split('T')[0], // Today's date if not provided
+        // Optional: assign to classes on creation
+        ...(data.classIds && data.classIds.length > 0
+          ? { assigned_classes: data.classIds }
+          : {}),
       };
 
       console.log('Creating staff profile with payload:', staffPayload);
