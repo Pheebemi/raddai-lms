@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,8 @@ import { toast } from 'sonner';
 
 export function FeesContent() {
   const { user, logout } = useAuth();
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const [payments, setPayments] = useState<FeeTransaction[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
@@ -246,6 +249,163 @@ export function FeesContent() {
     setCurrentFeeAmount(amount);
     setIsFeeAmountLoading(false);
   }, [paymentData.term, paymentData.academicYear, feeStructures, user]);
+
+  // Handle redirect back from Flutterwave using query parameters (?payment=success|failed)
+  useEffect(() => {
+    const status = searchParams.get('payment');
+    if (!status) return;
+
+    const normalize = status.toLowerCase();
+
+    const handlePaymentRecording = async () => {
+      try {
+        // Retrieve stored payment intent data
+        const storedData = sessionStorage.getItem('flutterwave_payment_intent');
+        if (!storedData) {
+          console.error('No payment intent data found in sessionStorage');
+          return;
+        }
+
+        const paymentIntent = JSON.parse(storedData);
+        console.log('Retrieved payment intent:', paymentIntent);
+
+        // Find the appropriate fee structure
+        const studentGrade = user?.profile?.current_class ?
+          (() => {
+            let grade = null;
+            const classLower = user.profile.current_class.toLowerCase();
+
+            // Method 3: Number anywhere in the string (e.g. "Jss1 A", "SSS 3 B")
+            const gradeMatch = user.profile.current_class.match(/(\d+)/);
+            if (gradeMatch) {
+              grade = parseInt(gradeMatch[1]);
+            }
+
+            // Normalize grade to match how grades are stored in the backend fee structures.
+            if (classLower.startsWith('jss')) {
+              grade = grade + 6; // 1->7, 2->8, 3->9
+            } else if (classLower.startsWith('sss')) {
+              grade = grade + 9; // 1->10, 2->11, 3->12
+            }
+
+            return grade || 1;
+          })() : 1;
+
+        const feeStructure = feeStructures.find(fs => {
+          const gradeMatches = fs.grade === studentGrade;
+          const typeMatches = fs.feeType === 'tuition';
+
+          const academicYearMatches =
+            fs.academicYearId === paymentIntent.academicYear ||
+            fs.academicYearId === parseInt(paymentIntent.academicYear) ||
+            String(fs.academicYearId) === paymentIntent.academicYear;
+
+          console.log('🔍 Payment fee structure check:', {
+            fs_id: fs.id,
+            fs_grade: fs.grade,
+            fs_feeType: fs.feeType,
+            fs_academicYearId: fs.academicYearId,
+            studentGrade,
+            paymentIntent_academicYear: paymentIntent.academicYear,
+            gradeMatches,
+            typeMatches,
+            academicYearMatches,
+            overallMatch: gradeMatches && typeMatches && academicYearMatches
+          });
+
+          return gradeMatches && typeMatches && academicYearMatches;
+        });
+
+        console.log('🎯 Found fee structure for payment recording:', feeStructure);
+        console.log('👤 Student grade:', studentGrade, 'Academic year:', paymentIntent.academicYear);
+
+        if (!feeStructure) {
+          console.error('❌ No fee structure found for payment recording');
+          toast.error('Payment was successful but could not be recorded: No matching fee structure found for your grade and academic year. Please contact the administrator.');
+          return;
+        }
+
+        // Calculate due date (end of current month for simplicity)
+        const now = new Date();
+        const dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+        const dueDateString = dueDate.toISOString().split('T')[0];
+
+        // Ensure studentId is a number
+        const numericStudentId = parseInt(paymentIntent.studentId.toString());
+        if (isNaN(numericStudentId)) {
+          console.error('❌ Invalid student ID:', paymentIntent.studentId);
+          toast.error('Payment was successful but could not be recorded: Invalid student ID. Please contact the administrator.');
+          return;
+        }
+
+        console.log('💳 Recording payment with data:', {
+          student: numericStudentId,
+          fee_structure: parseInt(feeStructure.id.toString()),
+          amount_paid: paymentIntent.amount,
+          total_amount: paymentIntent.totalAmount,
+          due_date: dueDateString,
+          payment_method: 'flutterwave',
+          transaction_id: paymentIntent.txRef,
+          remarks: paymentIntent.remarks,
+          debug: {
+            paymentIntent,
+            feeStructure_amount: feeStructure.amount,
+          }
+        });
+
+        const paymentPayload = {
+          student: numericStudentId,
+          fee_structure: parseInt(feeStructure.id.toString()),
+          academic_year: paymentIntent.academicYear,
+          term: paymentIntent.term,
+          amount_paid: paymentIntent.amount,
+          total_amount: paymentIntent.totalAmount,
+          due_date: dueDateString,
+          payment_method: 'flutterwave',
+          transaction_id: paymentIntent.txRef,
+          remarks: paymentIntent.remarks,
+        };
+
+        console.log('📤 Sending payment data to backend:', paymentPayload);
+
+        const result = await feesApi.createPayment(paymentPayload);
+        console.log('✅ Payment recorded successfully:', result);
+
+        // Clear the stored payment intent data
+        sessionStorage.removeItem('flutterwave_payment_intent');
+
+        toast.success('Payment completed and recorded successfully!');
+
+      } catch (error) {
+        console.error('❌ Payment recording failed:', error);
+        console.error('❌ Error details:', error.response?.data || error.message);
+        toast.error('Payment was successful but failed to record: ' + handleApiError(error));
+      }
+    };
+
+    const refreshPayments = async () => {
+      try {
+        const updatedPayments = await feesApi.getPayments();
+        setPayments(updatedPayments);
+      } catch (error) {
+        console.error('Failed to refresh payments after redirect:', error);
+      }
+    };
+
+    if (normalize === 'success') {
+      // Record the payment in the backend
+      handlePaymentRecording().then(() => {
+        refreshPayments();
+      });
+    } else if (normalize === 'failed' || normalize === 'cancelled') {
+      toast.error('Payment was not completed.');
+      // Clear stored data on failure
+      sessionStorage.removeItem('flutterwave_payment_intent');
+    }
+
+    // Clean the URL so the toast doesn't repeat on refresh
+    router.replace('/dashboard/fees');
+  }, [searchParams, router, user, feeStructures]);
 
   console.log('💰 Current fee calculation:', {
     paymentData_academicYear: paymentData.academicYear,
@@ -514,6 +674,12 @@ export function FeesContent() {
       description: `Payment for ${paymentData.term} term school fees`,
       logo: '/school-logo.png', // Add your school logo
     },
+    // Optional redirect back to the app after payment.
+    // Flutterwave will append its own status, but we also handle ?payment=success manually.
+    redirect_url:
+      typeof window !== 'undefined'
+        ? `${window.location.origin}/dashboard/fees?payment=success`
+        : undefined,
   };
 
   const handleFlutterwavePayment = useFlutterwave(flutterwaveConfig);
@@ -541,139 +707,30 @@ export function FeesContent() {
       return;
     }
 
+    // Store payment data in sessionStorage for the redirect handler
+    const paymentIntentData = {
+      studentId: user.profile?.id,
+      academicYear: paymentData.academicYear,
+      term: paymentData.term,
+      amount: effectiveAmount,
+      totalAmount: currentFeeAmount,
+      remarks: paymentData.remarks || `Flutterwave Payment - Term ${paymentData.term}`,
+      txRef: `school_fee_${user?.id}_${Date.now()}`,
+    };
+
+    sessionStorage.setItem('flutterwave_payment_intent', JSON.stringify(paymentIntentData));
+
     handleFlutterwavePayment({
       callback: async (response) => {
-        console.log('Flutterwave response:', response);
-
-        if (response.status === 'successful') {
-          // Find the appropriate fee structure
-          const studentGrade = user?.profile?.current_class ?
-            parseInt(user.profile.current_class.match(/Grade (\d+)/)?.[1] || '1') : 1;
-
-          const feeStructure = feeStructures.find(fs => {
-            // Match grade and fee type
-            const gradeMatches = fs.grade === studentGrade;
-            const typeMatches = fs.feeType === 'tuition';
-
-            // Match academic year - try both string and number comparisons
-            const academicYearMatches =
-              fs.academicYearId === paymentData.academicYear ||
-              fs.academicYearId === parseInt(paymentData.academicYear) ||
-              String(fs.academicYearId) === paymentData.academicYear;
-
-            console.log('🔍 Payment fee structure check:', {
-              fs_id: fs.id,
-              fs_grade: fs.grade,
-              fs_feeType: fs.feeType,
-              fs_academicYearId: fs.academicYearId,
-              studentGrade,
-              paymentData_academicYear: paymentData.academicYear,
-              gradeMatches,
-              typeMatches,
-              academicYearMatches,
-              overallMatch: gradeMatches && typeMatches && academicYearMatches
-            });
-
-            return gradeMatches && typeMatches && academicYearMatches;
-          });
-
-          console.log('🎯 Found fee structure for payment recording:', feeStructure);
-          console.log('👤 Student grade:', studentGrade, 'Academic year:', paymentData.academicYear);
-
-          // Check if we have a valid fee structure
-          if (!feeStructure) {
-            console.error('❌ No fee structure found for payment recording');
-            toast.error('Payment was successful but could not be recorded: No matching fee structure found for your grade and academic year. Please contact the administrator.');
-            return;
-          }
-
-          // Record the successful payment
-          try {
-            // Calculate due date (end of current month for simplicity)
-            const now = new Date();
-            const dueDate = new Date(now.getFullYear(), now.getMonth() + 1, 0); // Last day of current month
-            const dueDateString = dueDate.toISOString().split('T')[0]; // YYYY-MM-DD format
-
-            // Get the student profile ID, not the user ID
-            const studentId = user.profile?.id;
-            if (!studentId) {
-              console.error('❌ No student profile found for user:', user);
-              toast.error('Payment was successful but could not be recorded: Student profile not found. Please contact the administrator.');
-              return;
-            }
-
-            // Ensure studentId is a number
-            const numericStudentId = parseInt(studentId.toString());
-            if (isNaN(numericStudentId)) {
-              console.error('❌ Invalid student ID:', studentId);
-              toast.error('Payment was successful but could not be recorded: Invalid student ID. Please contact the administrator.');
-              return;
-            }
-
-            console.log('💳 Recording payment with data:', {
-              student: numericStudentId,
-              fee_structure: parseInt(feeStructure.id.toString()),
-              amount_paid: effectiveAmount,
-              total_amount: currentFeeAmount, // Full fee for the term
-              due_date: dueDateString,
-              payment_method: 'flutterwave',
-              transaction_id: response.transaction_id,
-              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`,
-              debug: {
-                currentFeeAmount,
-                effectiveAmount,
-                feeStructure_amount: feeStructure.amount,
-                remainingAmount
-              }
-            });
-
-            const paymentPayload = {
-              student: numericStudentId, // Use numeric student profile ID
-              fee_structure: parseInt(feeStructure.id.toString()), // Ensure fee structure ID is numeric
-              academic_year: paymentData.academicYear, // Academic year ID
-              term: paymentData.term, // Term (first, second, third)
-              amount_paid: effectiveAmount, // Part payment
-              total_amount: currentFeeAmount, // Full fee for the term
-              due_date: dueDateString,
-              // Backend will compute status (pending/partial/paid) based on cumulative amount
-              payment_method: 'flutterwave',
-              transaction_id: response.transaction_id,
-              remarks: paymentData.remarks || `Flutterwave Payment - ${response.transaction_id}`,
-            };
-
-            console.log('📤 Sending payment data to backend:', paymentPayload);
-
-            try {
-              const result = await feesApi.createPayment(paymentPayload);
-              console.log('✅ Payment recorded successfully:', result);
-            } catch (paymentError: any) {
-              console.error('❌ Payment recording failed:', paymentError);
-              console.error('❌ Error details:', paymentError.response?.data || paymentError.message);
-              throw paymentError; // Re-throw to trigger the error handling below
-            }
-
-            // Refresh payments
-            const updatedPayments = await feesApi.getPayments();
-            setPayments(updatedPayments);
-
-            toast.success('Payment completed successfully!');
-            setIsPaymentDialogOpen(false);
-            setPaymentData({
-              term: 'first',
-              academicYear: academicYears[0]?.id.toString() || '',
-              remarks: '',
-            });
-          } catch (error) {
-            toast.error('Payment was successful but failed to record: ' + handleApiError(error));
-          }
-        } else {
-          toast.error('Payment was not successful');
-        }
-
-        closePaymentModal(); // Close the Flutterwave modal
+        console.log('Flutterwave callback (redirect mode):', response);
+        // In redirect mode, this callback may not execute.
+        // Payment recording happens in the redirect handler instead.
+        closePaymentModal(); // Close the Flutterwave modal if it's still open
       },
       onClose: () => {
         toast.info('Payment cancelled');
+        // Clear stored data if user cancels
+        sessionStorage.removeItem('flutterwave_payment_intent');
       },
     });
   };
