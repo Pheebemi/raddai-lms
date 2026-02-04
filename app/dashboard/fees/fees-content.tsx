@@ -55,41 +55,60 @@ export function FeesContent() {
       classKeys: typeof studentClass === 'object' ? Object.keys(studentClass) : 'not object'
     });
 
-    // Try multiple ways to parse grade from class name
-    let grade = null;
+    // Try multiple ways to parse grade/level number from class name (e.g. "Jss1 A", "Grade 7 A")
+    let grade: number | null = null;
 
     // Method 1: "Grade X" or "Grade X Y"
-    const gradeMatch1 = studentClass.match(/Grade (\d+)/);
+    const gradeMatch1 = studentClass.match(/Grade (\d+)/i);
     if (gradeMatch1) {
       grade = parseInt(gradeMatch1[1]);
     }
 
-    // Method 2: Just a number at the beginning
-    if (!grade) {
+    // Method 2: Just a number at the beginning (e.g. "1A", "2 B")
+    if (grade === null) {
       const gradeMatch2 = studentClass.match(/^(\d+)/);
       if (gradeMatch2) {
         grade = parseInt(gradeMatch2[1]);
       }
     }
 
-    // Method 3: Number anywhere in the string
-    if (!grade) {
+    // Method 3: Number anywhere in the string (e.g. "Jss1 A", "SSS 3 B")
+    if (grade === null) {
       const gradeMatch3 = studentClass.match(/(\d+)/);
       if (gradeMatch3) {
         grade = parseInt(gradeMatch3[1]);
       }
     }
 
-    console.log('📊 Parsed grade:', grade, 'from class:', studentClass, 'using methods:', {
-      gradeMatch1: gradeMatch1?.[1],
-      gradeMatch2: studentClass.match(/^(\d+)/)?.[1],
-      gradeMatch3: studentClass.match(/(\d+)/)?.[1]
-    });
-
-    if (!grade) {
+    if (grade === null) {
+      console.log('❌ Could not parse grade from class name');
       console.log('❌ Could not parse grade from class name');
       return null;
     }
+
+    const originalGrade = grade;
+    const classLower = studentClass.toLowerCase();
+
+    // Normalize grade to match how grades are stored in the backend fee structures.
+    // Example convention:
+    // - JSS1, JSS2, JSS3 => grades 7, 8, 9
+    // - SSS1, SSS2, SSS3 => grades 10, 11, 12
+    if (classLower.startsWith('jss')) {
+      grade = grade + 6; // 1->7, 2->8, 3->9
+    } else if (classLower.startsWith('sss')) {
+      grade = grade + 9; // 1->10, 2->11, 3->12
+    }
+
+    console.log('📊 Parsed grade from class:', {
+      className: studentClass,
+      originalGrade,
+      normalizedGrade: grade,
+      methods: {
+        gradeMatch1: gradeMatch1?.[1],
+        gradeMatch2: studentClass.match(/^(\d+)/)?.[1],
+        gradeMatch3: studentClass.match(/(\d+)/)?.[1],
+      },
+    });
 
     console.log('💰 Available fee structures:', feeStructures.map(fs => ({
       id: fs.id,
@@ -153,6 +172,8 @@ export function FeesContent() {
     remarks: '',
   });
   const [paymentAmount, setPaymentAmount] = useState<number | ''>('');
+  const [currentFeeAmount, setCurrentFeeAmount] = useState<number | null>(null);
+  const [isFeeAmountLoading, setIsFeeAmountLoading] = useState(false);
 
   // Update payment data when academic years load
   useEffect(() => {
@@ -212,9 +233,19 @@ export function FeesContent() {
   }, [logout]);
 
   // Get current full fee amount for the term (target total for that term)
-  const currentFeeAmount: number | null = paymentData.academicYear
-    ? getFeeAmount(paymentData.term, paymentData.academicYear)
-    : null;
+  useEffect(() => {
+    // When either the selected term or academic year changes, recompute the fee
+    if (!paymentData.academicYear) {
+      setCurrentFeeAmount(null);
+      return;
+    }
+
+    setIsFeeAmountLoading(true);
+
+    const amount = getFeeAmount(paymentData.term, paymentData.academicYear);
+    setCurrentFeeAmount(amount);
+    setIsFeeAmountLoading(false);
+  }, [paymentData.term, paymentData.academicYear, feeStructures, user]);
 
   console.log('💰 Current fee calculation:', {
     paymentData_academicYear: paymentData.academicYear,
@@ -840,9 +871,15 @@ export function FeesContent() {
                       Full Fee for This Term
                     </p>
                     <div className="text-3xl font-bold text-green-600 mb-1">
-                      {currentFeeAmount !== null
-                        ? `₦${currentFeeAmount.toLocaleString()}`
-                        : '—'}
+                      {isFeeAmountLoading ? (
+                        <span className="text-base text-green-700">Calculating...</span>
+                      ) : currentFeeAmount !== null ? (
+                        `₦${currentFeeAmount.toLocaleString()}`
+                      ) : paymentData.academicYear ? (
+                        'No fee set'
+                      ) : (
+                        '—'
+                      )}
                     </div>
                     <p className="text-xs text-green-600">
                       {paymentData.academicYear && user?.profile?.current_class
