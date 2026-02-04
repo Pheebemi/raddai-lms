@@ -69,70 +69,31 @@ function useStaffDashboardData() {
         setResults(resultsData);
         setAnnouncements(announcementsData);
 
-        // Load rankings for staff's classes
-        if (staffData.length > 0 && studentsData.length > 0 && resultsData.length > 0) {
+        // Load rankings for staff's assigned class only (by class ID and academic year)
+        if (staffData.length > 0) {
           const currentStaff = staffData.find((s: Staff) => s.user.id === user.id);
-          if (currentStaff && currentStaff.assignedClasses && currentStaff.assignedClasses.length > 0) {
-            console.log('Staff assigned classes:', currentStaff.assignedClasses);
+          if (currentStaff?.assignedClassId && currentStaff?.assignedClassAcademicYearId) {
             try {
-              // Get unique classes for this staff
-              const staffClasses = [...new Set(studentsData
-                .filter(student => currentStaff.assignedClasses!.some(assignedClass =>
-                  student.class.toLowerCase().includes(assignedClass.toLowerCase())
-                ))
-                .map(student => ({
-                  id: student.id,
-                  name: student.class
-                }))
-              )];
-
-              console.log('Found staff classes:', staffClasses);
-
-              if (staffClasses.length > 0) {
-                // Get the most recent academic year from results
-                const academicYears = [...new Set(resultsData.map(result => result.academicYearId))];
-                const latestYearId = academicYears.sort((a, b) => parseInt(b) - parseInt(a))[0];
-
-                console.log('Available academic year IDs:', academicYears);
-                console.log('Using latest year ID:', latestYearId);
-
-                if (latestYearId) {
-                  // Load rankings for each of the staff's classes
-                  const rankingsPromises = staffClasses.slice(0, 2).map(async (classInfo) => { // Limit to first 2 classes for performance
-                    try {
-                      console.log(`Loading rankings for class: ${classInfo.name} (ID: ${classInfo.id}) with academic year ID: ${latestYearId}`);
-                      const rankings = await rankingsApi.getClassRankings(classInfo.id.toString(), 'first', latestYearId.toString());
-                      console.log(`Successfully loaded rankings for ${classInfo.name}:`, rankings.rankings?.length || 0, 'students');
-                      return {
-                        ...rankings,
-                        class_info: {
-                          ...rankings.class_info,
-                          class_name: classInfo.name
-                        }
-                      };
-                    } catch (error) {
-                      console.error(`Failed to load rankings for class ${classInfo.name}:`, error);
-                      return null;
-                    }
-                  });
-
-                  const rankingsResults = await Promise.all(rankingsPromises);
-                  const validRankings = rankingsResults.filter(ranking => ranking !== null);
-                  console.log(`Loaded ${validRankings.length} class rankings for staff dashboard`);
-                  setClassRankings(validRankings as ClassRanking[]);
+              const rankings = await rankingsApi.getClassRankings(
+                currentStaff.assignedClassId,
+                'first',
+                currentStaff.assignedClassAcademicYearId
+              );
+              setClassRankings([{
+                ...rankings,
+                class_info: {
+                  ...rankings.class_info,
+                  class_name: currentStaff.assignedClasses?.[0] || rankings.class_info?.class_name || 'Class'
                 }
-              }
+              }]);
             } catch (rankingError) {
               console.error('Failed to load rankings for staff dashboard:', rankingError);
-              // Don't fail the entire dashboard load if rankings fail
               setClassRankings([]);
             }
           } else {
-            console.log('Staff has no assigned classes or no students/results data');
             setClassRankings([]);
           }
         } else {
-          console.log('No staff data available');
           setClassRankings([]);
         }
       } catch (err) {
@@ -160,70 +121,33 @@ export function StaffDashboard() {
   const { user } = useAuth();
   const { students, staffProfile, results, classRankings, announcements, isLoading, error } = useStaffDashboardData();
 
-  // Filter students for this staff member (students in their classes)
+  // Filter students for this staff member (only students in their assigned class, by class ID)
   const assignedStudents = useMemo(() => {
-    if (!staffProfile) {
-      // If no staff profile found, return empty array
+    if (!staffProfile) return [];
+    if (!staffProfile.assignedClassId) {
       return [];
     }
-    
-    // If staff has no assigned classes, show all students (fallback)
-    if (!staffProfile.assignedClasses || staffProfile.assignedClasses.length === 0) {
-      console.warn('Staff has no assigned classes, showing all students');
-      return students;
-    }
-    
-    // Filter students whose class matches any of the staff's assigned classes
-    return students.filter(student => {
-      if (!student.class) return false;
-      
-      const studentClass = student.class.toLowerCase().trim();
-      
-      return staffProfile.assignedClasses!.some(assignedClass => {
-        if (!assignedClass) return false;
-        
-        const assignedClassLower = assignedClass.toLowerCase().trim();
-        
-        // Exact match
-        if (studentClass === assignedClassLower) return true;
-        
-        // Check if student class contains assigned class name (handles "Grade 10 A" vs "Grade 10")
-        if (studentClass.includes(assignedClassLower)) return true;
-        
-        // Check if assigned class contains student class name
-        if (assignedClassLower.includes(studentClass)) return true;
-        
-        // Extract grade numbers and compare (handles "Grade 10" vs "10")
-        const studentGradeMatch = studentClass.match(/(\d+)/);
-        const assignedGradeMatch = assignedClassLower.match(/(\d+)/);
-        if (studentGradeMatch && assignedGradeMatch) {
-          if (studentGradeMatch[1] === assignedGradeMatch[1]) {
-            // If grades match, check section if present
-            const studentSection = studentClass.match(/[a-z]$/i)?.[0];
-            const assignedSection = assignedClassLower.match(/[a-z]$/i)?.[0];
-            if (!assignedSection || studentSection === assignedSection) {
-              return true;
-            }
-          }
-        }
-        
-        return false;
-      });
-    });
+    return students.filter(student => student.classId === staffProfile.assignedClassId);
   }, [students, staffProfile]);
 
-  // Filter results uploaded by this staff member
+  // Results for this staff's assigned class academic year only (no other years)
+  const resultsInMyClassYear = useMemo(() => {
+    if (!staffProfile?.assignedClassAcademicYearId) return results;
+    return results.filter(r => r.academicYearId === staffProfile.assignedClassAcademicYearId);
+  }, [results, staffProfile?.assignedClassAcademicYearId]);
+
+  // Filter results uploaded by this staff (only in their class's academic year)
   const recentUploads = useMemo(() => {
-    return results
+    return resultsInMyClassYear
       .filter(r => r.teacherId === user?.id)
       .slice(0, 3);
-  }, [results, user?.id]);
+  }, [resultsInMyClassYear, user?.id]);
 
-  // Calculate statistics
+  // Calculate statistics (only for this class's academic year)
   const totalAssignedStudents = assignedStudents.length;
-  const pendingResults = results.filter(r => r.teacherId === user?.id && !r.grade).length;
-  const avgClassPerformance = results.length > 0
-    ? Math.round(results.reduce((sum, r) => sum + r.percentage, 0) / results.length)
+  const pendingResults = resultsInMyClassYear.filter(r => r.teacherId === user?.id && !r.grade).length;
+  const avgClassPerformance = resultsInMyClassYear.length > 0
+    ? Math.round(resultsInMyClassYear.reduce((sum, r) => sum + r.percentage, 0) / resultsInMyClassYear.length)
     : 0;
 
 
@@ -339,7 +263,7 @@ export function StaffDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {new Set(results.filter(r => r.teacherId === user?.id).map(r => r.subjectId)).size}
+              {new Set(resultsInMyClassYear.filter(r => r.teacherId === user?.id).map(r => r.subjectId)).size}
             </div>
             <p className="text-xs text-muted-foreground">
               Different subjects
@@ -389,8 +313,8 @@ export function StaffDashboard() {
                 </TableHeader>
                 <TableBody>
                   {assignedStudents.map((student) => {
-                    // Calculate average performance for this student
-                    const studentResults = results.filter(r => r.studentId === student.id);
+                    // Average performance for this student (only in this class's academic year)
+                    const studentResults = resultsInMyClassYear.filter(r => r.studentId === student.id);
                     const avgPerformance = studentResults.length > 0
                       ? Math.round(studentResults.reduce((sum, r) => sum + r.percentage, 0) / studentResults.length)
                       : 0;
@@ -507,7 +431,7 @@ export function StaffDashboard() {
           <div className="space-y-4">
             {/* Group results by subject */}
             {Object.entries(
-              results
+              resultsInMyClassYear
                 .filter(r => r.teacherId === user?.id)
                 .reduce((acc, result) => {
                   const subjectKey = result.subject_name || result.subjectId;
@@ -534,7 +458,7 @@ export function StaffDashboard() {
                 </div>
               );
             })}
-            {results.filter(r => r.teacherId === user?.id).length === 0 && (
+            {resultsInMyClassYear.filter(r => r.teacherId === user?.id).length === 0 && (
               <div className="text-center py-8 text-muted-foreground">
                 <TrendingUp className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No performance data yet</p>

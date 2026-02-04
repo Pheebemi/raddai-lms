@@ -122,33 +122,33 @@ export default function UploadResultsPage() {
   // Filter classes by selected academic year
   useEffect(() => {
     if (selectedAcademicYear && allClasses.length > 0) {
-      // Filter classes that belong to the selected academic year
-      const filteredClasses = allClasses.filter(cls => {
-        return cls.academicYearId === selectedAcademicYear;
-      });
-
-      console.log(`Filtered ${filteredClasses.length} classes for academic year ${selectedAcademicYear} from ${allClasses.length} total classes`);
+      const filteredClasses = allClasses.filter(cls => cls.academicYearId === selectedAcademicYear);
       setClasses(filteredClasses);
 
-      // Reset class selection if the currently selected class is not in the filtered list
+      // Reset class selection and clear students if selected class is not in this year
       if (selectedClass && !filteredClasses.find(cls => cls.id === selectedClass)) {
-        console.log('Resetting class selection because selected class is not available for this academic year');
         setSelectedClass('');
+        setStudents([]); // Clear results so we don't show stale/other-year data
       }
     } else {
-      // If no academic year selected, show all classes
       setClasses(allClasses);
     }
   }, [selectedAcademicYear, allClasses, selectedClass]);
 
   useEffect(() => {
     const fetchStudentsForClass = async () => {
-      if (!user) return; // Don't fetch if not authenticated
+      if (!user) return;
 
-      if (selectedClass && selectedSubject && selectedAcademicYear && selectedTerm) {
-        setIsLoading(true);
-        try {
-          console.log('Fetching students and results for authenticated user:', user);
+      // Only fetch when all fields are set AND selected class belongs to selected academic year
+      // (avoids showing other-year results when user switches year and class gets cleared)
+      const classInSelectedYear = classes.some(cls => cls.id === selectedClass && cls.academicYearId === selectedAcademicYear);
+      if (!selectedClass || !selectedSubject || !selectedAcademicYear || !selectedTerm || !classInSelectedYear) {
+        setStudents([]);
+        return;
+      }
+
+      setIsLoading(true);
+      try {
           // Fetch students for the selected class from API
           const allStudents = await usersApi.getStudents();
           const allResults = await resultsApi.getList();
@@ -207,9 +207,6 @@ export default function UploadResultsPage() {
         } finally {
           setIsLoading(false);
         }
-      } else {
-        setStudents([]);
-      }
     };
 
     fetchStudentsForClass();

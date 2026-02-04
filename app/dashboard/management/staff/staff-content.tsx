@@ -163,9 +163,14 @@ export function StaffManagementContent() {
   };
 
   const openEditDialog = (staffMember: Staff) => {
-    // Map assigned class name back to its ID (only one class can have this staff as class teacher)
-    const assignedClassName = staffMember.assignedClasses?.[0];
-    const assignedClass = classes.find((cls) => cls.name === assignedClassName);
+    // Use assignedClassId if available (more reliable than name matching)
+    // Fall back to name matching for backwards compatibility
+    let assignedClassId = staffMember.assignedClassId;
+    if (!assignedClassId && staffMember.assignedClasses?.[0]) {
+      const assignedClassName = staffMember.assignedClasses[0];
+      const assignedClass = classes.find((cls) => cls.name === assignedClassName);
+      assignedClassId = assignedClass?.id || '';
+    }
 
     setEditingStaff(staffMember);
     setEditStaffForm({
@@ -177,7 +182,7 @@ export function StaffManagementContent() {
       joiningDate: staffMember.joiningDate
         ? staffMember.joiningDate.split('T')[0]
         : new Date().toISOString().split('T')[0],
-      classId: assignedClass ? assignedClass.id : '',
+      classId: assignedClassId || '',
     });
     setIsEditOpen(true);
   };

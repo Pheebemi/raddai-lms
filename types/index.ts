@@ -50,6 +50,10 @@ export interface Staff {
   designation: string;
   department: string;
   assignedClasses: string[];
+  /** ID of the assigned class (for matching specific class + academic year) */
+  assignedClassId?: string;
+  /** Academic year ID of the assigned class (for filtering results by year) */
+  assignedClassAcademicYearId?: string;
   assignedSubjects: string[];
   joiningDate: string;
   salary?: number;
