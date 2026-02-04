@@ -153,31 +153,12 @@ export default function UploadResultsPage() {
           const allStudents = await usersApi.getStudents();
           const allResults = await resultsApi.getList();
 
-          // Find the selected class name from the classes list
-          const selectedClassObj = classes.find(cls => cls.id === selectedClass);
-          const selectedClassName = selectedClassObj ? selectedClassObj.name : selectedClass;
-
-          console.log(`Selected class ID: ${selectedClass}, Name: ${selectedClassName}`);
-          console.log(`All students:`, allStudents.map(s => ({name: `${s.user.firstName} ${s.user.lastName}`, class: s.class})));
-
-          // Filter students whose class matches the selected class
+          // Filter by class ID so we only show students whose current class is this exact class
+          // (avoids showing e.g. JSS3 A 2026-2027 students when viewing JSS3 A 2025-2026)
           const classStudents = allStudents.filter(student => {
-            if (!student.class) return false;
-            const studentClass = student.class.toLowerCase().trim();
-            const targetClass = selectedClassName.toLowerCase().trim();
-
-            console.log(`Checking student ${student.user.firstName} ${student.user.lastName}: class="${studentClass}" vs target="${targetClass}"`);
-
-            // Exact match or partial match
-            const matches = studentClass === targetClass ||
-                   studentClass.includes(targetClass) ||
-                   targetClass.includes(studentClass);
-
-            if (matches) {
-              console.log(`✓ Matched student: ${student.user.firstName} ${student.user.lastName}`);
-            }
-
-            return matches;
+            const studentClassId = student.classId;
+            if (studentClassId == null || studentClassId === '') return false;
+            return studentClassId === selectedClass;
           });
 
           // Create students with results, pre-populating with existing data if available

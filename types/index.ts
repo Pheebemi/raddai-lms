@@ -28,6 +28,8 @@ export interface Student {
   user: User;
   studentId: string;
   class: string;
+  /** Current class FK id (for filtering by specific class + academic year) */
+  classId?: string;
   section: string;
   rollNumber: number;
   parentId?: string;

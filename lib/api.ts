@@ -714,12 +714,14 @@ export const usersApi = {
       const className = item.current_class_name || '';
       const classParts = className.split(' ');
       const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+      const classId = item.current_class != null ? item.current_class.toString() : undefined;
 
       return {
         id: item.id.toString(),
         user: convertDjangoUser(item.user_details),
         studentId: item.student_id,
         class: className, // Keep full class name
+        classId, // Current class FK id (for filtering by class + academic year)
         section: section,
         rollNumber: 0, // Would need to be added to Django model
         admissionDate: item.admission_date,
@@ -842,12 +844,14 @@ export const usersApi = {
       const className = updatedStudent.current_class_name || '';
       const classParts = className.split(' ');
       const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+      const classId = updatedStudent.current_class != null ? updatedStudent.current_class.toString() : undefined;
 
       return {
         id: updatedStudent.id.toString(),
         user: convertDjangoUser(updatedStudent.user_details),
         studentId: updatedStudent.student_id,
         class: className,
+        classId,
         section,
         rollNumber: 0,
         admissionDate: updatedStudent.admission_date,
