@@ -38,8 +38,8 @@ export default function UploadResultsPage() {
   const [students, setStudents] = useState<StudentResult[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [classes, setClasses] = useState<any[]>([]);
-  const [filteredClasses, setFilteredClasses] = useState<any[]>([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]); // Store all classes
+  const [classes, setClasses] = useState<any[]>([]); // Filtered classes for display
   const [subjects, setSubjects] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
 
@@ -78,10 +78,11 @@ export default function UploadResultsPage() {
         // Find the current user's staff profile
         const currentStaff = staffData.find((s: any) => s.user.id === user?.id);
 
-        // Format classes data
+        // Format classes data (include academic year for filtering)
         const formattedClasses = (classesData.results || classesData).map((cls: any) => ({
           id: cls.id.toString(),
           name: cls.name,
+          academicYearId: cls.academic_year?.toString(),
         }));
 
         // Show all classes for now - filtering happens when selecting students
@@ -101,9 +102,12 @@ export default function UploadResultsPage() {
         }));
 
         setClasses(formattedClasses);
-        setFilteredClasses(filteredClassesList);
         setSubjects(formattedSubjects);
         setAcademicYears(formattedYears);
+
+        // Store full classes data for filtering later
+        setAllClasses(formattedClasses);
+        setClasses(formattedClasses); // Initially show all classes
       } catch (error) {
         console.error('Failed to load initial data:', error);
         toast.error('Failed to load form data');
@@ -114,6 +118,28 @@ export default function UploadResultsPage() {
 
     loadInitialData();
   }, [user]);
+
+  // Filter classes by selected academic year
+  useEffect(() => {
+    if (selectedAcademicYear && allClasses.length > 0) {
+      // Filter classes that belong to the selected academic year
+      const filteredClasses = allClasses.filter(cls => {
+        return cls.academicYearId === selectedAcademicYear;
+      });
+
+      console.log(`Filtered ${filteredClasses.length} classes for academic year ${selectedAcademicYear} from ${allClasses.length} total classes`);
+      setClasses(filteredClasses);
+
+      // Reset class selection if the currently selected class is not in the filtered list
+      if (selectedClass && !filteredClasses.find(cls => cls.id === selectedClass)) {
+        console.log('Resetting class selection because selected class is not available for this academic year');
+        setSelectedClass('');
+      }
+    } else {
+      // If no academic year selected, show all classes
+      setClasses(allClasses);
+    }
+  }, [selectedAcademicYear, allClasses, selectedClass]);
 
   useEffect(() => {
     const fetchStudentsForClass = async () => {
