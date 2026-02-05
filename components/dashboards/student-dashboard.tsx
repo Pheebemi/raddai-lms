@@ -47,13 +47,16 @@ export function StudentDashboard() {
       : true // If no academic year available, show all results
   );
 
-  // Consider the current year "paid" for result access if at least one
-  // current-year result has payment_status = true (backend already checks
-  // that the fee payment for that term/year is fully paid).
-  const hasPaidCurrentYearFees = currentYearResults.some(r => r.payment_status);
+  // For the dashboard card we only want FIRST TERM results
+  const firstTermResults = currentYearResults.filter(result => result.term === 'first');
 
-  // Only show results if fees are paid for the current academic year
-  const results = hasPaidCurrentYearFees ? currentYearResults : [];
+  // Consider the current year "paid" for result access if at least one
+  // first-term result has payment_status = true (backend already checks
+  // that the fee payment for that term/year is fully paid).
+  const hasPaidCurrentYearFees = firstTermResults.some(r => r.payment_status);
+
+  // Only show first-term results if fees are paid
+  const results = hasPaidCurrentYearFees ? firstTermResults : [];
 
   const recentAnnouncements = announcements.slice(0, 3);
 
@@ -216,47 +219,54 @@ export function StudentDashboard() {
           <CardContent>
             {hasPaidCurrentYearFees ? (
               results.length > 0 ? (
-                <div className="space-y-4">
-                  {results.map((result) => (
-                    <div key={result.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                          <AvatarFallback>
-                            {(result.subject_name || result.subjectId).charAt(0).toUpperCase()}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="font-medium">{result.subject_name || result.subjectId}</p>
-                          <p className="text-sm text-muted-foreground">
-                            CA: {result.ca1_score + result.ca2_score + result.ca3_score + result.ca4_score}/40 •
-                            Exam: {result.exam_score}/60
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <Badge
-                          variant={
-                            result.grade.startsWith('A')
-                              ? 'default'
-                              : result.grade.startsWith('B')
-                              ? 'secondary'
-                              : 'outline'
-                          }
-                          className="mb-1"
-                        >
-                          {result.grade}
-                        </Badge>
-                        <p className="text-sm font-medium">
-                          {result.percentage?.toFixed(1) || '0.0'}%
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Subject</TableHead>
+                      <TableHead className="text-center">CA1</TableHead>
+                      <TableHead className="text-center">CA2</TableHead>
+                      <TableHead className="text-center">CA3</TableHead>
+                      <TableHead className="text-center">CA4</TableHead>
+                      <TableHead className="text-center">Exam</TableHead>
+                      <TableHead className="text-center">Total</TableHead>
+                      <TableHead className="text-center">Grade</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {results.map((result) => (
+                      <TableRow key={result.id}>
+                        <TableCell className="font-medium">
+                          {result.subject_name || result.subjectId}
+                        </TableCell>
+                        <TableCell className="text-center">{result.ca1_score}</TableCell>
+                        <TableCell className="text-center">{result.ca2_score}</TableCell>
+                        <TableCell className="text-center">{result.ca3_score}</TableCell>
+                        <TableCell className="text-center">{result.ca4_score}</TableCell>
+                        <TableCell className="text-center">{result.exam_score}</TableCell>
+                        <TableCell className="text-center">
+                          {result.marks_obtained}/100
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <Badge
+                            variant={
+                              result.grade.startsWith('A')
+                                ? 'default'
+                                : result.grade.startsWith('B')
+                                ? 'secondary'
+                                : 'outline'
+                            }
+                          >
+                            {result.grade}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No results available for this academic year</p>
+                  <p>No first term results available for this academic year</p>
                 </div>
               )
             ) : (
