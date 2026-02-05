@@ -17,6 +17,7 @@ export function RankingsContent() {
   const { user } = useAuth();
   const [rankings, setRankings] = useState<ClassRanking | null>(null);
   const [classes, setClasses] = useState<ClassType[]>([]);
+  const [allClasses, setAllClasses] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedClass, setSelectedClass] = useState<string>('');
@@ -28,27 +29,73 @@ export function RankingsContent() {
   useEffect(() => {
     const fetchInitialData = async () => {
       try {
-        const [classesData, yearsData] = await Promise.all([
-          fetchClasses().catch((error) => { console.error('Failed to fetch classes:', error); return []; }),
-          fetchAcademicYears().catch((error) => { console.error('Failed to fetch academic years:', error); return []; }),
+        const [classesData, yearsData, staffData] = await Promise.all([
+          fetchClasses().catch((error) => {
+            console.error('Failed to fetch classes:', error);
+            return [];
+          }),
+          fetchAcademicYears().catch((error) => {
+            console.error('Failed to fetch academic years:', error);
+            return [];
+          }),
+          usersApi.getStaff().catch((error) => {
+            console.error('Failed to fetch staff:', error);
+            return [];
+          }),
         ]);
 
-        // Ensure classesData is an array
-        const safeClassesData = Array.isArray(classesData) ? classesData : [];
+        // Ensure base arrays
         const safeYearsData = Array.isArray(yearsData) ? yearsData : [];
 
-        setClasses(safeClassesData);
+        // Format classes to include academic year and class teacher info
+        const rawClasses = Array.isArray(classesData) ? classesData : [];
+        const formattedClasses: any[] = rawClasses.map((cls: any) => ({
+          id: cls.id.toString(),
+          name: cls.name,
+          grade: cls.grade,
+          section: cls.section,
+          academicYear: cls.academic_year_name,
+          academicYearId: cls.academic_year?.toString(),
+          classTeacher: cls.class_teacher ? cls.class_teacher.toString() : undefined,
+          classTeacherName: cls.class_teacher_name,
+          studentCount: cls.student_count || 0,
+        }));
+
+        // Find the current staff profile if user is staff
+        const currentStaff = Array.isArray(staffData)
+          ? staffData.find((s: any) => s.user.id === user?.id)
+          : null;
+
+        // For staff: restrict to classes where they are class teacher, if any
+        let filteredClasses = formattedClasses;
+        if (user?.role === 'staff' && currentStaff) {
+          const staffId = currentStaff.id?.toString?.() ?? String(currentStaff.id);
+          const staffClasses = formattedClasses.filter(
+            (cls: any) => cls.classTeacher === staffId
+          );
+          if (staffClasses.length > 0) {
+            filteredClasses = staffClasses;
+          }
+        }
+
+        setAllClasses(filteredClasses);
+        setClasses(filteredClasses);
         setAcademicYears(safeYearsData);
 
         // Set defaults
         if (safeYearsData.length > 0) {
-          const latestYear = safeYearsData.sort((a, b) => parseInt(b.id) - parseInt(a.id))[0];
+          const sortedYears = [...safeYearsData].sort(
+            (a, b) => parseInt(b.id) - parseInt(a.id)
+          );
+          const latestYear = sortedYears[0];
           setSelectedYear(latestYear.id.toString());
         }
 
-        // For students, auto-select their class
+        // For students, auto-select their class (if available)
         if (user?.role === 'student' && user.profile?.current_class) {
-          const studentClass = safeClassesData.find(c => c.id === user.profile.current_class);
+          const studentClass = filteredClasses.find(
+            (c: any) => c.id.toString() === user.profile.current_class.toString()
+          );
           if (studentClass) {
             setSelectedClass(studentClass.id.toString());
           }
@@ -62,6 +109,24 @@ export function RankingsContent() {
 
     fetchInitialData();
   }, [user]);
+
+  // Keep classes list in sync with selected academic year
+  useEffect(() => {
+    if (selectedYear && allClasses.length > 0) {
+      const filtered = allClasses.filter(
+        (cls: any) => cls.academicYearId?.toString() === selectedYear.toString()
+      );
+      setClasses(filtered);
+
+      // Reset selection if current class is not in this year
+      if (selectedClass && !filtered.find((cls: any) => cls.id.toString() === selectedClass)) {
+        setSelectedClass('');
+        setRankings(null);
+      }
+    } else {
+      setClasses(allClasses);
+    }
+  }, [selectedYear, allClasses, selectedClass]);
 
   useEffect(() => {
     const fetchRankings = async () => {
@@ -230,6 +295,7 @@ export function RankingsContent() {
                   <SelectItem value="first">First Term</SelectItem>
                   <SelectItem value="second">Second Term</SelectItem>
                   <SelectItem value="third">Third Term</SelectItem>
+                  <SelectItem value="final">Final Exam</SelectItem>
                 </SelectContent>
               </Select>
             </div>
