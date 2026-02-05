@@ -47,11 +47,10 @@ export function StudentDashboard() {
       : true // If no academic year available, show all results
   );
 
-  // Check if student has paid fees for the current academic year
-  const hasPaidCurrentYearFees = feeTransactions.some(ft =>
-    ft.academicYearId === studentProfile?.classAcademicYearId &&
-    ft.status === 'paid'
-  );
+  // Consider the current year "paid" for result access if at least one
+  // current-year result has payment_status = true (backend already checks
+  // that the fee payment for that term/year is fully paid).
+  const hasPaidCurrentYearFees = currentYearResults.some(r => r.payment_status);
 
   // Only show results if fees are paid for the current academic year
   const results = hasPaidCurrentYearFees ? currentYearResults : [];

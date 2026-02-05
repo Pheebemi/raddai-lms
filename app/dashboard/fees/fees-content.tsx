@@ -582,7 +582,11 @@ export function FeesContent() {
       const infoValueX = leftX + 280;
       ctx.fillText(`${user.firstName} ${user.lastName}`, infoValueX, y);
       ctx.fillText(user.id, infoValueX, y + 55);
-      ctx.fillText(user.profile?.current_class || 'Not Available', infoValueX, y + 110);
+      // Show the class/session for the year this payment belongs to, not the student's current class
+      const classOrSessionLabel = payment.academicYear
+        ? `${payment.academicYear} • ${termLabel}`
+        : termLabel;
+      ctx.fillText(classOrSessionLabel, infoValueX, y + 110);
       ctx.fillText(paymentDate, infoValueX, y + 165);
 
       y += 260 + 60;
