@@ -1,4 +1,4 @@
-import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, Student, Staff, Parent, Class } from '@/types';
+import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, Student, Staff, Parent, Class, StaffSalary } from '@/types';
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
@@ -709,6 +709,89 @@ export const feesApi = {
       term: data.term as 'first' | 'second' | 'third',
       academicYear: data.academic_year_name,
       academicYearId: data.academic_year?.toString(),
+    };
+  },
+};
+
+// Staff Salary API
+export const staffSalaryApi = {
+  list: async (filters?: { academic_year?: string; month?: number; staff?: string }): Promise<StaffSalary[]> => {
+    const params = new URLSearchParams();
+    if (filters?.academic_year) params.append('academic_year', filters.academic_year);
+    if (filters?.month) params.append('month', String(filters.month));
+    if (filters?.staff) params.append('staff', filters.staff);
+
+    const url = params.toString()
+      ? `${API_BASE_URL}/staff-salaries/?${params.toString()}`
+      : `${API_BASE_URL}/staff-salaries/`;
+
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    const results = Array.isArray(data) ? data : data.results || [];
+
+    return results.map((item: any): StaffSalary => ({
+      id: item.id.toString(),
+      staffId: item.staff.toString(),
+      staffName: item.staff_name,
+      staffCode: item.staff_staff_id,
+      academicYearId: item.academic_year.toString(),
+      academicYearName: item.academic_year_name,
+      month: item.month,
+      monthName: item.month_display,
+      amount: parseFloat(item.amount),
+      paidDate: item.paid_date,
+      voucherNumber: item.voucher_number || undefined,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
+    }));
+  },
+
+  upsert: async (payload: {
+    id?: string;
+    staff: string;
+    academic_year: string;
+    month: number;
+    amount: number;
+    voucher_number?: string;
+    paid_date?: string;
+  }): Promise<StaffSalary> => {
+    const body = {
+      staff: payload.staff,
+      academic_year: payload.academic_year,
+      month: payload.month,
+      amount: payload.amount,
+      voucher_number: payload.voucher_number || '',
+      paid_date: payload.paid_date,
+    };
+
+    const url = payload.id
+      ? `${API_BASE_URL}/staff-salaries/${payload.id}/`
+      : `${API_BASE_URL}/staff-salaries/`;
+
+    const response = await fetch(url, {
+      method: payload.id ? 'PATCH' : 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(body),
+    });
+
+    const item = await handleApiResponse<any>(response);
+
+    return {
+      id: item.id.toString(),
+      staffId: item.staff.toString(),
+      staffName: item.staff_name,
+      staffCode: item.staff_staff_id,
+      academicYearId: item.academic_year.toString(),
+      academicYearName: item.academic_year_name,
+      month: item.month,
+      monthName: item.month_display,
+      amount: parseFloat(item.amount),
+      paidDate: item.paid_date,
+      voucherNumber: item.voucher_number || undefined,
+      createdAt: item.created_at,
+      updatedAt: item.updated_at,
     };
   },
 };

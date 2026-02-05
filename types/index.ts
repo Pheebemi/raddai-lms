@@ -171,6 +171,22 @@ export interface PaymentSummary {
   nextDueDate?: string;
 }
 
+export interface StaffSalary {
+  id: string;
+  staffId: string;
+  staffName: string;
+  staffCode: string;
+  academicYearId: string;
+  academicYearName: string;
+  month: number;
+  monthName: string;
+  amount: number;
+  paidDate: string;
+  voucherNumber?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 // Announcement Types
 export interface Announcement {
   id: string;

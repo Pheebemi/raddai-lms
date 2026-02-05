@@ -185,6 +185,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         icon: 'Users',
       },
       {
+        title: 'Staff Salaries',
+        href: '/dashboard/management/salary',
+        icon: 'DollarSign',
+      },
+      {
         title: 'Parents',
         href: '/management/parents',
         icon: 'Heart',

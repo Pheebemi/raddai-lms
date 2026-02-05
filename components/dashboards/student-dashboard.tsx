@@ -20,7 +20,6 @@ import {
   DollarSign,
   Calendar,
   FileText,
-  TrendingUp,
   Clock,
   AlertCircle,
   Lock,
@@ -47,16 +46,13 @@ export function StudentDashboard() {
       : true // If no academic year available, show all results
   );
 
-  // For the dashboard card we only want FIRST TERM results
+  // For access control we only care if FIRST TERM results are paid
   const firstTermResults = currentYearResults.filter(result => result.term === 'first');
 
   // Consider the current year "paid" for result access if at least one
   // first-term result has payment_status = true (backend already checks
   // that the fee payment for that term/year is fully paid).
   const hasPaidCurrentYearFees = firstTermResults.some(r => r.payment_status);
-
-  // Only show first-term results if fees are paid
-  const results = hasPaidCurrentYearFees ? firstTermResults : [];
 
   const recentAnnouncements = announcements.slice(0, 3);
 
@@ -176,112 +172,84 @@ export function StudentDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Latest Grade</CardTitle>
-            {hasPaidCurrentYearFees ? (
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            )}
+            <CardTitle className="text-sm font-medium">Fee Status</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {hasPaidCurrentYearFees ? (results[0]?.grade || 'N/A') : 'Locked'}
+              {feeTransactions.some(ft => ft.status === 'overdue')
+                ? `${feeTransactions.filter(ft => ft.status === 'overdue').length} overdue`
+                : feeTransactions.some(ft => ft.status === 'pending' || ft.status === 'partial')
+                ? `${feeTransactions.filter(ft => ft.status === 'pending' || ft.status === 'partial').length} pending`
+                : 'All clear'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {hasPaidCurrentYearFees
-                ? (results[0] ? `${results[0].subject_name || results[0].subjectId} (${results[0].percentage.toFixed(1)}%)` : 'No results yet')
-                : 'Pay fees to unlock'
-              }
+              Fee payment overview
             </p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Current Academic Year Results */}
+        {/* Student Profile Overview (replaces Academic Results card) */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>Academic Results</CardTitle>
+            <CardTitle>Profile Overview</CardTitle>
             <CardDescription>
-              Your current academic year performance
-              {studentProfile?.classAcademicYearId && (
-                <span className="ml-2 text-sm">
-                  ({results.find(r => r.academicYearId === studentProfile.classAcademicYearId)?.academicYear})
-                </span>
-              )}
-              {hasPaidCurrentYearFees ? null : (
-                <span className="ml-2 text-sm text-orange-600">
-                  (Payment Required)
-                </span>
-              )}
+              Your basic student information at a glance
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {hasPaidCurrentYearFees ? (
-              results.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Subject</TableHead>
-                      <TableHead className="text-center">CA1</TableHead>
-                      <TableHead className="text-center">CA2</TableHead>
-                      <TableHead className="text-center">CA3</TableHead>
-                      <TableHead className="text-center">CA4</TableHead>
-                      <TableHead className="text-center">Exam</TableHead>
-                      <TableHead className="text-center">Total</TableHead>
-                      <TableHead className="text-center">Grade</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {results.map((result) => (
-                      <TableRow key={result.id}>
-                        <TableCell className="font-medium">
-                          {result.subject_name || result.subjectId}
-                        </TableCell>
-                        <TableCell className="text-center">{result.ca1_score}</TableCell>
-                        <TableCell className="text-center">{result.ca2_score}</TableCell>
-                        <TableCell className="text-center">{result.ca3_score}</TableCell>
-                        <TableCell className="text-center">{result.ca4_score}</TableCell>
-                        <TableCell className="text-center">{result.exam_score}</TableCell>
-                        <TableCell className="text-center">
-                          {result.marks_obtained}/100
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <Badge
-                            variant={
-                              result.grade.startsWith('A')
-                                ? 'default'
-                                : result.grade.startsWith('B')
-                                ? 'secondary'
-                                : 'outline'
-                            }
-                          >
-                            {result.grade}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No first term results available for this academic year</p>
+            {studentProfile ? (
+              <div className="flex flex-col gap-4 md:flex-row md:items-center">
+                <div className="flex items-center gap-4">
+                  <Avatar className="h-14 w-14">
+                    <AvatarFallback>
+                      {user.firstName?.[0]}
+                      {user.lastName?.[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-lg font-semibold">
+                      {user.firstName} {user.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Student ID: {studentProfile.studentId}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Class: {studentProfile.class}
+                    </p>
+                  </div>
                 </div>
-              )
+                <div className="grid gap-2 text-sm md:ml-8 md:grid-cols-2">
+                  <div>
+                    <p className="text-muted-foreground">Section</p>
+                    <p className="font-medium">{studentProfile.section}</p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Admission Date</p>
+                    <p className="font-medium">
+                      {new Date(studentProfile.admissionDate).toLocaleDateString()}
+                    </p>
+                  </div>
+                  {user.email && (
+                    <div>
+                      <p className="text-muted-foreground">Email</p>
+                      <p className="font-medium">{user.email}</p>
+                    </div>
+                  )}
+                  {user.phone && (
+                    <div>
+                      <p className="text-muted-foreground">Phone</p>
+                      <p className="font-medium">{user.phone}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
             ) : (
-              <div className="text-center py-8">
-                <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                <p className="text-lg font-medium mb-2">Results Locked</p>
-                <p className="text-muted-foreground">
-                  You haven&apos;t paid the school fees for this academic year. Please pay your fees
-                  to view your results.
-                </p>
-                <Button asChild className="mt-4">
-                  <Link href="/dashboard/fees">
-                    Pay School Fees
-                  </Link>
-                </Button>
+              <div className="text-center py-8 text-muted-foreground">
+                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Your profile details are not available yet.</p>
               </div>
             )}
           </CardContent>
