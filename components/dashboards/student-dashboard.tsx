@@ -41,11 +41,20 @@ export function StudentDashboard() {
   const backendPendingFees = dashboardStats?.pendingFees ?? 0;
 
   // Filter results to only show those from the student's current academic year
-  const results = allResults.filter(result =>
+  const currentYearResults = allResults.filter(result =>
     studentProfile?.classAcademicYearId
       ? result.academicYearId === studentProfile.classAcademicYearId
       : true // If no academic year available, show all results
   );
+
+  // Check if student has paid fees for the current academic year
+  const hasPaidCurrentYearFees = feeTransactions.some(ft =>
+    ft.academicYearId === studentProfile?.classAcademicYearId &&
+    ft.status === 'paid'
+  );
+
+  // Only show results if fees are paid for the current academic year
+  const results = hasPaidCurrentYearFees ? currentYearResults : [];
 
   const recentAnnouncements = announcements.slice(0, 3);
 
@@ -109,9 +118,9 @@ export function StudentDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
+          <Button disabled={!hasPaidCurrentYearFees}>
             <FileText className="mr-2 h-4 w-4" />
-            View Results
+            {hasPaidCurrentYearFees ? 'View Results' : 'Results Locked'}
           </Button>
           <Button variant="outline" asChild>
             <Link href="/dashboard/fees">
@@ -166,14 +175,21 @@ export function StudentDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Latest Grade</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            {hasPaidCurrentYearFees ? (
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <Lock className="h-4 w-4 text-muted-foreground" />
+            )}
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {results[0]?.grade || 'N/A'}
+              {hasPaidCurrentYearFees ? (results[0]?.grade || 'N/A') : 'Locked'}
             </div>
             <p className="text-xs text-muted-foreground">
-              {results[0] ? `${results[0].subjectId} (${results[0].percentage.toFixed(1)}%)` : 'No results yet'}
+              {hasPaidCurrentYearFees
+                ? (results[0] ? `${results[0].subject_name || results[0].subjectId} (${results[0].percentage.toFixed(1)}%)` : 'No results yet')
+                : 'Pay fees to unlock'
+              }
             </p>
           </CardContent>
         </Card>
@@ -191,10 +207,15 @@ export function StudentDashboard() {
                   ({results.find(r => r.academicYearId === studentProfile.classAcademicYearId)?.academicYear})
                 </span>
               )}
+              {hasPaidCurrentYearFees ? null : (
+                <span className="ml-2 text-sm text-orange-600">
+                  (Payment Required)
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {results.some((result) => result.payment_status) ? (
+            {hasPaidCurrentYearFees ? (
               results.length > 0 ? (
                 <div className="space-y-4">
                   {results.map((result) => (
@@ -247,6 +268,11 @@ export function StudentDashboard() {
                   You haven&apos;t paid the school fees for this academic year. Please pay your fees
                   to view your results.
                 </p>
+                <Button asChild className="mt-4">
+                  <Link href="/dashboard/fees">
+                    Pay School Fees
+                  </Link>
+                </Button>
               </div>
             )}
           </CardContent>
