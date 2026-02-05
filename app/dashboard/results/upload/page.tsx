@@ -86,16 +86,28 @@ export default function UploadResultsPage() {
         // Find the current user's staff profile
         const currentStaff = staffData.find((s: any) => s.user.id === user?.id);
 
-        // Format classes data (include academic year for filtering)
+        // Format classes data (include academic year and class teacher for filtering)
         const formattedClasses = (classesData.results || classesData).map((cls: any) => ({
           id: cls.id.toString(),
           name: cls.name,
           academicYearId: cls.academic_year?.toString(),
+          classTeacherId: cls.class_teacher ? cls.class_teacher.toString() : undefined,
         }));
 
-        // Show all classes for now - filtering happens when selecting students
-        // This allows staff to see all classes but only their assigned students when selecting
+        // By default show all classes.
+        // For staff users, try to restrict to classes where they are the class teacher.
         let filteredClassesList = formattedClasses;
+        if (user?.role === 'staff' && currentStaff) {
+          const staffId = currentStaff.id?.toString?.() ?? String(currentStaff.id);
+          const staffClasses = formattedClasses.filter(
+            (cls: any) => cls.classTeacherId === staffId
+          );
+
+          // Only restrict if we actually find assigned classes; otherwise fall back to all
+          if (staffClasses.length > 0) {
+            filteredClassesList = staffClasses;
+          }
+        }
 
         // Format subjects data
         const formattedSubjects = (subjectsData.results || subjectsData).map((subj: any) => ({
@@ -109,13 +121,12 @@ export default function UploadResultsPage() {
           name: year.name,
         }));
 
-        setClasses(formattedClasses);
+        setClasses(filteredClassesList);
         setSubjects(formattedSubjects);
         setAcademicYears(formattedYears);
 
-        // Store full classes data for filtering later
-        setAllClasses(formattedClasses);
-        setClasses(formattedClasses); // Initially show all classes
+        // Store full classes data (already filtered for staff where applicable) for filtering later
+        setAllClasses(filteredClassesList);
       } catch (error) {
         console.error('Failed to load initial data:', error);
         toast.error('Failed to load form data');
@@ -320,8 +331,17 @@ export default function UploadResultsPage() {
 
   // Export results for a specific term that this staff member can access
   const exportResultsByTerm = async (term: 'first' | 'second' | 'third') => {
+    if (!selectedAcademicYear || !selectedClass) {
+      toast.error('Please select an academic year and class before exporting results.');
+      return;
+    }
+
     try {
-      const blob = await resultsApi.exportResults({ term });
+      const blob = await resultsApi.exportResults({
+        term,
+        academic_year: selectedAcademicYear,
+        class_id: selectedClass,
+      });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
