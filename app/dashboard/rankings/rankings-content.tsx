@@ -276,11 +276,7 @@ export function RankingsContent() {
                         {cls.name}
                       </SelectItem>
                     ))
-                  ) : (
-                    <SelectItem value="" disabled>
-                      {isLoading ? "Loading..." : "No classes available"}
-                    </SelectItem>
-                  )}
+                  ) : null}
                 </SelectContent>
               </Select>
             </div>
@@ -313,11 +309,7 @@ export function RankingsContent() {
                         {year.name}
                       </SelectItem>
                     ))
-                  ) : (
-                    <SelectItem value="" disabled>
-                      {isLoading ? "Loading..." : "No academic years available"}
-                    </SelectItem>
-                  )}
+                  ) : null}
                 </SelectContent>
               </Select>
             </div>
