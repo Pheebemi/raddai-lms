@@ -223,34 +223,39 @@ export function ResultsContent() {
       let studentPosition = 'N/A';
 
       try {
-        // Get student class from profile
-        if (user?.profile?.current_class) {
+        // Get student class from the result data (historical class, not current class)
+        if (termResults[0]?.class) {
+          studentClass = termResults[0].class;
+        } else if (user?.profile?.current_class) {
+          // Fallback to current class if result doesn't have class info
           studentClass = user.profile.current_class;
         }
 
         // Get student position from rankings API for the specific term and year
         const academicYearId = termResults[0]?.academicYearId?.toString();
 
-        // Resolve class ID from class name + academic year using classes API
+        // Resolve class ID from the result's class information
         let classId: string | null = null;
-        if (user?.profile?.current_class) {
+        if (termResults[0]?.classId) {
+          // Use the class ID directly from the result
+          classId = termResults[0].classId;
+          console.log('Using class ID from result:', classId);
+        } else {
+          // Fallback: try to find class by name and academic year
           try {
             const allClasses = await classesApi.getAll();
             const academicYearName = termResults[0]?.academicYear;
+            const resultClassName = termResults[0]?.class || user?.profile?.current_class;
 
-            const matchingClass =
-              allClasses.find(
-                (c: any) =>
-                  c.name === user.profile.current_class &&
-                  c.academicYear === academicYearName
-              ) ||
-              allClasses.find(
-                (c: any) => c.name === user.profile.current_class
-              );
+            const matchingClass = allClasses.find(
+              (c: any) =>
+                c.name === resultClassName &&
+                c.academicYear === academicYearName
+            );
 
             if (matchingClass) {
               classId = matchingClass.id.toString();
-              console.log('Resolved class for rankings:', matchingClass);
+              console.log('Resolved class for rankings (fallback):', matchingClass);
             } else {
               console.warn('Could not resolve class from classes API for rankings.');
             }
