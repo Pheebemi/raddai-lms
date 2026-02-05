@@ -27,7 +27,7 @@ export function ResultsContent() {
   const [filteredResults, setFilteredResults] = useState<Result[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
-  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('');
   const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [classRankings, setClassRankings] = useState<ClassRanking | null>(null);
   const [showRankings, setShowRankings] = useState(false);
@@ -52,12 +52,14 @@ export function ResultsContent() {
   useEffect(() => {
     let filtered = results;
 
-    if (selectedTerm !== 'all') {
-      filtered = filtered.filter(result => result.term === selectedTerm);
+    // Always filter by selected year (no "all" option)
+    if (selectedYear) {
+      filtered = filtered.filter(result => result.academicYear === selectedYear);
     }
 
-    if (selectedYear !== 'all') {
-      filtered = filtered.filter(result => result.academicYear === selectedYear);
+    // Filter by term if specific term selected, otherwise show all terms for the selected year
+    if (selectedTerm !== 'all') {
+      filtered = filtered.filter(result => result.term === selectedTerm);
     }
 
     setFilteredResults(filtered);
@@ -66,7 +68,7 @@ export function ResultsContent() {
   // Load class rankings when filters change (for PNG download)
   useEffect(() => {
     const loadRankings = async () => {
-      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class_id) {
+      if (selectedTerm !== 'all' && selectedYear && user?.profile?.current_class_id) {
         try {
           const rankings = await rankingsApi.getClassRankings(
             String(user.profile.current_class_id),
@@ -152,7 +154,14 @@ export function ResultsContent() {
 
   // Get unique terms and years for filters
   const availableTerms = Array.from(new Set(results.map(r => r.term)));
-  const availableYears = Array.from(new Set(results.map(r => r.academicYear)));
+  const availableYears = Array.from(new Set(results.map(r => r.academicYear))).sort().reverse(); // Sort newest first
+
+  // Set default year to the most recent one when results are loaded
+  useEffect(() => {
+    if (availableYears.length > 0 && selectedYear === '') {
+      setSelectedYear(availableYears[0]); // Most recent year
+    }
+  }, [availableYears, selectedYear]);
 
   // Export results as CSV for staff users
   const exportResultsAsCSV = async () => {
@@ -166,12 +175,17 @@ export function ResultsContent() {
       return;
     }
 
+    if (!selectedYear) {
+      toast.error('Please select an academic year to export results.');
+      return;
+    }
+
     setIsExporting(true);
     try {
       const filters: any = {
-        term: selectedTerm
+        term: selectedTerm,
+        academic_year: selectedYear
       };
-      if (selectedYear !== 'all') filters.academic_year = selectedYear;
 
       const blob = await resultsApi.exportResults(filters);
       const url = URL.createObjectURL(blob);
@@ -500,7 +514,7 @@ export function ResultsContent() {
             <Button
               variant="outline"
               onClick={exportResultsAsCSV}
-              disabled={isExporting || selectedTerm === 'all'}
+              disabled={isExporting || selectedTerm === 'all' || !selectedYear}
             >
               <Download className="mr-2 h-4 w-4" />
               {isExporting ? 'Exporting...' : `Export ${selectedTerm === 'all' ? 'Results' : selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1) + ' Term'} CSV`}
@@ -524,13 +538,12 @@ export function ResultsContent() {
         <CardContent>
           <div className="flex gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Academic Year</label>
-              <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <label className="text-sm font-medium">Academic Year *</label>
+              <Select value={selectedYear} onValueChange={setSelectedYear} disabled={availableYears.length === 0}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Years" />
+                  <SelectValue placeholder={availableYears.length === 0 ? "No years available" : "Select academic year"} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Years</SelectItem>
                   {availableYears.map(year => (
                     <SelectItem key={year} value={year}>{year}</SelectItem>
                   ))}
