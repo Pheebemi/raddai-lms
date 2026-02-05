@@ -103,6 +103,7 @@ export interface Result {
   academicYearId?: string;
   classId?: string;
   class?: string;
+  recordedClassId?: string;
   payment_status: boolean;
   // CA Scores (10 marks each)
   ca1_score: number;

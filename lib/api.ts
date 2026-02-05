@@ -272,6 +272,7 @@ export const resultsApi = {
         academicYearId: item.academic_year.toString(),
         classId: item.class_id,
         class: item.class_name,
+        recordedClassId: item.recorded_class,
         payment_status: item.payment_status || false,
         // CA Scores
         ca1_score: parseFloat(item.ca1_score) || 0,
@@ -304,6 +305,7 @@ export const resultsApi = {
     subject: string;
     academic_year: string;
     term: string;
+    recorded_class: string;
     ca1_score: number;
     ca2_score: number;
     ca3_score: number;
@@ -357,6 +359,7 @@ export const resultsApi = {
     subject?: string;
     academic_year?: string;
     term?: string;
+    recorded_class?: string;
     ca1_score?: number;
     ca2_score?: number;
     ca3_score?: number;

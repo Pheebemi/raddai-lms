@@ -269,6 +269,7 @@ export default function UploadResultsPage() {
         subject: selectedSubject,
         academic_year: selectedAcademicYear,
         term: selectedTerm,
+        recorded_class: selectedClass,
         ca1_score: student.ca1_score,
         ca2_score: student.ca2_score,
         ca3_score: student.ca3_score,
