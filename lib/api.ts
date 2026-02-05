@@ -264,6 +264,7 @@ export const resultsApi = {
       const converted = allItems.map((item: any) => ({
         id: item.id.toString(),
         studentId: item.student.toString(),
+        studentName: item.student_name,
         subjectId: item.subject.toString(),
         subject_name: item.subject_name || item.subjectId,
         term: item.term as 'first' | 'second' | 'third' | 'final',
