@@ -269,6 +269,8 @@ export const resultsApi = {
         term: item.term as 'first' | 'second' | 'third' | 'final',
         academicYear: item.academic_year_name,
         academicYearId: item.academic_year.toString(),
+        classId: item.class_id,
+        class: item.class_name,
         payment_status: item.payment_status || false,
         // CA Scores
         ca1_score: parseFloat(item.ca1_score) || 0,
