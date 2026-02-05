@@ -29,7 +29,7 @@ import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 export function StudentDashboard() {
   const { user } = useAuth();
-  const { dashboardStats, results, feeTransactions, announcements, studentProfile, isLoading, error } = useDashboardData();
+  const { dashboardStats, results: allResults, feeTransactions, announcements, studentProfile, isLoading, error } = useDashboardData();
 
   if (!user) return null;
 
@@ -40,14 +40,12 @@ export function StudentDashboard() {
   // Prefer backend-computed pending fees for the current academic session if available.
   const backendPendingFees = dashboardStats?.pendingFees ?? 0;
 
-  // Group results by term
-  const resultsByTerm = results.reduce((acc, result) => {
-    if (!acc[result.term]) {
-      acc[result.term] = [];
-    }
-    acc[result.term].push(result);
-    return acc;
-  }, {} as Record<string, typeof results>);
+  // Filter results to only show those from the student's current academic year
+  const results = allResults.filter(result =>
+    studentProfile?.classAcademicYearId
+      ? result.academicYearId === studentProfile.classAcademicYearId
+      : true // If no academic year available, show all results
+  );
 
   const recentAnnouncements = announcements.slice(0, 3);
 
@@ -182,82 +180,75 @@ export function StudentDashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-        {/* Results by Term */}
+        {/* Current Academic Year Results */}
         <Card className="col-span-4">
           <CardHeader>
             <CardTitle>Academic Results</CardTitle>
             <CardDescription>
-              Your performance across all terms
+              Your current academic year performance
+              {studentProfile?.classAcademicYearId && (
+                <span className="ml-2 text-sm">
+                  ({results.find(r => r.academicYearId === studentProfile.classAcademicYearId)?.academicYear})
+                </span>
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-6">
-              {Object.keys(resultsByTerm).length > 0 ? (
-                Object.entries(resultsByTerm).map(([term, termResults]) => (
-                  <div key={term} className="space-y-2">
-                    <h3 className="font-semibold text-lg">
-                      {term} - {termResults[0]?.academicYear}
-                    </h3>
-                    {termResults.some((result) => result.payment_status) ? (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Subject</TableHead>
-                            <TableHead className="text-center">CA1</TableHead>
-                            <TableHead className="text-center">CA2</TableHead>
-                            <TableHead className="text-center">CA3</TableHead>
-                            <TableHead className="text-center">CA4</TableHead>
-                            <TableHead className="text-center">Exam</TableHead>
-                            <TableHead className="text-center">Grade</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {termResults.map((result) => (
-                            <TableRow key={result.id}>
-                              <TableCell className="font-medium">
-                                {result.subject_name || result.subjectId}
-                              </TableCell>
-                              <TableCell className="text-center">{result.ca1_score}</TableCell>
-                              <TableCell className="text-center">{result.ca2_score}</TableCell>
-                              <TableCell className="text-center">{result.ca3_score}</TableCell>
-                              <TableCell className="text-center">{result.ca4_score}</TableCell>
-                              <TableCell className="text-center">{result.exam_score}</TableCell>
-                              <TableCell className="text-center">
-                                <Badge
-                                  variant={
-                                    result.grade.startsWith('A')
-                                      ? 'default'
-                                      : result.grade.startsWith('B')
-                                      ? 'secondary'
-                                      : 'outline'
-                                  }
-                                >
-                                  {result.grade}
-                                </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    ) : (
-                      <div className="text-center py-8">
-                        <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                        <p className="text-lg font-medium mb-2">Results Locked</p>
-                        <p className="text-muted-foreground">
-                          You haven&apos;t paid the school fees for this term. Please pay your fees
-                          to view your results.
+            {results.some((result) => result.payment_status) ? (
+              results.length > 0 ? (
+                <div className="space-y-4">
+                  {results.map((result) => (
+                    <div key={result.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10">
+                          <AvatarFallback>
+                            {(result.subject_name || result.subjectId).charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{result.subject_name || result.subjectId}</p>
+                          <p className="text-sm text-muted-foreground">
+                            CA: {result.ca1_score + result.ca2_score + result.ca3_score + result.ca4_score}/40 •
+                            Exam: {result.exam_score}/60
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <Badge
+                          variant={
+                            result.grade.startsWith('A')
+                              ? 'default'
+                              : result.grade.startsWith('B')
+                              ? 'secondary'
+                              : 'outline'
+                          }
+                          className="mb-1"
+                        >
+                          {result.grade}
+                        </Badge>
+                        <p className="text-sm font-medium">
+                          {result.percentage?.toFixed(1) || '0.0'}%
                         </p>
                       </div>
-                    )}
-                  </div>
-                ))
+                    </div>
+                  ))}
+                </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
                   <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>No results available yet</p>
+                  <p>No results available for this academic year</p>
                 </div>
-              )}
-            </div>
+              )
+            ) : (
+              <div className="text-center py-8">
+                <Lock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-lg font-medium mb-2">Results Locked</p>
+                <p className="text-muted-foreground">
+                  You haven&apos;t paid the school fees for this academic year. Please pay your fees
+                  to view your results.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

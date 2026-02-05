@@ -209,42 +209,91 @@ export const announcementsApi = {
 // Results API
 export const resultsApi = {
   getList: async (): Promise<Result[]> => {
-    const response = await fetch(`${API_BASE_URL}/results/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
+    try {
+      // DRF typically paginates /results/. We want ALL results,
+      // so we follow `next` links until there are no more pages.
+      let url: string | null = `${API_BASE_URL}/results/`;
+      const allItems: any[] = [];
 
-    // Handle paginated response
-    const results = data.results || data;
+      while (url) {
+        const response = await fetch(url, {
+          headers: getAuthHeaders(),
+        });
 
-    // Convert Django format to frontend format
-    return results.map((item: any) => ({
-      id: item.id.toString(),
-      studentId: item.student.toString(),
-      subjectId: item.subject.toString(),
-      subject_name: item.subject_name || item.subjectId,
-      term: item.term as 'first' | 'second' | 'third' | 'final',
-      academicYear: item.academic_year_name,
-      academicYearId: item.academic_year.toString(),
-      payment_status: item.payment_status || false,
-      // CA Scores
-      ca1_score: parseFloat(item.ca1_score) || 0,
-      ca2_score: parseFloat(item.ca2_score) || 0,
-      ca3_score: parseFloat(item.ca3_score) || 0,
-      ca4_score: parseFloat(item.ca4_score) || 0,
-      ca_total: parseFloat(item.ca_total) || 0,
-      // Exam Score
-      exam_score: parseFloat(item.exam_score) || 0,
-      // Calculated totals
-      marks_obtained: parseFloat(item.marks_obtained) || 0,
-      total_marks: parseFloat(item.total_marks) || 100,
-      percentage: parseFloat(item.percentage) || 0,
-      grade: item.grade || '',
-      remarks: item.remarks || '',
-      teacherId: item.uploaded_by?.toString() || '',
-      createdAt: item.upload_date,
-      updatedAt: item.upload_date,
-    }));
+        console.log('Results API page response status:', response.status, 'for url:', url);
+        console.log('Results API response headers:', Object.fromEntries(response.headers.entries()));
+
+        if (!response.ok) {
+          console.error('Results API error response:', response.status, response.statusText);
+          break;
+        }
+
+        const data = await response.json().catch((error) => {
+          console.error('Results API JSON parse error:', error);
+          return null;
+        });
+
+        if (!data) {
+          console.error('Results API: No data received for url:', url);
+          break;
+        }
+
+        const pageItems = Array.isArray(data) ? data : (data.results || []);
+
+        if (!Array.isArray(pageItems)) {
+          console.error('Results API: Expected array or paginated results, got:', data);
+          break;
+        }
+
+        allItems.push(...pageItems);
+
+        // DRF pagination uses `next` with either absolute or relative URL
+        url = typeof data.next === 'string' && data.next.length > 0 ? data.next : null;
+      }
+
+      console.log('Total raw results from API (all pages):', allItems.length);
+      console.log('Sample results from API:', allItems.slice(0, 5).map((r: any) => ({
+        id: r.id,
+        student: r.student,
+        subject: r.subject,
+        academic_year: r.academic_year,
+        term: r.term
+      })));
+
+      // Convert Django format to frontend format
+      const converted = allItems.map((item: any) => ({
+        id: item.id.toString(),
+        studentId: item.student.toString(),
+        subjectId: item.subject.toString(),
+        subject_name: item.subject_name || item.subjectId,
+        term: item.term as 'first' | 'second' | 'third' | 'final',
+        academicYear: item.academic_year_name,
+        academicYearId: item.academic_year.toString(),
+        payment_status: item.payment_status || false,
+        // CA Scores
+        ca1_score: parseFloat(item.ca1_score) || 0,
+        ca2_score: parseFloat(item.ca2_score) || 0,
+        ca3_score: parseFloat(item.ca3_score) || 0,
+        ca4_score: parseFloat(item.ca4_score) || 0,
+        ca_total: parseFloat(item.ca_total) || 0,
+        // Exam Score
+        exam_score: parseFloat(item.exam_score) || 0,
+        // Calculated totals
+        marks_obtained: parseFloat(item.marks_obtained) || 0,
+        total_marks: parseFloat(item.total_marks) || 100,
+        percentage: parseFloat(item.percentage) || 0,
+        grade: item.grade || '',
+        remarks: item.remarks || '',
+        teacherId: item.uploaded_by?.toString() || '',
+        createdAt: item.upload_date,
+        updatedAt: item.upload_date,
+      }));
+
+      return converted;
+    } catch (error) {
+      console.error('Error in resultsApi.getList:', error);
+      return [];
+    }
   },
 
   create: async (resultData: {
@@ -259,11 +308,18 @@ export const resultsApi = {
     exam_score: number;
     remarks?: string;
   }): Promise<Result> => {
+    console.log('Creating result with data:', resultData);
     const response = await fetch(`${API_BASE_URL}/results/`, {
       method: 'POST',
       headers: getAuthHeaders(),
       body: JSON.stringify(resultData),
     });
+
+    if (!response.ok) {
+      // Log the error response
+      const errorText = await response.text();
+      console.error('Result creation failed:', response.status, errorText);
+    }
     const data = await handleApiResponse<any>(response);
 
     // Convert response to Result format
@@ -709,6 +765,12 @@ export const usersApi = {
     // Handle paginated response
     const results = data.results || data;
 
+    // Ensure results is an array
+    if (!Array.isArray(results)) {
+      console.error('getStudents: Expected array but got:', results);
+      return [];
+    }
+
     // Convert Django format to frontend format
     return results.map((item: any) => {
       const className = item.current_class_name || '';
@@ -722,6 +784,7 @@ export const usersApi = {
         studentId: item.student_id,
         class: className, // Keep full class name
         classId, // Current class FK id (for filtering by class + academic year)
+        classAcademicYearId: item.current_class?.academic_year?.toString(),
         section: section,
         rollNumber: 0, // Would need to be added to Django model
         admissionDate: item.admission_date,
@@ -783,12 +846,15 @@ export const usersApi = {
     const className = createdStudent.current_class_name || '';
     const classParts = className.split(' ');
     const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+    const classId = createdStudent.current_class != null ? createdStudent.current_class.toString() : undefined;
 
     return {
       id: createdStudent.id.toString(),
       user: convertDjangoUser(createdStudent.user_details),
       studentId: createdStudent.student_id,
       class: className,
+      classId,
+      classAcademicYearId: createdStudent.current_class?.academic_year?.toString(),
       section,
       rollNumber: 0,
       admissionDate: createdStudent.admission_date,
@@ -852,6 +918,7 @@ export const usersApi = {
         studentId: updatedStudent.student_id,
         class: className,
         classId,
+        classAcademicYearId: updatedStudent.current_class?.academic_year?.toString(),
         section,
         rollNumber: 0,
         admissionDate: updatedStudent.admission_date,

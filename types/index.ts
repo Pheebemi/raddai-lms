@@ -30,6 +30,8 @@ export interface Student {
   class: string;
   /** Current class FK id (for filtering by specific class + academic year) */
   classId?: string;
+  /** Academic year ID of the current class (for filtering results by year) */
+  classAcademicYearId?: string;
   section: string;
   rollNumber: number;
   parentId?: string;

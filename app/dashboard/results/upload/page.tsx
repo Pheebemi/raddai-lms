@@ -54,6 +54,14 @@ export default function UploadResultsPage() {
     { id: 'final', name: 'Final Exam' },
   ];
 
+  // Clamp score helper to keep values within allowed ranges
+  const normalizeScore = (rawValue: string, max: number) => {
+    const parsed = parseInt(rawValue, 10);
+    if (isNaN(parsed) || parsed < 0) return 0;
+    if (parsed > max) return max;
+    return parsed;
+  };
+
   // Load classes, subjects, and academic years on component mount
   useEffect(() => {
     // Only load data if user is authenticated
@@ -150,40 +158,43 @@ export default function UploadResultsPage() {
       setIsLoading(true);
       try {
           // Fetch students for the selected class from API
-          const allStudents = await usersApi.getStudents();
-          const allResults = await resultsApi.getList();
+          let allStudents = await usersApi.getStudents();
+          let allResults = await resultsApi.getList();
+
+          // Ensure we have valid data
+          if (!Array.isArray(allStudents)) {
+            console.error('allStudents is not an array:', allStudents);
+            allStudents = [];
+          }
+          if (!Array.isArray(allResults)) {
+            console.error('allResults is not an array:', allResults);
+            allResults = [];
+          }
+
+          const relevantResults = allResults.filter(r =>
+            String(r.subjectId) === String(selectedSubject) &&
+            String(r.academicYearId) === String(selectedAcademicYear) &&
+            String(r.term) === String(selectedTerm)
+          );
 
           // Filter by class ID so we only show students whose current class is this exact class
           // (avoids showing e.g. JSS3 A 2026-2027 students when viewing JSS3 A 2025-2026)
           const classStudents = allStudents.filter(student => {
             const studentClassId = student.classId;
-            if (studentClassId == null || studentClassId === '') return false;
-            return studentClassId === selectedClass;
+            return studentClassId != null && studentClassId !== '' && studentClassId === selectedClass;
           });
 
           // Create students with results, pre-populating with existing data if available
           const studentsWithResults = classStudents.map(student => {
-            // Find existing result for this student, subject, academic year, and term
-            // Debug logging for matching
-            console.log(`Looking for result for student ${student.id} (${student.user.firstName} ${student.user.lastName})`);
-            console.log(`Selected filters: subject=${selectedSubject}, academicYear=${selectedAcademicYear}, term=${selectedTerm}`);
+            // Find results that match the current selection criteria
+            const matchingResults = allResults.filter(result =>
+              String(result.studentId) === String(student.id) &&
+              String(result.subjectId) === String(selectedSubject) &&
+              String(result.academicYearId) === String(selectedAcademicYear) &&
+              String(result.term) === String(selectedTerm)
+            );
 
-            const existingResult = allResults.find(result => {
-              const studentMatch = result.studentId === student.id;
-              const subjectMatch = result.subjectId === selectedSubject;
-              // Compare academic year ID directly
-              const academicYearMatch = result.academicYearId === selectedAcademicYear;
-              // Term should match directly (both are stored as 'first', 'second', etc.)
-              const termMatch = result.term === selectedTerm;
-
-              console.log(`Checking result ${result.id}: student=${studentMatch}, subject=${subjectMatch}, year=${academicYearMatch} (${result.academicYearId} vs ${selectedAcademicYear}), term=${termMatch} (${result.term} vs ${selectedTerm})`);
-
-              return studentMatch && subjectMatch && academicYearMatch && termMatch;
-            });
-
-            if (existingResult) {
-              console.log(`Found existing result for ${student.user.firstName} ${student.user.lastName}:`, existingResult);
-            }
+            const existingResult = matchingResults[0]; // Take the first match if multiple
 
             return {
               id: student.id,
@@ -199,7 +210,9 @@ export default function UploadResultsPage() {
             };
           });
 
-          console.log(`Found ${studentsWithResults.filter(s => s.existingResultId).length} students with existing results`);
+          console.log(`Created ${studentsWithResults.length} student result forms`);
+          console.log(`Students with existing results:`, studentsWithResults.filter(s => s.existingResultId).map(s => `${s.studentName} (result: ${s.existingResultId})`));
+          console.log(`Students without existing results:`, studentsWithResults.filter(s => !s.existingResultId).map(s => `${s.studentName}`));
           setStudents(studentsWithResults);
         } catch (error) {
           console.error('Failed to fetch students:', error);
@@ -252,6 +265,8 @@ export default function UploadResultsPage() {
         exam_score: student.exam_score,
         remarks: student.remarks || '',
       }));
+
+      console.log('Results to save:', resultsToSave);
 
       const promises = resultsToSave.map(async (resultData, index) => {
         const student = students[index];
@@ -492,7 +507,13 @@ export default function UploadResultsPage() {
                         min="0"
                         max="10"
                         value={student.ca1_score}
-                        onChange={(e) => updateStudentResult(student.id, 'ca1_score', parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateStudentResult(
+                            student.id,
+                            'ca1_score',
+                            normalizeScore(e.target.value, 10)
+                          )
+                        }
                         className="text-center"
                       />
                     </div>
@@ -503,7 +524,13 @@ export default function UploadResultsPage() {
                         min="0"
                         max="10"
                         value={student.ca2_score}
-                        onChange={(e) => updateStudentResult(student.id, 'ca2_score', parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateStudentResult(
+                            student.id,
+                            'ca2_score',
+                            normalizeScore(e.target.value, 10)
+                          )
+                        }
                         className="text-center"
                       />
                     </div>
@@ -514,7 +541,13 @@ export default function UploadResultsPage() {
                         min="0"
                         max="10"
                         value={student.ca3_score}
-                        onChange={(e) => updateStudentResult(student.id, 'ca3_score', parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateStudentResult(
+                            student.id,
+                            'ca3_score',
+                            normalizeScore(e.target.value, 10)
+                          )
+                        }
                         className="text-center"
                       />
                     </div>
@@ -525,7 +558,13 @@ export default function UploadResultsPage() {
                         min="0"
                         max="10"
                         value={student.ca4_score}
-                        onChange={(e) => updateStudentResult(student.id, 'ca4_score', parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateStudentResult(
+                            student.id,
+                            'ca4_score',
+                            normalizeScore(e.target.value, 10)
+                          )
+                        }
                         className="text-center"
                       />
                     </div>
@@ -536,7 +575,13 @@ export default function UploadResultsPage() {
                         min="0"
                         max="60"
                         value={student.exam_score}
-                        onChange={(e) => updateStudentResult(student.id, 'exam_score', parseInt(e.target.value) || 0)}
+                        onChange={(e) =>
+                          updateStudentResult(
+                            student.id,
+                            'exam_score',
+                            normalizeScore(e.target.value, 60)
+                          )
+                        }
                         className="text-center"
                       />
                     </div>
