@@ -298,155 +298,247 @@ export function ResultsContent() {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Canvas context not available');
 
-      // Set canvas size (A4-like dimensions at 300 DPI)
-      const width = 2480; // 8.27 inches * 300 DPI
-      const height = 3508; // 11.69 inches * 300 DPI
+      // Set canvas size (A4 dimensions at 300 DPI)
+      const width = 2480;
+      const height = 3508;
       canvas.width = width;
       canvas.height = height;
 
-      // Set white background
+      // Margins
+      const marginLeft = 160;
+      const marginRight = 160;
+      const contentWidth = width - marginLeft - marginRight;
+
+      // White background
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
 
-      // Set font and colors
       ctx.fillStyle = '#000000';
-      ctx.font = 'bold 72px Arial';
-      let yPosition = 120;
+      let y = 100;
 
-      // School Header with better design
-      ctx.textAlign = 'center';
-
-      // School logo area (placeholder - you can add actual logo later)
+      // --- School Crest / Logo placeholder (circle with text) ---
+      const crestX = width / 2;
+      const crestY = y + 100;
+      const crestRadius = 90;
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(crestX, crestY, crestRadius, 0, Math.PI * 2);
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 3;
-      ctx.strokeRect(width/2 - 200, yPosition - 80, 400, 120);
-
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, yPosition);
-      yPosition += 60;
-      ctx.font = '48px Arial';
-      ctx.fillText('JALINGO', width / 2, yPosition);
-      yPosition += 80;
-
-      // Result title
-      ctx.font = 'bold 56px Arial';
-      ctx.fillStyle = '#1a365d';
-      ctx.fillText('ACADEMIC RESULT SHEET', width / 2, yPosition);
-      yPosition += 80;
-
-      // Term and Session info
-      ctx.font = 'bold 40px Arial';
+      ctx.stroke();
+      ctx.font = 'bold 28px serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#000000';
-      ctx.fillText(`${term.charAt(0).toUpperCase() + term.slice(1)} TERM`, width / 2, yPosition);
-      yPosition += 60;
-      ctx.font = '36px Arial';
-      ctx.fillText(`ACADEMIC SESSION: ${termResults[0]?.academicYear}`, width / 2, yPosition);
-      yPosition += 100;
+      ctx.fillText('RMS', crestX, crestY);
+      ctx.restore();
+      y = crestY + crestRadius + 100;
 
-      // Student Information Box
+      // --- School Name (large, bold, centered) ---
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = 'bold 72px serif';
+      ctx.fillStyle = '#000000';
+      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y);
+      y += 60;
+
+      // Subtitle line
+      ctx.font = '44px serif';
+      ctx.fillText('Jalingo, Taraba State', width / 2, y);
+      y += 50;
+
+      // Department/class info
+      ctx.font = 'italic 38px serif';
+      ctx.fillText(`(${studentClass})`, width / 2, y);
+      y += 70;
+
+      // --- Title: "STUDENT ACADEMIC RESULT" (bold, centered) ---
+      ctx.font = 'bold 52px serif';
+      ctx.fillText('STUDENT ACADEMIC RESULT', width / 2, y);
+      y += 80;
+
+      // --- Session / Term info line (left-right aligned) ---
+      // Draw a thin top border line
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2;
-      ctx.strokeRect(100, yPosition - 20, width - 200, 200);
-      ctx.fillStyle = '#f8f9fa';
-      ctx.fillRect(100, yPosition - 20, width - 200, 200);
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(width - marginRight, y);
+      ctx.stroke();
+      y += 50;
 
-      ctx.font = 'bold 32px Arial';
-      ctx.fillStyle = '#000000';
+      ctx.font = '36px serif';
       ctx.textAlign = 'left';
+      ctx.fillText(`SESSION: ${termResults[0]?.academicYear || 'N/A'}`, marginLeft, y);
+      ctx.textAlign = 'right';
+      ctx.fillText(`TERM: ${term.toUpperCase()}`, width - marginRight, y);
+      y += 50;
 
-      // Left column
-      ctx.fillText('STUDENT NAME:', 150, yPosition + 30);
-      ctx.fillText('STUDENT ID:', 150, yPosition + 80);
-      ctx.fillText('CLASS:', 150, yPosition + 130);
-      ctx.fillText('POSITION:', 150, yPosition + 180);
+      ctx.textAlign = 'left';
+      ctx.fillText(`NAME: ${user.firstName?.toUpperCase() || ''} ${user.lastName?.toUpperCase() || ''}`, marginLeft, y);
+      ctx.textAlign = 'right';
+      ctx.fillText(`ID. NO: ${user.id}`, width - marginRight, y);
+      y += 10;
 
-      // Right column values
-      ctx.font = '32px Arial';
-      ctx.fillText(`${user.firstName} ${user.lastName}`, 500, yPosition + 30);
-      ctx.fillText(user.id, 500, yPosition + 80);
-      ctx.fillText(studentClass, 500, yPosition + 130);
-      ctx.fillText(studentPosition, 500, yPosition + 180);
+      // Bottom border for info section
+      ctx.beginPath();
+      ctx.moveTo(marginLeft, y);
+      ctx.lineTo(width - marginRight, y);
+      ctx.stroke();
+      y += 20;
 
-      yPosition += 250;
+      // --- Position info ---
+      ctx.textAlign = 'left';
+      ctx.font = '34px serif';
+      ctx.fillText(`POSITION IN CLASS: ${studentPosition}`, marginLeft, y + 30);
+      y += 60;
 
-      // Results Table
-      ctx.font = 'bold 28px Arial';
-      const colWidths = [450, 100, 100, 100, 100, 120, 120, 100];
-      const headers = ['SUBJECT', 'CA1', 'CA2', 'CA3', 'CA4', 'EXAM', 'TOTAL', 'GRADE'];
-      let xPosition = 120;
+      // === RESULTS TABLE (bordered cells like the PDF) ===
+      const colWidths = [80, 500, 100, 100, 100, 100, 180, 200, 140];
+      const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'CA4', 'EXAM', 'TOTAL', 'GRADE'];
+      const rowHeight = 60;
+      const tableX = marginLeft;
+      const tableWidth = contentWidth;
 
-      // Table header with better styling
-      ctx.fillStyle = '#1a365d';
-      ctx.fillRect(100, yPosition - 30, width - 200, 60);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px Arial';
+      // Recalculate column widths to fit contentWidth proportionally
+      const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
+      const scaledColWidths = colWidths.map(w => (w / totalColWidth) * tableWidth);
 
-      for (let i = 0; i < headers.length; i++) {
-        ctx.fillText(headers[i], xPosition, yPosition);
-        xPosition += colWidths[i];
-      }
-      yPosition += 80;
+      // Helper: draw a bordered row of cells
+      const drawTableRow = (rowY: number, data: string[], isHeader: boolean) => {
+        let cellX = tableX;
+        for (let i = 0; i < data.length; i++) {
+          const cellW = scaledColWidths[i];
+          // Cell border
+          ctx.strokeStyle = '#000000';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(cellX, rowY, cellW, rowHeight);
 
-      // Draw table rows with better styling
-      ctx.font = '24px Arial';
-      termResults.forEach((result, index) => {
-        // Alternate row background
-        if (index % 2 === 0) {
-          ctx.fillStyle = '#f8f9fa';
-          ctx.fillRect(100, yPosition - 30, width - 200, 50);
-        } else {
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(100, yPosition - 30, width - 200, 50);
+          // Text
+          ctx.fillStyle = '#000000';
+          ctx.font = isHeader ? 'bold 28px serif' : '28px serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(data[i], cellX + cellW / 2, rowY + rowHeight / 2);
+          cellX += cellW;
         }
-        ctx.fillStyle = '#000000';
+      };
 
-        xPosition = 120;
+      // Draw header row
+      drawTableRow(y, headers, true);
+      y += rowHeight;
+
+      // Draw data rows
+      termResults.forEach((result, index) => {
         const rowData = [
-          result.subject_name || result.subjectId,
+          (index + 1).toString(),
+          (result.subject_name || result.subjectId).toUpperCase(),
           result.ca1_score.toString(),
           result.ca2_score.toString(),
           result.ca3_score.toString(),
           result.ca4_score.toString(),
           result.exam_score.toString(),
           result.marks_obtained.toString(),
-          result.grade
+          result.grade,
         ];
-
-        for (let i = 0; i < rowData.length; i++) {
-          ctx.fillText(rowData[i], xPosition, yPosition);
-          xPosition += colWidths[i];
-        }
-        yPosition += 60;
+        drawTableRow(y, rowData, false);
+        y += rowHeight;
       });
 
-      // Performance Summary Box
-      yPosition += 60;
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(100, yPosition - 20, width - 200, 150);
-      ctx.fillStyle = '#f0f8ff';
-      ctx.fillRect(100, yPosition - 20, width - 200, 150);
-
-      ctx.font = 'bold 32px Arial';
-      ctx.fillStyle = '#000000';
-      ctx.textAlign = 'left';
-
-      ctx.fillText('PERFORMANCE SUMMARY:', 150, yPosition + 40);
-      ctx.font = '28px Arial';
+      // --- Total row below table ---
+      y += 10;
       const totalMarksSummary = termResults.reduce((sum, r) => sum + r.marks_obtained, 0);
-      const averagePercentage = termResults.length > 0 ? (totalMarksSummary / termResults.length).toFixed(2) : '0';
-      const overallGrade = termResults.length > 0 ? termResults[0].grade : 'N/A';
+      const averagePercentage = termResults.length > 0 ? (totalMarksSummary / termResults.length).toFixed(1) : '0';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'alphabetic';
+      ctx.font = '34px serif';
+      ctx.fillText(`Total Marks Obtained: ${totalMarksSummary}  |  Average Score: ${averagePercentage}%`, marginLeft, y + 30);
+      y += 80;
 
-      ctx.fillText(`Average Score: ${averagePercentage}%`, 200, yPosition + 80);
-      ctx.fillText(`Overall Grade: ${overallGrade}`, 200, yPosition + 110);
+      // --- Grading Key ---
+      ctx.font = 'bold 30px serif';
+      ctx.fillText('GRADING KEY:', marginLeft, y);
+      y += 40;
+      ctx.font = '26px serif';
+      const grades = [
+        'A+ (90-100)',  'A (80-89)',  'B+ (70-79)',  'B (60-69)',
+        'C+ (50-59)',   'C (40-49)',  'D (30-39)',   'F (Below 30)',
+      ];
+      // Draw in two rows of four
+      for (let row = 0; row < 2; row++) {
+        let gx = marginLeft;
+        for (let col = 0; col < 4; col++) {
+          const idx = row * 4 + col;
+          if (idx < grades.length) {
+            ctx.fillText(grades[idx], gx, y);
+          }
+          gx += contentWidth / 4;
+        }
+        y += 40;
+      }
 
-      // Footer
-      yPosition += 200;
-      ctx.font = '20px Arial';
-      ctx.fillStyle = '#666666';
+      y += 40;
+
+      // --- Remarks ---
+      const remarksText = termResults
+        .filter(r => r.remarks)
+        .map(r => `${r.subject_name}: ${r.remarks}`)
+        .join(', ');
+      if (remarksText) {
+        ctx.font = 'bold 30px serif';
+        ctx.fillText('REMARKS:', marginLeft, y);
+        y += 40;
+        ctx.font = '28px serif';
+        // Word-wrap remarks
+        const maxLineWidth = contentWidth;
+        const words = remarksText.split(' ');
+        let line = '';
+        for (const word of words) {
+          const testLine = line + (line ? ' ' : '') + word;
+          if (ctx.measureText(testLine).width > maxLineWidth) {
+            ctx.fillText(line, marginLeft, y);
+            y += 36;
+            line = word;
+          } else {
+            line = testLine;
+          }
+        }
+        if (line) {
+          ctx.fillText(line, marginLeft, y);
+          y += 50;
+        }
+      }
+
+      // --- Signature Lines (like the PDF) ---
+      y += 60;
+      const lineLength = contentWidth * 0.55;
+      const sigLabels = ["CLASS TEACHER'S SIGNATURE:", "HEAD TEACHER'S SIGNATURE:", "PARENT'S SIGNATURE:"];
+      ctx.font = '32px serif';
+      ctx.fillStyle = '#000000';
+      for (const label of sigLabels) {
+        ctx.textAlign = 'left';
+        ctx.fillText(label, marginLeft, y);
+        // Dotted line
+        const labelW = ctx.measureText(label).width;
+        const lineStartX = marginLeft + labelW + 20;
+        const lineEndX = marginLeft + lineLength;
+        ctx.setLineDash([6, 6]);
+        ctx.beginPath();
+        ctx.moveTo(lineStartX, y);
+        ctx.lineTo(lineEndX, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        y += 70;
+      }
+
+      // --- Footer ---
+      y += 30;
+      ctx.font = '22px serif';
+      ctx.fillStyle = '#555555';
       ctx.textAlign = 'center';
-      ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, width / 2, yPosition);
-      yPosition += 40;
-      ctx.fillText('This is an official academic result document from Raddai Metropolitan School Jalingo', width / 2, yPosition);
+      ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, width / 2, y);
+      y += 35;
+      ctx.fillText('This is an official academic result document from Raddai Metropolitan School, Jalingo', width / 2, y);
 
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
