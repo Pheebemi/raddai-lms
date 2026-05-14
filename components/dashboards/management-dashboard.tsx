@@ -6,7 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Users,
   DollarSign,
@@ -16,17 +18,47 @@ import {
   BarChart3,
   AlertTriangle,
   CheckCircle,
-  MessageSquare
+  MessageSquare,
+  GraduationCap,
 } from 'lucide-react';
-import { dashboardApi, usersApi, feesApi, resultsApi, announcementsApi } from '@/lib/api';
+import { dashboardApi, feesApi, promotionApi, fetchAcademicYears } from '@/lib/api';
 import { DashboardStats } from '@/types';
 import { toast } from 'sonner';
+
+type StudentStatus = 'promote' | 'repeat' | 'graduated';
+
+interface PreviewStudent {
+  student_id: number;
+  student_name: string;
+  student_number: string;
+  current_class: string | null;
+  current_grade: number | null;
+  next_class: string | null;
+  can_promote: boolean;
+}
+
+interface AcademicYear {
+  id: number;
+  name: string;
+  is_active: boolean;
+}
 
 export function ManagementDashboard() {
   const { user } = useAuth();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [recentTransactions, setRecentTransactions] = useState<any[]>([]);
+
+  // Promotion dialog state
+  const [promoteOpen, setPromoteOpen] = useState(false);
+  const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
+  const [fromYear, setFromYear] = useState<string>('');
+  const [toYear, setToYear] = useState<string>('');
+  const [previewStudents, setPreviewStudents] = useState<PreviewStudent[]>([]);
+  const [studentStatuses, setStudentStatuses] = useState<Record<number, StudentStatus>>({});
+  const [previewing, setPreviewing] = useState(false);
+  const [promoting, setPromoting] = useState(false);
+  const [previewLoaded, setPreviewLoaded] = useState(false);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -59,6 +91,65 @@ export function ManagementDashboard() {
       fetchDashboardData();
     }
   }, [user]);
+
+  const openPromoteDialog = async () => {
+    setPromoteOpen(true);
+    setPreviewLoaded(false);
+    setPreviewStudents([]);
+    setStudentStatuses({});
+    try {
+      const years = await fetchAcademicYears();
+      setAcademicYears(years);
+      const active = years.find((y: AcademicYear) => y.is_active);
+      if (active) setFromYear(active.id.toString());
+    } catch {
+      toast.error('Failed to load academic years');
+    }
+  };
+
+  const handlePreview = async () => {
+    if (!fromYear || !toYear) {
+      toast.error('Select both academic years');
+      return;
+    }
+    setPreviewing(true);
+    try {
+      const result = await promotionApi.preview(Number(fromYear), Number(toYear));
+      setPreviewStudents(result.students);
+      const statuses: Record<number, StudentStatus> = {};
+      result.students.forEach(s => { statuses[s.student_id] = 'promote'; });
+      setStudentStatuses(statuses);
+      setPreviewLoaded(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to load preview');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
+  const handlePromote = async () => {
+    if (!fromYear || !toYear) return;
+    setPromoting(true);
+    try {
+      const repeated  = Object.entries(studentStatuses).filter(([, v]) => v === 'repeat').map(([k]) => Number(k));
+      const graduated = Object.entries(studentStatuses).filter(([, v]) => v === 'graduated').map(([k]) => Number(k));
+      const result = await promotionApi.execute({
+        from_academic_year: Number(fromYear),
+        to_academic_year: Number(toYear),
+        repeated_student_ids: repeated,
+        graduated_student_ids: graduated,
+      });
+      toast.success(result.message);
+      if (result.no_class_found.length > 0) {
+        toast.warning(`${result.no_class_found.length} student(s) could not be assigned — check that classes exist in the new year.`);
+      }
+      setPromoteOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || 'Promotion failed');
+    } finally {
+      setPromoting(false);
+    }
+  };
 
   if (!user) return null;
 
@@ -392,13 +483,122 @@ export function ManagementDashboard() {
               <DollarSign className="h-6 w-6" />
               Financial Reports
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <BarChart3 className="h-6 w-6" />
-              View Analytics
+            <Button variant="outline" className="h-20 flex-col gap-2" onClick={openPromoteDialog}>
+              <GraduationCap className="h-6 w-6" />
+              Promote Students
             </Button>
           </div>
         </CardContent>
       </Card>
+
+      {/* Promote Students Dialog */}
+      <Dialog open={promoteOpen} onOpenChange={setPromoteOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>Promote Students</DialogTitle>
+            <DialogDescription>
+              Move students to the next grade for a new academic year. Mark students who are repeating or graduating before confirming.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex gap-4 mt-2">
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">From Academic Year</label>
+              <Select value={fromYear} onValueChange={setFromYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map(y => (
+                    <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex-1">
+              <label className="text-sm font-medium mb-1 block">To Academic Year</label>
+              <Select value={toYear} onValueChange={setToYear}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select year" />
+                </SelectTrigger>
+                <SelectContent>
+                  {academicYears.map(y => (
+                    <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-end">
+              <Button onClick={handlePreview} disabled={previewing || !fromYear || !toYear} variant="outline">
+                {previewing ? 'Loading...' : 'Preview'}
+              </Button>
+            </div>
+          </div>
+
+          {previewLoaded && (
+            <div className="flex-1 overflow-y-auto mt-4 border rounded-lg">
+              <table className="w-full text-sm">
+                <thead className="bg-muted sticky top-0">
+                  <tr>
+                    <th className="text-left p-3">Student</th>
+                    <th className="text-left p-3">Current Class</th>
+                    <th className="text-left p-3">Moving To</th>
+                    <th className="text-left p-3">Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {previewStudents.map(s => (
+                    <tr key={s.student_id} className="border-t">
+                      <td className="p-3">
+                        <p className="font-medium">{s.student_name}</p>
+                        <p className="text-xs text-muted-foreground">{s.student_number}</p>
+                      </td>
+                      <td className="p-3">{s.current_class ?? '—'}</td>
+                      <td className="p-3">
+                        {studentStatuses[s.student_id] === 'graduated'
+                          ? <span className="text-muted-foreground">Graduating</span>
+                          : studentStatuses[s.student_id] === 'repeat'
+                          ? <span className="text-yellow-600">{s.current_class ?? '—'} (repeat)</span>
+                          : s.next_class
+                          ? s.next_class
+                          : <span className="text-red-500">No class found</span>}
+                      </td>
+                      <td className="p-3">
+                        <Select
+                          value={studentStatuses[s.student_id] ?? 'promote'}
+                          onValueChange={(v) => setStudentStatuses(prev => ({ ...prev, [s.student_id]: v as StudentStatus }))}
+                        >
+                          <SelectTrigger className="w-32 h-8">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="promote">Promote</SelectItem>
+                            <SelectItem value="repeat">Repeat</SelectItem>
+                            <SelectItem value="graduated">Graduated</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {previewStudents.length === 0 && (
+                <p className="text-center text-muted-foreground py-8">No students found in the selected academic year.</p>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setPromoteOpen(false)}>Cancel</Button>
+            <Button
+              onClick={handlePromote}
+              disabled={!previewLoaded || promoting || previewStudents.length === 0}
+            >
+              {promoting ? 'Promoting...' : `Confirm Promotion (${previewStudents.length} students)`}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

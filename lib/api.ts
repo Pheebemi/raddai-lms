@@ -1288,6 +1288,54 @@ export const classesApi = {
   },
 };
 
+// Promotion API
+export const promotionApi = {
+  preview: async (fromYearId: number, toYearId: number) => {
+    const params = new URLSearchParams({
+      from_academic_year: fromYearId.toString(),
+      to_academic_year: toYearId.toString(),
+    });
+    const response = await fetch(`${API_BASE_URL}/promote-students/?${params}`, {
+      headers: getAuthHeaders(),
+    });
+    return handleApiResponse<{
+      students: {
+        student_id: number;
+        student_name: string;
+        student_number: string;
+        current_class: string | null;
+        current_grade: number | null;
+        next_class: string | null;
+        next_class_id: number | null;
+        can_promote: boolean;
+      }[];
+      from_year: string;
+      to_year: string;
+      total: number;
+    }>(response);
+  },
+
+  execute: async (data: {
+    from_academic_year: number;
+    to_academic_year: number;
+    repeated_student_ids: number[];
+    graduated_student_ids: number[];
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/promote-students/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleApiResponse<{
+      promoted: number;
+      repeated: number;
+      graduated: number;
+      no_class_found: string[];
+      message: string;
+    }>(response);
+  },
+};
+
 // Generic API error handler
 export const handleApiError = (error: any): string => {
   if (error.message) {
