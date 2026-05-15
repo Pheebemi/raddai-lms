@@ -1105,7 +1105,7 @@ export function FeesContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.filter((y): y is string => y !== undefined).map(year => (
+                  {availableYears.map(year => (
                     <SelectItem key={year} value={year}>{year}</SelectItem>
                   ))}
                 </SelectContent>
@@ -1119,7 +1119,7 @@ export function FeesContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Terms</SelectItem>
-                  {availableTerms.filter((t): t is string => t !== undefined).map(term => (
+                  {availableTerms.map(term => (
                     <SelectItem key={term} value={term}>{term.charAt(0).toUpperCase() + term.slice(1)} Term</SelectItem>
                   ))}
                 </SelectContent>
