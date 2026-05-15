@@ -179,12 +179,12 @@ export function FeesContent() {
     setIsFeeAmountLoading(false);
   }, [paymentData.term, paymentData.academicYear, feeStructures, user]);
 
-  // Handle redirect back from Flutterwave using query parameters (?payment=success|failed)
+  // Handle redirect back from Flutterwave
   useEffect(() => {
-    const status = searchParams.get('payment');
-    if (!status) return;
+    const paymentStatus = searchParams.get('payment') || searchParams.get('status');
+    if (!paymentStatus) return;
 
-    const normalize = status.toLowerCase();
+    const normalize = paymentStatus.toLowerCase();
 
   const handlePaymentRecording = async () => {
     try {
@@ -248,54 +248,28 @@ export function FeesContent() {
           return;
         }
 
-        if (!feeStructure) {
-          toast.error('Payment recorded but fee structure not found. Please contact the administrator.');
-          return;
-        }
-
-        const paymentPayload = {
-          student: numericStudentId,
-          fee_structure: parseInt(feeStructure.id.toString()),
-          academic_year: paymentIntent.academicYear,
-          term: paymentIntent.term,
-          amount_paid: paymentIntent.amount,
-          total_amount: paymentIntent.totalAmount,
-          due_date: dueDateString,
-          payment_method: 'flutterwave',
-          transaction_id: paymentIntent.txRef,
-          remarks: paymentIntent.remarks,
-        };
+        // Get the real Flutterwave transaction_id from the URL (appended by Flutterwave on redirect)
+        const urlTransactionId = new URLSearchParams(window.location.search).get('transaction_id');
+        const transactionId = urlTransactionId || paymentIntent.txRef;
 
         try {
-          const result = await feesApi.createPayment(paymentPayload);
+          const result = await feesApi.verifyPayment({
+            transaction_id: transactionId,
+            student_id: numericStudentId,
+            term: paymentIntent.term,
+            academic_year: paymentIntent.academicYear,
+            expected_amount: paymentIntent.amount,
+            remarks: paymentIntent.remarks,
+          });
 
           // Clear the stored payment intent data
           sessionStorage.removeItem('flutterwave_payment_intent');
 
           toast.success('Payment completed and recorded successfully!');
         } catch (paymentError: any) {
-          console.error('❌ Payment recording failed:', paymentError);
-          console.error('❌ Payment payload that failed:', paymentPayload);
-          console.error('❌ Error response:', paymentError.response?.data || paymentError.message);
-
-          // Check if it's a duplicate payment error
-          const errorData = paymentError.response?.data;
-          if (errorData && typeof errorData === 'object') {
-            const errorMessages = Object.values(errorData).flat();
-            const isDuplicate = errorMessages.some(msg =>
-              typeof msg === 'string' && msg.toLowerCase().includes('unique') ||
-              msg.toLowerCase().includes('already exists') ||
-              msg.toLowerCase().includes('duplicate')
-            );
-
-            if (isDuplicate) {
-              sessionStorage.removeItem('flutterwave_payment_intent');
-              toast.success('Payment completed successfully! (Already recorded)');
-              return; // Don't throw error for duplicates
-            }
-          }
-
-          throw paymentError; // Re-throw for other errors
+          const msg = paymentError?.message || 'Payment verification failed';
+          toast.error(`Payment was received but could not be recorded: ${msg}. Please contact the administrator.`);
+          throw paymentError;
         }
 
       } catch (error) {
