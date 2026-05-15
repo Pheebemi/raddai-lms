@@ -330,7 +330,7 @@ export function ResultsContent() {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#000000';
-      ctx.fillText('RMS', crestX, crestY);
+      ctx.fillText('LA', crestX, crestY);
       ctx.restore();
       y = crestY + crestRadius + 100;
 
@@ -339,7 +339,7 @@ export function ResultsContent() {
       ctx.textBaseline = 'alphabetic';
       ctx.font = 'bold 72px serif';
       ctx.fillStyle = '#000000';
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y);
+      ctx.fillText('LAAZEERE ACADEMY', width / 2, y);
       y += 60;
 
       // Subtitle line

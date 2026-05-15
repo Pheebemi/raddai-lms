@@ -248,20 +248,10 @@ export function FeesContent() {
           return;
         }
 
-        console.log('💳 Recording payment with data:', {
-          student: numericStudentId,
-          fee_structure: parseInt(feeStructure.id.toString()),
-          amount_paid: paymentIntent.amount,
-          total_amount: paymentIntent.totalAmount,
-          due_date: dueDateString,
-          payment_method: 'flutterwave',
-          transaction_id: paymentIntent.txRef,
-          remarks: paymentIntent.remarks,
-          debug: {
-            paymentIntent,
-            feeStructure_amount: feeStructure.amount,
-          }
-        });
+        if (!feeStructure) {
+          toast.error('Payment recorded but fee structure not found. Please contact the administrator.');
+          return;
+        }
 
         const paymentPayload = {
           student: numericStudentId,
@@ -414,7 +404,7 @@ export function FeesContent() {
       // School header text
       ctx.fillStyle = '#e5e7eb';
       ctx.font = 'bold 60px Arial';
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', width / 2, y + 10);
+      ctx.fillText('LAAZEERE ACADEMY', width / 2, y + 10);
       y += 60;
 
       ctx.font = '36px Arial';
