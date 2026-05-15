@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { feesApi, feeStructureApi, classesApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
+import { feesApi, feeStructureApi, classesApi, dashboardApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
@@ -34,6 +34,7 @@ export function FeesContent() {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [studentGrade, setStudentGrade] = useState<number | null>(null);
+  const [serverPendingFees, setServerPendingFees] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
@@ -85,15 +86,17 @@ export function FeesContent() {
     const fetchData = async () => {
       try {
         setAuthError(false);
-        const [paymentsData, yearsData, feeStructuresData] = await Promise.all([
+        const [paymentsData, yearsData, feeStructuresData, statsData] = await Promise.all([
           feesApi.getPayments(),
           fetchAcademicYears(),
           feeStructureApi.getAll(),
+          dashboardApi.getStats().catch(() => null),
         ]);
 
         setPayments(paymentsData);
         setAcademicYears(yearsData);
         setFeeStructures(feeStructuresData);
+        if (statsData?.pendingFees) setServerPendingFees(Number(statsData.pendingFees));
 
         // Resolve student grade separately so it never blocks the main data
         try {
@@ -629,18 +632,8 @@ export function FeesContent() {
   // Calculate summary statistics
   const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
 
-  // Session-level pending fees for the currently selected / latest academic year:
-  // (per-term fee * 3 terms) - total amount paid in that academic year.
-  const selectedAcademicYearId = paymentData.academicYear;
-
-  const totalPaidInSession = payments
-    .filter(p => !selectedAcademicYearId || p.academicYearId === selectedAcademicYearId)
-    .reduce((sum, p) => sum + p.amount, 0);
-
-  const sessionPendingAmount =
-    currentFeeAmount !== null
-      ? Math.max(currentFeeAmount * 3 - totalPaidInSession, 0)
-      : 0;
+  // Use server-calculated pending fees — accurate even with no payment records
+  const sessionPendingAmount = serverPendingFees;
 
   // Overdue amount across filtered payments, based on remaining per record
   const totalOverdue = filteredPayments
