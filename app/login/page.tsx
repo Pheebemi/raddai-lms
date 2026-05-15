@@ -5,15 +5,14 @@ import { useRouter } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Eye, EyeOff, GraduationCap, Shield, Users, UserCheck, User } from 'lucide-react';
+import { Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
-import { UserRole } from '@/types';
 
 const loginSchema = z.object({
   username: z.string().min(1, 'Please enter your username'),
@@ -21,14 +20,6 @@ const loginSchema = z.object({
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
-
-const roleOptions = [
-  { value: 'admin' as UserRole, label: 'Administrator', icon: Shield, description: 'Full system access' },
-  { value: 'management' as UserRole, label: 'School Management', icon: Users, description: 'Raddai Metropolitan School administration' },
-  { value: 'staff' as UserRole, label: 'Staff/Teacher', icon: UserCheck, description: 'Teaching staff' },
-  { value: 'student' as UserRole, label: 'Student', icon: GraduationCap, description: 'Student access' },
-  { value: 'parent' as UserRole, label: 'Parent', icon: User, description: 'Parent access' },
-];
 
 export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -38,20 +29,15 @@ export default function LoginPage() {
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: '',
-      password: '',
-    },
+    defaultValues: { username: '', password: '' },
   });
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
       const result = await login(data.username, data.password);
-
       if (result.success) {
         toast.success('Login successful! Redirecting...');
-        // Redirect based on role
         router.push('/dashboard');
       } else {
         toast.error(result.message);
@@ -63,95 +49,85 @@ export default function LoginPage() {
     }
   };
 
-  const selectedRole = form.watch('role');
-  const roleInfo = roleOptions.find(option => option.value === selectedRole);
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-            <GraduationCap className="h-6 w-6 text-primary-foreground" />
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-md">
+
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-4">
+            <GraduationCap className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-2xl font-bold">Raddai Metropolitan School</CardTitle>
-          <CardDescription>
-            Excellence in Education - Jalingo, Taraba State
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="text"
-                        placeholder="Enter your username"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+          <h1 className="text-2xl font-semibold text-foreground">Laazeere Academy</h1>
+          <p className="text-sm text-muted-foreground mt-1">Jalingo, Taraba State</p>
+        </div>
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input
-                          type={showPassword ? 'text' : 'password'}
-                          placeholder="Enter your password"
-                          {...field}
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                          onClick={() => setShowPassword(!showPassword)}
-                        >
-                          {showPassword ? (
-                            <EyeOff className="h-4 w-4" />
-                          ) : (
-                            <Eye className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="pb-4">
+            <CardTitle className="text-xl font-semibold text-foreground">Sign in</CardTitle>
+            <CardDescription>Enter your credentials to access the portal</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="username"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Username</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Enter your username" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-              <Button type="submit" className="w-full" disabled={isLoading}>
-                {isLoading ? 'Signing in...' : 'Sign In'}
-              </Button>
-            </form>
-          </Form>
+                <FormField
+                  control={form.control}
+                  name="password"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Password</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? 'text' : 'password'}
+                            placeholder="Enter your password"
+                            {...field}
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-          <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg">
-            <h4 className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-2">
-              Demo Credentials:
-            </h4>
-            <div className="text-xs text-blue-700 dark:text-blue-300 space-y-1">
-              <div><strong>Admin:</strong> admin / admin123</div>
-              <div><strong>Management:</strong> management / mgmt123</div>
-              <div><strong>Staff:</strong> teacher1 / teacher123</div>
-              <div><strong>Student:</strong> student1 / student123</div>
-              <div><strong>Parent:</strong> parent1 / parent123</div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading ? 'Signing in...' : 'Sign In'}
+                </Button>
+              </form>
+            </Form>
+
+            <p className="text-center text-xs text-muted-foreground mt-6">
+              <Link href="/" className="hover:text-primary transition-colors">
+                ← Back to home
+              </Link>
+            </p>
+          </CardContent>
+        </Card>
+
+      </div>
     </div>
   );
 }

@@ -5,9 +5,9 @@ import { AuthProvider } from "@/contexts/auth-context";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Raddai Metropolitan School Jalingo - Excellence in Education",
-  description: "Raddai Metropolitan School Jalingo provides quality education with modern facilities, qualified teachers, and comprehensive academic programs from nursery to senior secondary level.",
-  keywords: "Raddai Metropolitan School, Jalingo, Taraba State, school, education, nursery, primary, secondary, WAEC, NECO, quality education",
+  title: "Laazeere Academy — Excellence in Education",
+  description: "Laazeere Academy, Jalingo, provides quality education with modern facilities, qualified teachers, and comprehensive academic programs from nursery to senior secondary level.",
+  keywords: "Laazeere Academy, Jalingo, Taraba State, school, education, nursery, primary, secondary, WAEC, NECO",
 };
 
 export default function RootLayout({
@@ -17,6 +17,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200..800&display=swap" rel="stylesheet" />
+      </head>
       <body className="antialiased">
         <ThemeProvider
           attribute="class"

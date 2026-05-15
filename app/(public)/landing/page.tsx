@@ -1,396 +1,361 @@
 'use client';
 
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
-  GraduationCap,
-  Users,
-  BookOpen,
-  Trophy,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
-  Clock,
-  Shield,
-  Heart,
-  Star,
-  ArrowRight,
-  CheckCircle
+  GraduationCap, Users, BookOpen, Trophy,
+  MapPin, Phone, Mail, Clock, Shield, Heart,
+  ArrowRight, CheckCircle, Star, Award, Sun, Moon,
 } from 'lucide-react';
 
 export default function LandingPage() {
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 dark:from-gray-900 dark:via-gray-800 dark:to-blue-900">
-      {/* Header */}
-      <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="h-12 w-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center">
-              <GraduationCap className="h-7 w-7 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Raddai Metropolitan School
-              </h1>
-              <p className="text-sm text-gray-600 dark:text-gray-400">Jalingo</p>
-            </div>
-          </div>
+  const { theme, setTheme } = useTheme();
 
-          <div className="flex items-center gap-4">
-            <Button asChild variant="outline">
-              <Link href="/login">Login</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/login">
-                Get Started
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+  return (
+    <div className="min-h-screen bg-background">
+
+      {/* Nav — M3 Top App Bar */}
+      <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md">
+        <div className="container mx-auto px-4">
+          <div className="flex h-16 items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0">
+                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+              </div>
+              <div>
+                <p className="text-base font-semibold text-foreground leading-tight">Laazeere Academy</p>
+                <p className="text-xs text-muted-foreground">laazeereacademy.com</p>
+              </div>
+            </div>
+
+            <nav className="hidden md:flex items-center">
+              {[
+                { label: 'About', href: '#about' },
+                { label: 'Programs', href: '#programs' },
+                { label: 'Contact', href: '#contact' },
+              ].map(({ label, href }) => (
+                <a
+                  key={label}
+                  href={href}
+                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform hover:after:scale-x-100"
+                >
+                  {label}
+                </a>
+              ))}
+            </nav>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                aria-label="Toggle theme"
+              >
+                <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+              </Button>
+              <Button asChild variant="ghost" size="sm">
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link href="/login">
+                  Access Portal
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto text-center max-w-4xl">
-          <Badge variant="secondary" className="mb-4">
-            <Star className="h-4 w-4 mr-1" />
+      {/* Hero — full screen with scrim */}
+      <section className="relative h-screen overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center bg-primary"
+          style={{ backgroundImage: "url('/hero.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-linear-to-t from-black/80 via-black/30 to-transparent" />
+
+        <div className="absolute bottom-0 left-0 right-0 px-6 md:px-16 pb-20 md:pb-24">
+          <span className="inline-block border border-white/30 text-white text-xs font-medium px-3 py-1 rounded-full mb-5 uppercase tracking-wider">
             Excellence in Education Since 1995
-          </Badge>
-
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 dark:text-white mb-6">
-            Welcome to{' '}
-            <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-              Raddai Metropolitan School
-            </span>
+          </span>
+          <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white mb-4 max-w-3xl">
+            Laazeere Academy
           </h1>
-
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-2xl mx-auto">
-            Empowering young minds with quality education, character development, and
-            technological innovation in the heart of Jalingo, Taraba State.
+          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-xl leading-relaxed">
+            Empowering young minds with quality education, character development,
+            and technological innovation in the heart of Jalingo, Taraba State.
           </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button size="lg" asChild className="text-lg px-8 py-6">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button asChild size="lg">
               <Link href="/login">
                 Access Portal
-                <ArrowRight className="ml-2 h-5 w-5" />
+                <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
-            <Button size="lg" variant="outline" className="text-lg px-8 py-6">
-              Learn More
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-white/40 text-white bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-sm"
+            >
+              <a href="#about">Learn More</a>
             </Button>
           </div>
         </div>
       </section>
 
-      {/* Stats Section */}
-      <section className="py-16 bg-white/50 dark:bg-gray-800/50">
+      {/* Stats — M3 Assist Chips */}
+      <section className="py-10 border-b border-border bg-background">
         <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">500+</div>
-              <div className="text-gray-600 dark:text-gray-400">Students</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">30+</div>
-              <div className="text-gray-600 dark:text-gray-400">Teachers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">15+</div>
-              <div className="text-gray-600 dark:text-gray-400">Years Experience</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-2">98%</div>
-              <div className="text-gray-600 dark:text-gray-400">Pass Rate</div>
-            </div>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              { icon: Users, label: '500+ Students' },
+              { icon: GraduationCap, label: '30+ Qualified Teachers' },
+              { icon: Award, label: '98% Pass Rate' },
+              { icon: Star, label: '15+ Years of Excellence' },
+              { icon: BookOpen, label: 'WAEC & NECO Center' },
+            ].map(({ icon: Icon, label }) => (
+              <div
+                key={label}
+                className="inline-flex items-center gap-2 border border-border bg-background rounded-full px-4 py-2 text-sm font-medium text-foreground"
+              >
+                <Icon className="h-4 w-4 text-primary" />
+                {label}
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* About Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+      {/* About */}
+      <section id="about" className="py-20 bg-background">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-16 items-center">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                About Raddai Metropolitan School
+              <span className="inline-block border border-primary/30 text-primary text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+                About Us
+              </span>
+              <h2 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tight mb-6">
+                A legacy of academic excellence
               </h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Located in the vibrant city of Jalingo, Taraba State, Raddai Metropolitan School
+              <p className="text-base text-muted-foreground leading-relaxed mb-4">
+                Located in the vibrant city of Jalingo, Taraba State, Laazeere Academy
                 has been a beacon of educational excellence for over 15 years. We provide
                 comprehensive education from nursery to senior secondary levels.
               </p>
-              <p className="text-gray-600 dark:text-gray-300 mb-6">
-                Our commitment to holistic development ensures that every student receives
-                not just academic excellence, but also moral guidance, leadership skills,
-                and technological proficiency for the 21st century.
+              <p className="text-base text-muted-foreground leading-relaxed mb-8">
+                Our commitment to holistic development ensures every student receives
+                academic excellence, moral guidance, leadership skills, and technological
+                proficiency for the 21st century.
               </p>
-
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm">Modern Facilities</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm">Qualified Teachers</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm">Digital Learning</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="h-5 w-5 text-green-500" />
-                  <span className="text-sm">Sports & Arts</span>
-                </div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  'Modern Facilities',
+                  'Qualified Teachers',
+                  'Digital Learning',
+                  'Sports & Arts',
+                  'Safe Environment',
+                  'Character Development',
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <CheckCircle className="h-4 w-4 text-accent-foreground shrink-0" />
+                    <span className="text-sm text-foreground">{item}</span>
+                  </div>
+                ))}
               </div>
             </div>
 
-            <div className="relative">
-              <div className="bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 rounded-2xl p-8">
-                <div className="grid grid-cols-2 gap-6">
-                  <div className="text-center">
-                    <BookOpen className="h-12 w-12 text-blue-600 mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">Academic Excellence</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Comprehensive curriculum with focus on critical thinking
-                    </p>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                {
+                  icon: BookOpen,
+                  title: 'Academic Excellence',
+                  desc: 'Comprehensive curriculum with focus on critical thinking and problem-solving',
+                },
+                {
+                  icon: Heart,
+                  title: 'Character Development',
+                  desc: 'Moral and ethical education for responsible future citizens',
+                },
+                {
+                  icon: Trophy,
+                  title: 'Sports & Arts',
+                  desc: 'Holistic development through a wide range of extracurricular activities',
+                },
+                {
+                  icon: Shield,
+                  title: 'Safe Environment',
+                  desc: 'Secure and nurturing learning environment for every student',
+                },
+              ].map(({ icon: Icon, title, desc }) => (
+                <div key={title} className="bg-secondary rounded-2xl p-5 flex flex-col">
+                  <div className="w-10 h-10 bg-primary/10 rounded-2xl flex items-center justify-center mb-3">
+                    <Icon className="h-5 w-5 text-primary" />
                   </div>
-                  <div className="text-center">
-                    <Heart className="h-12 w-12 text-red-500 mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">Character Development</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Moral and ethical education for responsible citizens
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <Trophy className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">Sports & Arts</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Holistic development through extracurricular activities
-                    </p>
-                  </div>
-                  <div className="text-center">
-                    <Shield className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">Safe Environment</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-300">
-                      Secure and nurturing learning environment
-                    </p>
-                  </div>
+                  <h3 className="text-sm font-semibold text-foreground mb-1">{title}</h3>
+                  <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>
                 </div>
-              </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
 
-      {/* Programs Section */}
-      <section className="py-20 px-4 bg-white/50 dark:bg-gray-800/50">
-        <div className="container mx-auto max-w-6xl">
+      {/* Programs */}
+      <section id="programs" className="py-20 bg-muted/40">
+        <div className="container mx-auto px-4 max-w-6xl">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-              Our Academic Programs
+            <span className="inline-block border border-primary/30 text-primary text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+              Academic Programs
+            </span>
+            <h2 className="text-4xl font-semibold text-foreground tracking-tight">
+              Education for every stage
             </h2>
-            <p className="text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-              Comprehensive education from early childhood to senior secondary level
+            <p className="text-base text-muted-foreground mt-3 max-w-xl mx-auto leading-relaxed">
+              From early childhood through senior secondary — a seamless educational journey
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <Card className="text-center">
-              <CardHeader>
-                <div className="h-16 w-16 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Users className="h-8 w-8 text-blue-600" />
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                icon: Users,
+                title: 'Nursery & Primary',
+                age: 'Ages 3–11 years',
+                items: ['Play-based learning', 'Basic literacy & numeracy', 'Social skills development', 'Creative arts and music'],
+              },
+              {
+                icon: BookOpen,
+                title: 'Junior Secondary',
+                age: 'Ages 12–14 · JSS 1–3',
+                items: ['Core subjects curriculum', 'Computer studies', 'Practical skills', 'Career guidance'],
+              },
+              {
+                icon: GraduationCap,
+                title: 'Senior Secondary',
+                age: 'Ages 15–17 · SS 1–3',
+                items: ['WAEC/NECO preparation', 'Advanced sciences & maths', 'Entrepreneurship education', 'University preparation'],
+              },
+            ].map(({ icon: Icon, title, age, items }) => (
+              <div
+                key={title}
+                className="bg-card border border-border rounded-2xl p-6 hover:shadow-md hover:border-primary/20 transition-all duration-200"
+              >
+                <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
+                  <Icon className="h-6 w-6 text-primary" />
                 </div>
-                <CardTitle>Nursery & Primary</CardTitle>
-                <CardDescription>
-                  Ages 3-11 years
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-left space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Play-based learning
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Basic literacy and numeracy
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Social skills development
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Creative arts and music
-                  </li>
+                <h3 className="text-xl font-semibold text-foreground mb-1">{title}</h3>
+                <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">{age}</p>
+                <ul className="space-y-2">
+                  {items.map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-sm text-foreground">
+                      <CheckCircle className="h-4 w-4 text-accent-foreground shrink-0" />
+                      {item}
+                    </li>
+                  ))}
                 </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="h-16 w-16 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <BookOpen className="h-8 w-8 text-green-600" />
-                </div>
-                <CardTitle>Junior Secondary</CardTitle>
-                <CardDescription>
-                  Ages 12-14 years (JSS 1-3)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-left space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Core subjects curriculum
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Computer studies
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Practical skills
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Career guidance
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="h-16 w-16 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <GraduationCap className="h-8 w-8 text-purple-600" />
-                </div>
-                <CardTitle>Senior Secondary</CardTitle>
-                <CardDescription>
-                  Ages 15-17 years (SS 1-3)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="text-left space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    WAEC/NECO preparation
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Advanced mathematics & sciences
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    Entrepreneurship education
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
-                    University preparation
-                  </li>
-                </ul>
-              </CardContent>
-            </Card>
+              </div>
+            ))}
           </div>
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section className="py-20 px-4">
-        <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+      {/* Portal CTA — accent section */}
+      <section className="py-20 bg-accent">
+        <div className="container mx-auto px-4 max-w-4xl text-center">
+          <span className="inline-block border border-accent-foreground/30 text-accent-foreground text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+            Student & Parent Portal
+          </span>
+          <h2 className="text-4xl font-semibold text-accent-foreground tracking-tight mb-4">
+            Everything you need, in one place
+          </h2>
+          <p className="text-base text-accent-foreground/80 leading-relaxed mb-8 max-w-2xl mx-auto">
+            Access results, fee payments, class rankings, and announcements.
+            Students, parents, and staff each have a dedicated dashboard built for their needs.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button
+              asChild
+              size="lg"
+              className="bg-accent-foreground text-accent hover:bg-accent-foreground/90"
+            >
+              <Link href="/login">
+                Login to Portal
+                <ArrowRight className="h-5 w-5" />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="border-accent-foreground/30 text-accent-foreground hover:bg-accent-foreground/10"
+            >
+              <a href="#contact">Contact Admissions</a>
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Contact */}
+      <section id="contact" className="py-20 bg-background">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="grid md:grid-cols-2 gap-16 items-start">
             <div>
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">
-                Get in Touch
+              <span className="inline-block border border-primary/30 text-primary text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+                Contact Us
+              </span>
+              <h2 className="text-4xl font-semibold text-foreground tracking-tight mb-4">
+                Get in touch
               </h2>
-              <p className="text-gray-600 dark:text-gray-300 mb-8">
-                Visit us or contact our administrative office for admissions,
-                inquiries, or any questions about our programs and facilities.
+              <p className="text-base text-muted-foreground leading-relaxed mb-8">
+                Visit our administrative office for admissions, inquiries, or any
+                questions about our programs and facilities.
               </p>
-
-              <div className="space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900 rounded-lg flex items-center justify-center">
-                    <MapPin className="h-6 w-6 text-blue-600" />
+              <div className="space-y-3">
+                {[
+                  { icon: MapPin, label: 'Location', value: 'No. 45, Ahmadu Bello Way, Jalingo, Taraba State, Nigeria' },
+                  { icon: Phone, label: 'Phone', value: '+234 (0) 803 123 4567' },
+                  { icon: Mail, label: 'Email', value: 'info@laazeereacademy.com' },
+                  { icon: Clock, label: 'Office Hours', value: 'Mon – Fri: 8:00 AM – 4:00 PM' },
+                ].map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-start gap-4 bg-muted rounded-2xl p-4">
+                    <div className="w-10 h-10 bg-primary/10 rounded-xl flex items-center justify-center shrink-0">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-foreground">{label}</p>
+                      <p className="text-sm text-muted-foreground">{value}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold">Location</h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      No. 45, Ahmadu Bello Way, Jalingo, Taraba State, Nigeria
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-green-100 dark:bg-green-900 rounded-lg flex items-center justify-center">
-                    <Phone className="h-6 w-6 text-green-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Phone</h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      +234 (0) 803 123 4567
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900 rounded-lg flex items-center justify-center">
-                    <Mail className="h-6 w-6 text-purple-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Email</h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      info@raddaimetropolitanschool.edu.ng
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 bg-orange-100 dark:bg-orange-900 rounded-lg flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-orange-600" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">Office Hours</h3>
-                    <p className="text-gray-600 dark:text-gray-300">
-                      Mon - Fri: 8:00 AM - 4:00 PM
-                    </p>
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
 
-            <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 shadow-lg">
-              <h3 className="text-2xl font-bold mb-6 text-center">
-                Ready to Join Our Community?
+            <div className="bg-card border border-border rounded-2xl p-8">
+              <h3 className="text-2xl font-semibold text-foreground mb-2">
+                Ready to join our community?
               </h3>
-              <div className="space-y-4">
-                <div className="text-center">
-                  <Button size="lg" className="w-full mb-4" asChild>
-                    <Link href="/login">
-                      Login to Portal
-                    </Link>
-                  </Button>
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    Access your student/parent dashboard
-                  </p>
-                </div>
-
-                <div className="border-t pt-4">
-                  <h4 className="font-semibold mb-2">For New Admissions:</h4>
-                  <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                    Contact our admissions office to learn about our enrollment process
-                    and schedule a campus visit.
-                  </p>
-                  <Button variant="outline" className="w-full">
-                    <Phone className="mr-2 h-4 w-4" />
-                    Call Admissions
-                  </Button>
-                </div>
+              <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                Log in to your portal or reach out to our admissions office to schedule a campus visit.
+              </p>
+              <Button asChild size="lg" className="w-full mb-3">
+                <Link href="/login">
+                  Login to Portal
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+              <Button size="lg" variant="tonal" className="w-full">
+                <Phone className="h-4 w-4" />
+                Call Admissions
+              </Button>
+              <div className="mt-6 pt-6 border-t border-border">
+                <p className="text-xs text-muted-foreground text-center leading-relaxed">
+                  Contact our admissions office to learn about our enrollment process
+                  and schedule a campus visit.
+                </p>
               </div>
             </div>
           </div>
@@ -398,57 +363,70 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-gray-900 text-white py-12 px-4">
+      <footer className="bg-foreground text-background py-12 px-4">
         <div className="container mx-auto max-w-6xl">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="h-10 w-10 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <GraduationCap className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0">
+                  <GraduationCap className="h-5 w-5 text-primary-foreground" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold">Raddai Metropolitan School</h3>
-                  <p className="text-sm text-gray-400">Jalingo, Taraba State</p>
+                  <p className="text-base font-semibold">Laazeere Academy</p>
+                  <p className="text-xs opacity-60">Jalingo, Taraba State</p>
                 </div>
               </div>
-              <p className="text-gray-400 mb-4">
-                Empowering young minds with quality education and character development
-                in the heart of Taraba State.
+              <p className="text-sm opacity-60 mb-4 leading-relaxed">
+                Empowering young minds with quality education and character
+                development in the heart of Taraba State.
               </p>
-              <div className="flex gap-4">
-                <Badge variant="secondary">WAEC Approved</Badge>
-                <Badge variant="secondary">NECO Center</Badge>
-                <Badge variant="secondary">Digital Learning</Badge>
+              <div className="flex flex-wrap gap-2">
+                {['WAEC Approved', 'NECO Center', 'Digital Learning'].map((badge) => (
+                  <span
+                    key={badge}
+                    className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full"
+                  >
+                    {badge}
+                  </span>
+                ))}
               </div>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Quick Links</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li><Link href="/login" className="hover:text-white transition-colors">Student Portal</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Parent Portal</Link></li>
-                <li><Link href="/login" className="hover:text-white transition-colors">Staff Portal</Link></li>
-                <li><a href="mailto:info@raddaimetropolitanschool.edu.ng" className="hover:text-white transition-colors">Contact Us</a></li>
+              <p className="text-sm font-semibold mb-4">Quick Links</p>
+              <ul className="space-y-2 text-sm opacity-60">
+                {[
+                  { label: 'Student Portal', href: '/login' },
+                  { label: 'Parent Portal', href: '/login' },
+                  { label: 'Staff Portal', href: '/login' },
+                  { label: 'Contact Us', href: '#contact' },
+                ].map(({ label, href }) => (
+                  <li key={label}>
+                    <Link href={href} className="hover:opacity-100 transition-opacity">
+                      {label}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold mb-4">Programs</h4>
-              <ul className="space-y-2 text-gray-400">
-                <li>Nursery & Primary</li>
-                <li>Junior Secondary</li>
-                <li>Senior Secondary</li>
-                <li>Extracurricular Activities</li>
+              <p className="text-sm font-semibold mb-4">Programs</p>
+              <ul className="space-y-2 text-sm opacity-60">
+                {['Nursery & Primary', 'Junior Secondary', 'Senior Secondary', 'Extracurricular Activities'].map(
+                  (item) => <li key={item}>{item}</li>
+                )}
               </ul>
             </div>
           </div>
 
-          <div className="border-t border-gray-800 mt-8 pt-8 text-center text-gray-400">
-            <p>&copy; 2024 Raddai Metropolitan School Jalingo. All rights reserved.</p>
-            <p className="mt-2">Building Tomorrow&apos;s Leaders Today</p>
+          <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-2 text-sm opacity-60">
+            <p>© 2026 Laazeere Academy, Jalingo. All rights reserved.</p>
+            <p>Building Tomorrow&apos;s Leaders Today</p>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
