@@ -675,8 +675,8 @@ export function FeesContent() {
     }, 0);
 
   // Get unique terms and years for filters
-  const availableTerms = Array.from(new Set(payments.map(p => p.term).filter(Boolean)));
-  const availableYears = Array.from(new Set(payments.map(p => p.academicYear).filter(Boolean)));
+  const availableTerms = Array.from(new Set(payments.map(p => p.term).filter((t): t is string => Boolean(t))));
+  const availableYears = Array.from(new Set(payments.map(p => p.academicYear).filter((y): y is string => Boolean(y))));
 
   if (isLoading) {
     return (
@@ -1119,7 +1119,7 @@ export function FeesContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Terms</SelectItem>
-                  {availableTerms.map(term => (
+                  {availableTerms.filter((t): t is string => t !== undefined).map(term => (
                     <SelectItem key={term} value={term}>{term.charAt(0).toUpperCase() + term.slice(1)} Term</SelectItem>
                   ))}
                 </SelectContent>
