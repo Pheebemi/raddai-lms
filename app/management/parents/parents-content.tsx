@@ -48,7 +48,7 @@ export function ParentsManagementContent() {
   const filteredParents = parents.filter(parent => {
     const matchesSearch = parent.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          parent.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         parent.parentId.toLowerCase().includes(searchTerm.toLowerCase());
+                         parent.id.toLowerCase().includes(searchTerm.toLowerCase());
 
     return matchesSearch;
   });
