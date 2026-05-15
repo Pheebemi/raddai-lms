@@ -675,8 +675,8 @@ export function FeesContent() {
     }, 0);
 
   // Get unique terms and years for filters
-  const availableTerms = Array.from(new Set(payments.map(p => p.term).filter((t): t is string => Boolean(t))));
-  const availableYears = Array.from(new Set(payments.map(p => p.academicYear).filter((y): y is string => Boolean(y))));
+  const availableTerms = Array.from(new Set(payments.map(p => p.term).filter((t): t is 'first' | 'second' | 'third' => Boolean(t))));
+  const availableYears = Array.from(new Set(payments.map(p => p.academicYear).filter((y): y is string => y !== undefined && y !== null)));
 
   if (isLoading) {
     return (
