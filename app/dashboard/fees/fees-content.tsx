@@ -166,18 +166,23 @@ export function FeesContent() {
 
   // Get current full fee amount for the term (target total for that term)
   useEffect(() => {
-    // When either the selected term or academic year changes, recompute the fee
     if (!paymentData.academicYear) {
       setCurrentFeeAmount(null);
+      setIsFeeAmountLoading(false);
+      return;
+    }
+
+    // Still fetching fee structures — show spinner and wait
+    if (isLoading || feeStructures.length === 0) {
+      setIsFeeAmountLoading(true);
       return;
     }
 
     setIsFeeAmountLoading(true);
-
     const amount = getFeeAmount(paymentData.term, paymentData.academicYear);
     setCurrentFeeAmount(amount);
     setIsFeeAmountLoading(false);
-  }, [paymentData.term, paymentData.academicYear, feeStructures, user]);
+  }, [paymentData.term, paymentData.academicYear, feeStructures, user, isLoading]);
 
   // Handle redirect back from Flutterwave
   useEffect(() => {
@@ -823,11 +828,14 @@ export function FeesContent() {
                     </p>
                     <div className="text-3xl font-bold text-green-600 mb-1">
                       {isFeeAmountLoading ? (
-                        <span className="text-base text-green-700">Calculating...</span>
+                        <div className="flex items-center justify-center gap-2">
+                          <div className="animate-spin rounded-full h-5 w-5 border-2 border-green-600 border-t-transparent" />
+                          <span className="text-base text-green-700 font-medium">Loading fee...</span>
+                        </div>
                       ) : currentFeeAmount !== null ? (
                         `₦${currentFeeAmount.toLocaleString()}`
                       ) : paymentData.academicYear ? (
-                        'No fee set'
+                        'No fee structure set for this class'
                       ) : (
                         '—'
                       )}
