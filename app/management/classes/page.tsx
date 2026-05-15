@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import AppLayout from '@/components/app-layout';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { classesApi, fetchAcademicYears } from '@/lib/api';
 import { toast } from 'sonner';
-import { GraduationCap, Plus, Trash2, Users } from 'lucide-react';
+import { GraduationCap, Plus, Trash2, Users, X, Pencil } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 const CLASS_PRESETS = [
   { label: 'Primary 1', grade: 1 },
@@ -28,20 +29,35 @@ const CLASS_PRESETS = [
   { label: 'SS 3', grade: 12 },
 ];
 
+const SECTION_PRESETS = [
+  { group: 'Letters', values: ['A', 'B', 'C', 'D', 'E', 'F'] },
+  { group: 'Metals', values: ['Gold', 'Silver', 'Bronze', 'Platinum', 'Diamond'] },
+  { group: 'Colours', values: ['Red', 'Blue', 'Green', 'Yellow', 'Purple', 'Orange'] },
+  { group: 'Stars', values: ['Star 1', 'Star 2', 'Star 3', 'Star 4', 'Star 5'] },
+  { group: 'Numbers', values: ['1', '2', '3', '4', '5', '6'] },
+];
+
 export default function ClassManagementPage() {
   const [classes, setClasses] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [filterYear, setFilterYear] = useState('');
 
-  const [form, setForm] = useState({
-    classLabel: '',
-    grade: '',
-    section: '',
-    academic_year: '',
-  });
+  // Multi-select form state
+  const [selectedLevels, setSelectedLevels] = useState<number[]>([]);
+  const [selectedSections, setSelectedSections] = useState<string[]>([]);
+  const [customSection, setCustomSection] = useState('');
+  const [formYear, setFormYear] = useState('');
   const [creating, setCreating] = useState(false);
+
+  // Edit state
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editName, setEditName] = useState('');
+  const [editSection, setEditSection] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -53,9 +69,10 @@ export default function ClassManagementPage() {
       const [cls, years] = await Promise.all([classesApi.getAll(), fetchAcademicYears()]);
       setClasses(cls);
       setAcademicYears(years);
-      if (years.length > 0) {
-        const active = years.find((y: any) => y.is_active) || years[0];
-        setForm(prev => ({ ...prev, academic_year: active.id.toString() }));
+      const active = years.find((y: any) => y.is_active) || years[0];
+      if (active) {
+        setFilterYear(active.id.toString());
+        setFormYear(active.id.toString());
       }
     } catch {
       toast.error('Failed to load classes');
@@ -64,31 +81,90 @@ export default function ClassManagementPage() {
     }
   };
 
-  const handlePresetSelect = (label: string, grade: number) => {
-    setForm(prev => ({ ...prev, classLabel: label, grade: grade.toString() }));
+  const toggleLevel = (grade: number) => {
+    setSelectedLevels(prev =>
+      prev.includes(grade) ? prev.filter(g => g !== grade) : [...prev, grade]
+    );
   };
 
-  const handleCreate = async () => {
-    if (!form.classLabel || !form.grade || !form.section || !form.academic_year) {
-      toast.error('Fill in all fields');
-      return;
+  const toggleSection = (section: string) => {
+    setSelectedSections(prev =>
+      prev.includes(section) ? prev.filter(s => s !== section) : [...prev, section]
+    );
+  };
+
+  const addCustomSection = () => {
+    const val = customSection.trim();
+    if (!val) return;
+    if (!selectedSections.includes(val)) {
+      setSelectedSections(prev => [...prev, val]);
     }
+    setCustomSection('');
+  };
+
+  // Preview: what will be created
+  const preview = selectedLevels.flatMap(grade => {
+    const preset = CLASS_PRESETS.find(p => p.grade === grade)!;
+    return selectedSections.map(section => ({
+      name: `${preset.label} ${section}`,
+      grade,
+      section,
+    }));
+  });
+
+  const handleCreate = async () => {
+    if (selectedLevels.length === 0) { toast.error('Select at least one class level'); return; }
+    if (selectedSections.length === 0) { toast.error('Select at least one section'); return; }
+    if (!formYear) { toast.error('Select an academic year'); return; }
+
     setCreating(true);
+    let success = 0;
+    let skipped = 0;
+
+    for (const item of preview) {
+      try {
+        await classesApi.create({
+          name: item.name,
+          grade: item.grade,
+          section: item.section,
+          academic_year: formYear,
+        });
+        success++;
+      } catch {
+        skipped++;
+      }
+    }
+
+    toast.success(`${success} class${success !== 1 ? 'es' : ''} created${skipped > 0 ? `, ${skipped} already existed` : ''}`);
+    setDialogOpen(false);
+    setSelectedLevels([]);
+    setSelectedSections([]);
+    fetchData();
+    setCreating(false);
+  };
+
+  const openEdit = (cls: any) => {
+    setEditTarget(cls);
+    setEditName(cls.name);
+    setEditSection(cls.section);
+    setEditDialogOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editTarget || !editName.trim()) return;
+    setSaving(true);
     try {
-      await classesApi.create({
-        name: `${form.classLabel} ${form.section}`,
-        grade: parseInt(form.grade),
-        section: form.section,
-        academic_year: form.academic_year,
+      await classesApi.update(editTarget.id, {
+        name: editName.trim(),
+        section: editSection.trim(),
       });
-      toast.success(`${form.classLabel} ${form.section} created`);
-      setDialogOpen(false);
-      setForm(prev => ({ ...prev, classLabel: '', grade: '', section: '' }));
+      toast.success('Class updated');
+      setEditDialogOpen(false);
       fetchData();
     } catch {
-      toast.error('Failed to create class');
+      toast.error('Failed to update class');
     } finally {
-      setCreating(false);
+      setSaving(false);
     }
   };
 
@@ -106,10 +182,14 @@ export default function ClassManagementPage() {
     }
   };
 
+  const filteredClasses = filterYear
+    ? classes.filter(c => c.academicYearId === filterYear)
+    : classes;
+
   const grouped = CLASS_PRESETS.map(preset => ({
     ...preset,
-    classes: classes.filter(c => c.grade === preset.grade),
-  }));
+    classes: filteredClasses.filter(c => c.grade === preset.grade),
+  })).filter(g => g.classes.length > 0);
 
   return (
     <AppLayout>
@@ -121,16 +201,16 @@ export default function ClassManagementPage() {
           </div>
           <Button onClick={() => setDialogOpen(true)}>
             <Plus className="h-4 w-4" />
-            Add Class
+            Add Classes
           </Button>
         </div>
 
-        {/* Academic year filter */}
+        {/* Filter */}
         <div className="flex items-center gap-3">
-          <Label className="text-sm font-medium">Academic Year</Label>
-          <Select value={form.academic_year} onValueChange={v => setForm(prev => ({ ...prev, academic_year: v }))}>
+          <Label className="text-sm font-medium shrink-0">Academic Year</Label>
+          <Select value={filterYear} onValueChange={setFilterYear}>
             <SelectTrigger className="w-44">
-              <SelectValue placeholder="Select year" />
+              <SelectValue placeholder="All years" />
             </SelectTrigger>
             <SelectContent>
               {academicYears.map((y: any) => (
@@ -138,29 +218,33 @@ export default function ClassManagementPage() {
               ))}
             </SelectContent>
           </Select>
-          <span className="text-sm text-muted-foreground">{classes.length} total classes</span>
+          <span className="text-sm text-muted-foreground">{filteredClasses.length} classes</span>
         </div>
 
-        {/* Classes grid */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {grouped.map(({ label, grade, classes: gradeClasses }) => (
-            <Card key={grade} className="border border-border rounded-2xl">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
-                      <GraduationCap className="h-4 w-4 text-primary" />
+        {/* Classes grouped by level */}
+        {isLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Loading...</div>
+        ) : grouped.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground">
+            No classes yet — click Add Classes to get started.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {grouped.map(({ label, grade, classes: gradeClasses }) => (
+              <Card key={grade} className="border border-border rounded-2xl">
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-primary/10 rounded-xl flex items-center justify-center">
+                        <GraduationCap className="h-4 w-4 text-primary" />
+                      </div>
+                      <CardTitle className="text-base">{label}</CardTitle>
                     </div>
-                    <CardTitle className="text-base">{label}</CardTitle>
+                    <Badge variant="secondary">{gradeClasses.length} section{gradeClasses.length !== 1 ? 's' : ''}</Badge>
                   </div>
-                  <Badge variant="secondary">Grade {grade}</Badge>
-                </div>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {gradeClasses.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No sections yet</p>
-                ) : (
-                  gradeClasses.map(cls => (
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {gradeClasses.map(cls => (
                     <div key={cls.id} className="flex items-center justify-between bg-muted rounded-xl px-3 py-2">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-medium">{cls.name}</span>
@@ -169,72 +253,125 @@ export default function ClassManagementPage() {
                           {cls.studentCount}
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        disabled={deleting === cls.id}
-                        onClick={() => handleDelete(cls.id, cls.name)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-muted-foreground hover:text-primary"
+                          onClick={() => openEdit(cls)}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-destructive hover:text-destructive"
+                          disabled={deleting === cls.id}
+                          onClick={() => handleDelete(cls.id, cls.name)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  ))
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+                  ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {/* Create dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-md">
+          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add Class</DialogTitle>
+              <DialogTitle>Add Classes</DialogTitle>
             </DialogHeader>
 
-            <div className="space-y-4 py-2">
+            <div className="space-y-6 py-2">
+
+              {/* Class levels - multi select */}
               <div className="space-y-2">
-                <Label>Class Level</Label>
-                <div className="grid grid-cols-3 gap-2">
+                <Label>Class Levels <span className="text-muted-foreground text-xs">(select multiple)</span></Label>
+                <div className="grid grid-cols-4 gap-2">
                   {CLASS_PRESETS.map(({ label, grade }) => (
                     <button
                       key={grade}
-                      onClick={() => handlePresetSelect(label, grade)}
-                      className={`text-xs px-2 py-2 rounded-xl border transition-all ${
-                        form.grade === grade.toString()
+                      onClick={() => toggleLevel(grade)}
+                      className={cn(
+                        'text-xs px-2 py-2 rounded-xl border transition-all text-left',
+                        selectedLevels.includes(grade)
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'bg-background border-border hover:border-primary/40'
-                      }`}
+                      )}
                     >
                       {label}
                     </button>
                   ))}
                 </div>
+                {selectedLevels.length > 0 && (
+                  <button onClick={() => setSelectedLevels([])} className="text-xs text-muted-foreground hover:text-foreground">
+                    Clear selection
+                  </button>
+                )}
               </div>
 
-              <div className="space-y-2">
-                <Label>Section</Label>
+              {/* Sections */}
+              <div className="space-y-3">
+                <Label>Sections <span className="text-muted-foreground text-xs">(select multiple or add custom)</span></Label>
+
+                {SECTION_PRESETS.map(group => (
+                  <div key={group.group} className="space-y-1">
+                    <p className="text-xs text-muted-foreground uppercase tracking-wider">{group.group}</p>
+                    <div className="flex flex-wrap gap-2">
+                      {group.values.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => toggleSection(s)}
+                          className={cn(
+                            'text-xs px-3 py-1.5 rounded-full border transition-all',
+                            selectedSections.includes(s)
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'bg-background border-border hover:border-primary/40'
+                          )}
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+
+                {/* Custom section */}
                 <div className="flex gap-2">
-                  {['A', 'B', 'C', 'D'].map(s => (
-                    <button
-                      key={s}
-                      onClick={() => setForm(prev => ({ ...prev, section: s }))}
-                      className={`flex-1 py-2 rounded-xl border text-sm font-medium transition-all ${
-                        form.section === s
-                          ? 'bg-primary text-primary-foreground border-primary'
-                          : 'bg-background border-border hover:border-primary/40'
-                      }`}
-                    >
-                      {s}
-                    </button>
-                  ))}
+                  <Input
+                    placeholder="Custom section name..."
+                    value={customSection}
+                    onChange={e => setCustomSection(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && addCustomSection()}
+                    className="text-sm"
+                  />
+                  <Button variant="outline" size="sm" onClick={addCustomSection}>Add</Button>
                 </div>
+
+                {/* Selected sections display */}
+                {selectedSections.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {selectedSections.map(s => (
+                      <span key={s} className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-full">
+                        {s}
+                        <button onClick={() => toggleSection(s)}>
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
 
+              {/* Academic year */}
               <div className="space-y-2">
                 <Label>Academic Year</Label>
-                <Select value={form.academic_year} onValueChange={v => setForm(prev => ({ ...prev, academic_year: v }))}>
+                <Select value={formYear} onValueChange={setFormYear}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select year" />
                   </SelectTrigger>
@@ -246,21 +383,76 @@ export default function ClassManagementPage() {
                 </Select>
               </div>
 
-              {form.classLabel && form.section && (
-                <div className="bg-secondary rounded-xl px-4 py-3 text-sm">
-                  Creating: <strong>{form.classLabel} {form.section}</strong>
+              {/* Preview */}
+              {preview.length > 0 && (
+                <div className="bg-muted rounded-2xl p-4 space-y-2">
+                  <p className="text-sm font-medium">Creating {preview.length} class{preview.length !== 1 ? 'es' : ''}:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {preview.map(p => (
+                      <span key={`${p.grade}-${p.section}`} className="bg-secondary text-secondary-foreground text-xs px-2 py-1 rounded-full">
+                        {p.name}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
 
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleCreate} disabled={creating}>
-                {creating ? 'Creating...' : 'Create Class'}
+              <Button onClick={handleCreate} disabled={creating || preview.length === 0}>
+                {creating ? 'Creating...' : `Create ${preview.length > 0 ? preview.length : ''} Class${preview.length !== 1 ? 'es' : ''}`}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+        {/* Edit dialog */}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="max-w-sm">
+            <DialogHeader>
+              <DialogTitle>Edit Class</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4 py-2">
+              <div className="space-y-2">
+                <Label>Class Name</Label>
+                <Input
+                  value={editName}
+                  onChange={e => setEditName(e.target.value)}
+                  placeholder="e.g. JSS 1 Gold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Section</Label>
+                <Input
+                  value={editSection}
+                  onChange={e => setEditSection(e.target.value)}
+                  placeholder="e.g. Gold, A, Silver"
+                />
+                <div className="flex flex-wrap gap-1 pt-1">
+                  {['A','B','C','Gold','Silver','Bronze','Red','Blue','Green'].map(s => (
+                    <button
+                      key={s}
+                      onClick={() => {
+                        setEditSection(s);
+                        setEditName(`${editTarget?.name?.split(' ').slice(0, -1).join(' ')} ${s}`);
+                      }}
+                      className="text-xs px-2 py-1 rounded-full border border-border hover:border-primary/40 transition-all"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+              <Button onClick={handleSaveEdit} disabled={saving}>
+                {saving ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </AppLayout>
   );

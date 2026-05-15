@@ -1324,6 +1324,15 @@ export const classesApi = {
     return handleApiResponse<any>(response);
   },
 
+  update: async (id: string, payload: { name?: string; section?: string; grade?: number }) => {
+    const response = await fetch(`${API_BASE_URL}/classes/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
   delete: async (id: string) => {
     const response = await fetch(`${API_BASE_URL}/classes/${id}/`, {
       method: 'DELETE',
