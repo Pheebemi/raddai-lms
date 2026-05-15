@@ -8,17 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { subjectsApi } from '@/lib/api';
+import { subjectsApi, classesApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { BookOpen, Plus, Trash2, Pencil, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-const GRADE_LABELS: Record<number, string> = {
-  1: 'Primary 1', 2: 'Primary 2', 3: 'Primary 3',
-  4: 'Primary 4', 5: 'Primary 5', 6: 'Primary 6',
-  7: 'JSS 1', 8: 'JSS 2', 9: 'JSS 3',
-  10: 'SS 1', 11: 'SS 2', 12: 'SS 3',
-};
 
 interface Subject {
   id: string;
@@ -31,6 +24,7 @@ interface Subject {
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [gradeOptions, setGradeOptions] = useState<{ grade: number; label: string }[]>([]);
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Subject | null>(null);
@@ -43,7 +37,24 @@ export default function SubjectsPage() {
   const fetchData = async () => {
     try {
       setIsLoading(true);
-      setSubjects(await subjectsApi.getAll());
+      const [subjectsData, classesData] = await Promise.all([
+        subjectsApi.getAll(),
+        classesApi.getAll(),
+      ]);
+      setSubjects(subjectsData);
+
+      // Build unique grade options from actual classes in DB
+      const gradeMap: Record<number, string> = {};
+      classesData.forEach((cls: any) => {
+        if (!gradeMap[cls.grade]) {
+          gradeMap[cls.grade] = cls.name.replace(/\s+[A-Za-z0-9]+$/, '').trim();
+        }
+      });
+      setGradeOptions(
+        Object.entries(gradeMap)
+          .map(([g, label]) => ({ grade: Number(g), label: label as string }))
+          .sort((a, b) => a.grade - b.grade)
+      );
     } catch {
       toast.error('Failed to load subjects');
     } finally {
@@ -179,11 +190,14 @@ export default function SubjectsPage() {
                     {subject.grades.length === 0 ? (
                       <span className="text-xs text-muted-foreground italic">All grades</span>
                     ) : (
-                      subject.grades.map(g => (
-                        <span key={g} className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
-                          {GRADE_LABELS[g] || `Grade ${g}`}
-                        </span>
-                      ))
+                      subject.grades.map(g => {
+                        const opt = gradeOptions.find(o => o.grade === g);
+                        return (
+                          <span key={g} className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                            {opt ? opt.label : `Grade ${g}`}
+                          </span>
+                        );
+                      })
                     )}
                   </div>
                 </CardContent>
@@ -237,13 +251,12 @@ export default function SubjectsPage() {
                   <span className="text-muted-foreground text-xs ml-2">(leave empty = all grades)</span>
                 </Label>
                 <div className="grid grid-cols-4 gap-2">
-                  {Object.entries(GRADE_LABELS).map(([grade, label]) => {
-                    const g = Number(grade);
-                    const selected = form.grades.includes(g);
+                  {gradeOptions.map(({ grade, label }) => {
+                    const selected = form.grades.includes(grade);
                     return (
                       <button
                         key={grade}
-                        onClick={() => toggleGrade(g)}
+                        onClick={() => toggleGrade(grade)}
                         className={cn(
                           'text-xs px-2 py-2 rounded-xl border transition-all',
                           selected
