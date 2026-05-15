@@ -203,7 +203,7 @@ export default function ClassManagementPage() {
       return map;
     }, new Map<number, { grade: number; label: string; classes: any[] }>())
   )
-    .map(([, group]) => group)
+    .map(([, group]) => group as { grade: number; label: string; classes: any[] })
     .sort((a, b) => a.grade - b.grade);
 
   return (
