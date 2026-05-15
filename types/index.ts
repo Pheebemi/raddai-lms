@@ -96,6 +96,7 @@ export interface Class {
 export interface Result {
   id: string;
   studentId: string;
+  studentName?: string;
   subjectId: string;
   subject_name?: string;
   term: 'first' | 'second' | 'third' | 'final';
