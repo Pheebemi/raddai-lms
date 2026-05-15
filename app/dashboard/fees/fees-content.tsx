@@ -1105,7 +1105,7 @@ export function FeesContent() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Years</SelectItem>
-                  {availableYears.map(year => (
+                  {availableYears.filter((y): y is string => y !== undefined).map(year => (
                     <SelectItem key={year} value={year}>{year}</SelectItem>
                   ))}
                 </SelectContent>
