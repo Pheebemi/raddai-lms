@@ -290,7 +290,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   };
 
   return (
-    <div className="h-screen flex">
+    <div className="h-screen flex overflow-hidden">
       {/* Desktop Sidebar */}
       <div className="hidden md:flex md:w-64 md:flex-col md:fixed md:inset-y-0 bg-card border-r">
         <SidebarContent
@@ -312,7 +312,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </Sheet>
 
       {/* Main Content */}
-      <div className="flex flex-1 flex-col md:ml-64">
+      <div className="flex flex-1 flex-col min-w-0 md:ml-64">
         {/* Header */}
         <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:px-6">
           <Button variant="outline" size="icon" className="md:hidden" onClick={() => setSidebarOpen(true)}>
@@ -389,7 +389,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden p-4 lg:p-6">
           {children}
         </main>
       </div>
