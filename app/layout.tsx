@@ -9,6 +9,10 @@ export const metadata: Metadata = {
   title: "Laazeere Academy — Excellence in Education",
   description: "Laazeere Academy, Jalingo, provides quality education with modern facilities, qualified teachers, and comprehensive academic programs from nursery to senior secondary level.",
   keywords: "Laazeere Academy, Jalingo, Taraba State, school, education, nursery, primary, secondary, WAEC, NECO",
+  icons: {
+    icon: [{ url: '/logo.png', type: 'image/png' }],
+    apple: [{ url: '/logo.png' }],
+  },
 };
 
 export default function RootLayout({

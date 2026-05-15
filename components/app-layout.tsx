@@ -34,6 +34,7 @@ import {
   Heart,
   Download
 } from 'lucide-react';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { UserRole, NavItem } from '@/types';
 import { cn } from '@/lib/utils';
@@ -52,10 +53,16 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigationItems, user, 
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shrink-0">
-            <GraduationCap className="h-4 w-4 text-primary-foreground" />
+          <div className="w-8 h-8 shrink-0">
+            <Image
+              src="/logo.png"
+              alt="Laazeere Academy"
+              width={32}
+              height={32}
+              className="object-contain w-full h-full"
+            />
           </div>
-          <span>Laazeere Academy</span>
+          <span className="truncate">Laazeere Academy</span>
         </Link>
       </div>
 

@@ -1,12 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { Button } from '@/components/ui/button';
 import {
   GraduationCap, Users, BookOpen, Trophy,
   MapPin, Phone, Mail, Clock, Shield, Heart,
-  ArrowRight, CheckCircle, Star, Award, Sun, Moon,
+  ArrowRight, CheckCircle, Star, Award, Sun, Moon, Target, Lightbulb,
 } from 'lucide-react';
 
 export default function LandingPage() {
@@ -15,17 +16,17 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-background">
 
-      {/* Nav — M3 Top App Bar */}
+      {/* Nav */}
       <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur-md">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0">
-                <GraduationCap className="h-5 w-5 text-primary-foreground" />
+              <div className="w-10 h-10 shrink-0">
+                <Image src="/logo.png" alt="Laazeere Academy" width={40} height={40} className="object-contain w-full h-full" />
               </div>
               <div>
                 <p className="text-base font-semibold text-foreground leading-tight">Laazeere Academy</p>
-                <p className="text-xs text-muted-foreground">laazeereacademy.com</p>
+                <p className="text-xs text-muted-foreground italic">Education is Power</p>
               </div>
             </div>
 
@@ -69,7 +70,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      {/* Hero — full screen with scrim */}
+      {/* Hero */}
       <section className="relative h-screen overflow-hidden">
         <div
           className="absolute inset-0 bg-cover bg-center bg-primary"
@@ -79,15 +80,15 @@ export default function LandingPage() {
 
         <div className="absolute bottom-0 left-0 right-0 px-6 md:px-16 pb-20 md:pb-24">
           <span className="inline-block border border-white/30 text-white text-xs font-medium px-3 py-1 rounded-full mb-5 uppercase tracking-wider">
-            Excellence in Education Since 1995
+            Education is Power
           </span>
           <h1 className="text-5xl md:text-7xl font-semibold tracking-tight text-white mb-4 max-w-3xl">
             Laazeere Academy
           </h1>
-          <p className="text-lg md:text-xl text-white/80 mb-8 max-w-xl leading-relaxed">
-            Empowering young minds with quality education, character development,
-            and technological innovation in the heart of Jalingo, Taraba State.
+          <p className="text-lg md:text-xl text-white/80 mb-2 max-w-xl leading-relaxed">
+            Raising a generation capable of building new innovation — not just repeating what others have done.
           </p>
+          <p className="text-sm text-white/60 mb-8">Samunaka Sabon Gari, Jalingo, Taraba State</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild size="lg">
               <Link href="/login">
@@ -96,9 +97,7 @@ export default function LandingPage() {
               </Link>
             </Button>
             <Button
-              asChild
-              size="lg"
-              variant="outline"
+              asChild size="lg" variant="outline"
               className="border-white/40 text-white bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-sm"
             >
               <a href="#about">Learn More</a>
@@ -107,7 +106,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Stats — M3 Assist Chips */}
+      {/* Stats */}
       <section className="py-10 border-b border-border bg-background">
         <div className="container mx-auto px-4">
           <div className="flex flex-wrap justify-center gap-3">
@@ -115,13 +114,10 @@ export default function LandingPage() {
               { icon: Users, label: '500+ Students' },
               { icon: GraduationCap, label: '30+ Qualified Teachers' },
               { icon: Award, label: '98% Pass Rate' },
-              { icon: Star, label: '15+ Years of Excellence' },
-              { icon: BookOpen, label: 'WAEC & NECO Center' },
+              { icon: Star, label: 'WAEC & NECO Center' },
+              { icon: BookOpen, label: 'Nursery to SS3' },
             ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="inline-flex items-center gap-2 border border-border bg-background rounded-full px-4 py-2 text-sm font-medium text-foreground"
-              >
+              <div key={label} className="inline-flex items-center gap-2 border border-border bg-background rounded-full px-4 py-2 text-sm font-medium text-foreground">
                 <Icon className="h-4 w-4 text-primary" />
                 {label}
               </div>
@@ -139,27 +135,15 @@ export default function LandingPage() {
                 About Us
               </span>
               <h2 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tight mb-6">
-                A legacy of academic excellence
+                Building innovators, not imitators
               </h2>
-              <p className="text-base text-muted-foreground leading-relaxed mb-4">
-                Located in the vibrant city of Jalingo, Taraba State, Laazeere Academy
-                has been a beacon of educational excellence for over 15 years. We provide
-                comprehensive education from nursery to senior secondary levels.
-              </p>
               <p className="text-base text-muted-foreground leading-relaxed mb-8">
-                Our commitment to holistic development ensures every student receives
-                academic excellence, moral guidance, leadership skills, and technological
-                proficiency for the 21st century.
+                Laazeere Academy is an educational institution that focuses on raising a young generation
+                capable of building new innovation — not just repeating what others have done. We are
+                located in Samunaka Sabon Gari, Jalingo, Taraba State.
               </p>
               <div className="grid grid-cols-2 gap-3">
-                {[
-                  'Modern Facilities',
-                  'Qualified Teachers',
-                  'Digital Learning',
-                  'Sports & Arts',
-                  'Safe Environment',
-                  'Character Development',
-                ].map((item) => (
+                {['Modern Facilities', 'Qualified Teachers', 'Digital Learning', 'Sports & Arts', 'Safe Environment', 'Character Development'].map(item => (
                   <div key={item} className="flex items-center gap-2">
                     <CheckCircle className="h-4 w-4 text-accent-foreground shrink-0" />
                     <span className="text-sm text-foreground">{item}</span>
@@ -171,24 +155,24 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 gap-4">
               {[
                 {
-                  icon: BookOpen,
-                  title: 'Academic Excellence',
-                  desc: 'Comprehensive curriculum with focus on critical thinking and problem-solving',
+                  icon: Lightbulb,
+                  title: 'Our About',
+                  desc: 'Raising a young generation capable of building new innovation, not just repeating what others have done.',
+                },
+                {
+                  icon: Target,
+                  title: 'Our Vision',
+                  desc: 'Creating relevant learning opportunities — inside and outside the classroom — to develop knowledge, critical thinking and character.',
                 },
                 {
                   icon: Heart,
-                  title: 'Character Development',
-                  desc: 'Moral and ethical education for responsible future citizens',
-                },
-                {
-                  icon: Trophy,
-                  title: 'Sports & Arts',
-                  desc: 'Holistic development through a wide range of extracurricular activities',
+                  title: 'Our Mission',
+                  desc: 'Preparing all students to become lifelong learners and responsible citizens, in partnership with families and community.',
                 },
                 {
                   icon: Shield,
-                  title: 'Safe Environment',
-                  desc: 'Secure and nurturing learning environment for every student',
+                  title: 'Our Motto',
+                  desc: 'Education is Power — we believe learning is the greatest tool for transforming lives and communities.',
                 },
               ].map(({ icon: Icon, title, desc }) => (
                 <div key={title} className="bg-secondary rounded-2xl p-5 flex flex-col">
@@ -240,17 +224,14 @@ export default function LandingPage() {
                 items: ['WAEC/NECO preparation', 'Advanced sciences & maths', 'Entrepreneurship education', 'University preparation'],
               },
             ].map(({ icon: Icon, title, age, items }) => (
-              <div
-                key={title}
-                className="bg-card border border-border rounded-2xl p-6 hover:shadow-md hover:border-primary/20 transition-all duration-200"
-              >
+              <div key={title} className="bg-card border border-border rounded-2xl p-6 hover:shadow-md hover:border-primary/20 transition-all duration-200">
                 <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center mb-4">
                   <Icon className="h-6 w-6 text-primary" />
                 </div>
                 <h3 className="text-xl font-semibold text-foreground mb-1">{title}</h3>
                 <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">{age}</p>
                 <ul className="space-y-2">
-                  {items.map((item) => (
+                  {items.map(item => (
                     <li key={item} className="flex items-center gap-2 text-sm text-foreground">
                       <CheckCircle className="h-4 w-4 text-accent-foreground shrink-0" />
                       {item}
@@ -263,7 +244,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Portal CTA — accent section */}
+      {/* Portal CTA */}
       <section className="py-20 bg-accent">
         <div className="container mx-auto px-4 max-w-4xl text-center">
           <span className="inline-block border border-accent-foreground/30 text-accent-foreground text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
@@ -274,25 +255,16 @@ export default function LandingPage() {
           </h2>
           <p className="text-base text-accent-foreground/80 leading-relaxed mb-8 max-w-2xl mx-auto">
             Access results, fee payments, class rankings, and announcements.
-            Students, parents, and staff each have a dedicated dashboard built for their needs.
+            Students, parents, and staff each have a dedicated dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button
-              asChild
-              size="lg"
-              className="bg-accent-foreground text-accent hover:bg-accent-foreground/90"
-            >
+            <Button asChild size="lg" className="bg-accent-foreground text-accent hover:bg-accent-foreground/90">
               <Link href="/login">
                 Login to Portal
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="border-accent-foreground/30 text-accent-foreground hover:bg-accent-foreground/10"
-            >
+            <Button asChild size="lg" variant="outline" className="border-accent-foreground/30 text-accent-foreground hover:bg-accent-foreground/10">
               <a href="#contact">Contact Admissions</a>
             </Button>
           </div>
@@ -316,8 +288,8 @@ export default function LandingPage() {
               </p>
               <div className="space-y-3">
                 {[
-                  { icon: MapPin, label: 'Location', value: 'No. 45, Ahmadu Bello Way, Jalingo, Taraba State, Nigeria' },
-                  { icon: Phone, label: 'Phone', value: '+234 (0) 803 123 4567' },
+                  { icon: MapPin, label: 'Location', value: 'Samunaka Sabon Gari, Jalingo, Taraba State, Nigeria' },
+                  { icon: Phone, label: 'Phone', value: '08066115707, 09060405589, 08039305511' },
                   { icon: Mail, label: 'Email', value: 'info@laazeereacademy.com' },
                   { icon: Clock, label: 'Office Hours', value: 'Mon – Fri: 8:00 AM – 4:00 PM' },
                 ].map(({ icon: Icon, label, value }) => (
@@ -335,9 +307,7 @@ export default function LandingPage() {
             </div>
 
             <div className="bg-card border border-border rounded-2xl p-8">
-              <h3 className="text-2xl font-semibold text-foreground mb-2">
-                Ready to join our community?
-              </h3>
+              <h3 className="text-2xl font-semibold text-foreground mb-2">Ready to join our community?</h3>
               <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
                 Log in to your portal or reach out to our admissions office to schedule a campus visit.
               </p>
@@ -368,26 +338,26 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div className="col-span-2">
               <div className="flex items-center gap-3 mb-4">
-                <div className="w-10 h-10 bg-primary rounded-2xl flex items-center justify-center shrink-0">
-                  <GraduationCap className="h-5 w-5 text-primary-foreground" />
+                <div className="w-10 h-10 shrink-0">
+                  <Image
+                    src="/logo.png"
+                    alt="Laazeere Academy"
+                    width={40}
+                    height={40}
+                    className="object-contain w-full h-full"
+                  />
                 </div>
                 <div>
                   <p className="text-base font-semibold">Laazeere Academy</p>
-                  <p className="text-xs opacity-60">Jalingo, Taraba State</p>
+                  <p className="text-xs opacity-60 italic">Education is Power</p>
                 </div>
               </div>
               <p className="text-sm opacity-60 mb-4 leading-relaxed">
-                Empowering young minds with quality education and character
-                development in the heart of Taraba State.
+                Raising a young generation capable of building new innovation in the heart of Taraba State.
               </p>
               <div className="flex flex-wrap gap-2">
-                {['WAEC Approved', 'NECO Center', 'Digital Learning'].map((badge) => (
-                  <span
-                    key={badge}
-                    className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full"
-                  >
-                    {badge}
-                  </span>
+                {['WAEC Approved', 'NECO Center', 'Digital Learning'].map(badge => (
+                  <span key={badge} className="bg-secondary text-secondary-foreground text-xs px-2 py-0.5 rounded-full">{badge}</span>
                 ))}
               </div>
             </div>
@@ -402,27 +372,27 @@ export default function LandingPage() {
                   { label: 'Contact Us', href: '#contact' },
                 ].map(({ label, href }) => (
                   <li key={label}>
-                    <Link href={href} className="hover:opacity-100 transition-opacity">
-                      {label}
-                    </Link>
+                    <Link href={href} className="hover:opacity-100 transition-opacity">{label}</Link>
                   </li>
                 ))}
               </ul>
             </div>
 
             <div>
-              <p className="text-sm font-semibold mb-4">Programs</p>
+              <p className="text-sm font-semibold mb-4">Contact</p>
               <ul className="space-y-2 text-sm opacity-60">
-                {['Nursery & Primary', 'Junior Secondary', 'Senior Secondary', 'Extracurricular Activities'].map(
-                  (item) => <li key={item}>{item}</li>
-                )}
+                <li>08066115707</li>
+                <li>09060405589</li>
+                <li>08039305511</li>
+                <li>Samunaka Sabon Gari</li>
+                <li>Jalingo, Taraba State</li>
               </ul>
             </div>
           </div>
 
           <div className="border-t border-background/10 pt-8 flex flex-col md:flex-row justify-between items-center gap-2 text-sm opacity-60">
             <p>© 2026 Laazeere Academy, Jalingo. All rights reserved.</p>
-            <p>Building Tomorrow&apos;s Leaders Today</p>
+            <p>Education is Power</p>
           </div>
         </div>
       </footer>

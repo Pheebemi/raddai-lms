@@ -11,6 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Eye, EyeOff, GraduationCap } from 'lucide-react';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/auth-context';
 import { toast } from 'sonner';
 
@@ -55,11 +56,17 @@ export default function LoginPage() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-8">
-          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center mb-4">
-            <GraduationCap className="h-7 w-7 text-primary-foreground" />
+          <div className="w-20 h-20 mb-4">
+            <Image
+              src="/logo.png"
+              alt="Laazeere Academy"
+              width={80}
+              height={80}
+              className="object-contain w-full h-full"
+            />
           </div>
           <h1 className="text-2xl font-semibold text-foreground">Laazeere Academy</h1>
-          <p className="text-sm text-muted-foreground mt-1">Jalingo, Taraba State</p>
+          <p className="text-sm text-muted-foreground mt-1 italic">Education is Power</p>
         </div>
 
         <Card className="border border-border rounded-2xl">
