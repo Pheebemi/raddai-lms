@@ -217,50 +217,23 @@ export function FeesContent() {
         return;
       }
 
-        // Find the appropriate fee structure
-        const studentGrade = user?.profile?.current_class ?
-          (() => {
-            let grade = null;
-            const className = user.profile.current_class;
-            const classLower = className.toLowerCase();
+        const studentGrade = user?.profile?.current_class
+          ? (() => {
+              const className = user.profile.current_class;
+              const classLower = className.toLowerCase();
+              const gradeMatch = className.match(/(\d+)/);
+              let grade = gradeMatch ? parseInt(gradeMatch[1]) : 1;
+              if (classLower.startsWith('jss')) grade = grade + 6;
+              else if (classLower.startsWith('sss')) grade = grade + 9;
+              return grade;
+            })()
+          : 1;
 
-            console.log('🎓 Processing class for payment:', {
-              className,
-              classLower,
-              paymentIntent_academicYear: paymentIntent.academicYear
-            });
-
-            // Method 3: Number anywhere in the string (e.g. "Jss1 A", "SSS 3 B")
-            const gradeMatch = className.match(/(\d+)/);
-            if (gradeMatch) {
-              grade = parseInt(gradeMatch[1]);
-            } else {
-            }
-
-            // Normalize grade to match how grades are stored in the backend fee structures.
-            if (classLower.startsWith('jss')) {
-              grade = grade + 6; // 1->7, 2->8, 3->9
-            } else if (classLower.startsWith('sss')) {
-              grade = grade + 9; // 1->10, 2->11, 3->12
-            } else {
-            }
-
-            const finalGrade = grade || 1;
-            return finalGrade;
-          })() : 1;
-
-        // Find the fee structure (should exist since getFeeAmount already validated it)
-        const feeStructure = feeStructures.find(fs => {
-          const gradeMatches = fs.grade === studentGrade;
-          const typeMatches = fs.feeType === 'tuition';
-
-          const academicYearMatches =
-            fs.academicYearId === paymentIntent.academicYear ||
-            fs.academicYearId === parseInt(paymentIntent.academicYear) ||
-            String(fs.academicYearId) === paymentIntent.academicYear;
-
-          return gradeMatches && typeMatches && academicYearMatches;
-        });
+        const feeStructure = feeStructures.find(fs =>
+          fs.grade === studentGrade &&
+          fs.feeType === 'tuition' &&
+          String(fs.academicYearId) === String(paymentIntent.academicYear)
+        );
 
         // Calculate due date (end of current month for simplicity)
         const now = new Date();
