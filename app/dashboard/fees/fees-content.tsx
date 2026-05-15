@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { feesApi, feeStructureApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
+import { feesApi, feeStructureApi, classesApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
@@ -33,6 +33,7 @@ export function FeesContent() {
   const [payments, setPayments] = useState<FeeTransaction[]>([]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [studentGrade, setStudentGrade] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
@@ -43,52 +44,11 @@ export function FeesContent() {
   // Get fee amount for student's grade and academic year
   // Returns null when we cannot reliably determine the configured fee
   const getFeeAmount = (term: string, academicYear: string): number | null => {
-
-    if (!user?.profile?.current_class) {
-      return null;
-    }
-
-    const studentClass = user.profile.current_class;
-
-    // Try multiple ways to parse grade/level number from class name (e.g. "Jss1 A", "Grade 7 A")
-    let grade: number | null = null;
-
-    // Method 1: "Grade X" or "Grade X Y"
-    const gradeMatch1 = studentClass.match(/Grade (\d+)/i);
-    if (gradeMatch1) {
-      grade = parseInt(gradeMatch1[1]);
-    }
-
-    // Method 2: Just a number at the beginning (e.g. "1A", "2 B")
-    if (grade === null) {
-      const gradeMatch2 = studentClass.match(/^(\d+)/);
-      if (gradeMatch2) {
-        grade = parseInt(gradeMatch2[1]);
-      }
-    }
-
-    // Method 3: Number anywhere in the string (e.g. "Jss1 A", "SSS 3 B")
-    if (grade === null) {
-      const gradeMatch3 = studentClass.match(/(\d+)/);
-      if (gradeMatch3) {
-        grade = parseInt(gradeMatch3[1]);
-      }
-    }
-
-    if (grade === null) {
-      return null;
-    }
-
-    const classLower = studentClass.toLowerCase();
-
-    if (classLower.startsWith('jss')) {
-      grade = grade + 6;
-    } else if (classLower.startsWith('sss')) {
-      grade = grade + 9;
-    }
+    // Use grade resolved directly from the classes API — no fragile string parsing
+    if (studentGrade === null) return null;
 
     const feeStructure = feeStructures.find(fs =>
-      fs.grade === grade &&
+      fs.grade === studentGrade &&
       fs.feeType === 'tuition' &&
       String(fs.academicYearId) === String(academicYear)
     );
@@ -125,15 +85,23 @@ export function FeesContent() {
     const fetchData = async () => {
       try {
         setAuthError(false);
-        const [paymentsData, yearsData, feeStructuresData] = await Promise.all([
+        const [paymentsData, yearsData, feeStructuresData, classesData] = await Promise.all([
           feesApi.getPayments(),
           fetchAcademicYears(),
           feeStructureApi.getAll(),
+          classesApi.getAll(),
         ]);
 
         setPayments(paymentsData);
         setAcademicYears(yearsData);
         setFeeStructures(feeStructuresData);
+
+        // Resolve student grade directly from class data — no fragile string parsing
+        const classId = user?.profile?.current_class_id;
+        if (classId) {
+          const studentClass = classesData.find((c: any) => String(c.id) === String(classId));
+          if (studentClass) setStudentGrade(studentClass.grade);
+        }
 
         // Set default academic year to current/latest
         if (yearsData.length > 0) {
@@ -182,7 +150,7 @@ export function FeesContent() {
     const amount = getFeeAmount(paymentData.term, paymentData.academicYear);
     setCurrentFeeAmount(amount);
     setIsFeeAmountLoading(false);
-  }, [paymentData.term, paymentData.academicYear, feeStructures, user, isLoading]);
+  }, [paymentData.term, paymentData.academicYear, feeStructures, studentGrade, isLoading]);
 
   // Handle redirect back from Flutterwave
   useEffect(() => {
