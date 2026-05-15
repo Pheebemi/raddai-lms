@@ -192,16 +192,15 @@ export default function ClassManagementPage() {
     : classes;
 
   // Build groups dynamically from actual classes — works for any grade including custom ones
-  const grouped = Array.from(
-    filteredClasses.reduce((map, cls) => {
-      if (!map.has(cls.grade)) {
-        const label = cls.name.replace(/\s+\S+$/, '').trim();
-        map.set(cls.grade, { grade: cls.grade, label, classes: [] as any[] });
-      }
-      map.get(cls.grade)!.classes.push(cls);
-      return map;
-    }, new Map<number, { grade: number; label: string; classes: any[] }>()).values()
-  ).sort((a, b) => a.grade - b.grade);
+  const gradeMap = new Map<number, { grade: number; label: string; classes: any[] }>();
+  filteredClasses.forEach(cls => {
+    if (!gradeMap.has(cls.grade)) {
+      const label = cls.name.replace(/\s+\S+$/, '').trim();
+      gradeMap.set(cls.grade, { grade: cls.grade, label, classes: [] });
+    }
+    gradeMap.get(cls.grade)!.classes.push(cls);
+  });
+  const grouped = Array.from(gradeMap.values()).sort((a, b) => a.grade - b.grade);
 
   return (
     <AppLayout>
