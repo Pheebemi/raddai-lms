@@ -177,6 +177,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     management: [
       ...baseItems,
       {
+        title: 'Classes',
+        href: '/management/classes',
+        icon: 'BookOpen',
+      },
+      {
         title: 'Students',
         href: '/management/students',
         icon: 'GraduationCap',

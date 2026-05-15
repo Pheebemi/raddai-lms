@@ -1296,11 +1296,7 @@ export const classesApi = {
       headers: getAuthHeaders(),
     });
     const data = await handleApiResponse<any>(response);
-
-    // Handle paginated response
     const results = data.results || data;
-
-    // Convert Django format to frontend format
     return results.map((item: any) => ({
       id: item.id.toString(),
       name: item.name,
@@ -1312,6 +1308,28 @@ export const classesApi = {
       classTeacherName: item.class_teacher_name,
       studentCount: item.student_count || 0,
     }));
+  },
+
+  create: async (payload: {
+    name: string;
+    grade: number;
+    section: string;
+    academic_year: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/classes/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/classes/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete class');
   },
 };
 
