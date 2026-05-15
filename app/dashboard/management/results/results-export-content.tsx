@@ -144,7 +144,7 @@ export function ResultsExportContent() {
           total_marks: result.total_marks,
           percentage: result.percentage,
           grade: result.grade,
-          remarks: result.remarks,
+          remarks: result.remarks ?? '',
           uploadedBy: result.teacherId || 'Unknown',
           uploadDate: result.createdAt,
         }));
