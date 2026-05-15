@@ -538,7 +538,7 @@ export function ResultsContent() {
       ctx.textAlign = 'center';
       ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, width / 2, y);
       y += 35;
-      ctx.fillText('This is an official academic result document from Raddai Metropolitan School, Jalingo', width / 2, y);
+      ctx.fillText('This is an official academic result document from Laazeere Academy, Jalingo', width / 2, y);
 
       // Convert canvas to blob and download
       canvas.toBlob((blob) => {
@@ -546,7 +546,7 @@ export function ResultsContent() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `Raddai_Metropolitan_School_${term}_term_results_${termResults[0]?.academicYear}.png`;
+          a.download = `Laazeere_Academy_${term}_term_results_${termResults[0]?.academicYear}.png`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);

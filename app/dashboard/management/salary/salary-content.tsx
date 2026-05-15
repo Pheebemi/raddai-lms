@@ -312,7 +312,7 @@ export function SalaryManagementContent() {
       ctx.textAlign = 'center';
       ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, canvas.width / 2, yPosition);
       yPosition += 20;
-      ctx.fillText('This is an official monthly salary report from Raddai Metropolitan School Jalingo', canvas.width / 2, yPosition);
+      ctx.fillText('This is an official monthly salary report from Laazeere Academy, Jalingo', canvas.width / 2, yPosition);
 
       // Download PNG
       canvas.toBlob((blob) => {
@@ -411,7 +411,7 @@ export function SalaryManagementContent() {
       ctx.textAlign = 'center';
       ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, canvas.width / 2, yPosition);
       yPosition += 30;
-      ctx.fillText('This is an official salary voucher from Raddai Metropolitan School Jalingo', canvas.width / 2, yPosition);
+      ctx.fillText('This is an official salary voucher from Laazeere Academy, Jalingo', canvas.width / 2, yPosition);
 
       // Download PNG
       canvas.toBlob((blob) => {

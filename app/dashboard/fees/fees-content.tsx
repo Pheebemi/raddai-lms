@@ -570,7 +570,7 @@ export function FeesContent() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `Raddai_Fees_Receipt_${termLabel.replace(' ', '_')}_${
+          a.download = `Laazeere_Academy_Fees_Receipt_${termLabel.replace(' ', '_')}_${
             payment.academicYear || 'session'
           }.png`;
           document.body.appendChild(a);
@@ -606,7 +606,7 @@ export function FeesContent() {
       name: user ? `${user.firstName} ${user.lastName}` : '',
     },
     customizations: {
-      title: `Raddai Metropolitan School - ${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term Fee`,
+      title: `Laazeere Academy -${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term Fee`,
       description: `Payment for ${paymentData.term} term school fees`,
       logo: '/school-logo.png', // Add your school logo
     },
