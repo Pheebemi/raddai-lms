@@ -545,6 +545,44 @@ export const feeStructureApi = {
       description: item.description,
     }));
   },
+
+  create: async (payload: {
+    academic_year: string;
+    grade: number;
+    fee_type: string;
+    amount: number;
+    description: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  update: async (id: string, payload: {
+    academic_year?: string;
+    grade?: number;
+    fee_type?: string;
+    amount?: number;
+    description?: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/fee-structures/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/fee-structures/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete fee structure');
+  },
 };
 
 // Rankings API

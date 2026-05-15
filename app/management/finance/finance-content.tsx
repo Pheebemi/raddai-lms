@@ -142,46 +142,19 @@ export function FinanceManagementContent() {
         description: structureForm.description,
       };
 
-      let saved: FeeStructure;
-      if (editingStructure) {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/${editingStructure.id}/`,
-          {
-            method: 'PATCH',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }
-        );
-        const data = await response.json();
-        saved = {
-          id: data.id.toString(),
-          academicYear: data.academic_year_name,
-          academicYearId: data.academic_year.toString(),
-          grade: data.grade,
-          feeType: data.fee_type,
-          amount: parseFloat(data.amount),
-          description: data.description,
-        };
-      } else {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          }
-        );
-        const data = await response.json();
-        saved = {
-          id: data.id.toString(),
-          academicYear: data.academic_year_name,
-          academicYearId: data.academic_year.toString(),
-          grade: data.grade,
-          feeType: data.fee_type,
-          amount: parseFloat(data.amount),
-          description: data.description,
-        };
-      }
+      const data = editingStructure
+        ? await feeStructureApi.update(editingStructure.id, payload)
+        : await feeStructureApi.create(payload);
+
+      const saved: FeeStructure = {
+        id: data.id.toString(),
+        academicYear: data.academic_year_name,
+        academicYearId: data.academic_year.toString(),
+        grade: data.grade,
+        feeType: data.fee_type,
+        amount: parseFloat(data.amount),
+        description: data.description,
+      };
 
       setFeeStructures((prev) =>
         editingStructure ? prev.map((fs) => (fs.id === saved.id ? saved : fs)) : [saved, ...prev]
@@ -203,21 +176,10 @@ export function FinanceManagementContent() {
     }
 
     try {
-      const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/fee-structures/${structure.id}/`,
-        {
-          method: 'DELETE',
-        }
-      );
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ message: 'Failed to delete fee structure' }));
-        throw new Error(errorData.message || `HTTP ${response.status}`);
-      }
-
+      await feeStructureApi.delete(structure.id);
       setFeeStructures((prev) => prev.filter((fs) => fs.id !== structure.id));
       toast.success('Fee structure deleted.');
-    } catch (error) {
+    } catch {
       toast.error('Failed to delete fee structure.');
     }
   };
