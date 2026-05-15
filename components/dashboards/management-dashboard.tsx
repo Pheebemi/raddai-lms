@@ -20,8 +20,10 @@ import {
   CheckCircle,
   MessageSquare,
   GraduationCap,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
-import { dashboardApi, feesApi, promotionApi, fetchAcademicYears } from '@/lib/api';
+import { dashboardApi, feesApi, promotionApi, fetchAcademicYears, toggleResultsVisibility } from '@/lib/api';
 import { DashboardStats } from '@/types';
 import { toast } from 'sonner';
 
@@ -59,6 +61,14 @@ export function ManagementDashboard() {
   const [previewing, setPreviewing] = useState(false);
   const [promoting, setPromoting] = useState(false);
   const [previewLoaded, setPreviewLoaded] = useState(false);
+  const [togglingResults, setTogglingResults] = useState<string | null>(null);
+  const [activeYearVisibility, setActiveYearVisibility] = useState({
+    results_visible: false,
+    first_term_visible: false,
+    second_term_visible: false,
+    third_term_visible: false,
+  });
+  const [activeYearId, setActiveYearId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -66,8 +76,21 @@ export function ManagementDashboard() {
         setLoading(true);
 
         // Fetch dashboard stats
-        const dashboardStats = await dashboardApi.getStats();
+        const [dashboardStats, yearsData] = await Promise.all([
+          dashboardApi.getStats(),
+          fetchAcademicYears(),
+        ]);
         setStats(dashboardStats);
+        const active = yearsData.find((y: any) => y.is_active) || yearsData[0];
+        if (active) {
+          setActiveYearId(active.id.toString());
+          setActiveYearVisibility({
+            results_visible: active.results_visible ?? false,
+            first_term_visible: active.first_term_visible ?? false,
+            second_term_visible: active.second_term_visible ?? false,
+            third_term_visible: active.third_term_visible ?? false,
+          });
+        }
 
         // Fetch recent fee transactions for the financial overview
         try {
@@ -100,8 +123,17 @@ export function ManagementDashboard() {
     try {
       const years = await fetchAcademicYears();
       setAcademicYears(years);
-      const active = years.find((y: AcademicYear) => y.is_active);
-      if (active) setFromYear(active.id.toString());
+      const active = years.find((y: AcademicYear) => y.is_active) || years[0];
+      if (active) {
+        setFromYear(active.id.toString());
+        setActiveYearId(active.id.toString());
+        setActiveYearVisibility({
+          results_visible: active.results_visible ?? false,
+          first_term_visible: active.first_term_visible ?? false,
+          second_term_visible: active.second_term_visible ?? false,
+          third_term_visible: active.third_term_visible ?? false,
+        });
+      }
     } catch {
       toast.error('Failed to load academic years');
     }
@@ -460,6 +492,60 @@ export function ManagementDashboard() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Results Visibility Toggle */}
+      {activeYearId && (
+        <Card className="border-2 border-border">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Student Results Visibility</CardTitle>
+            <CardDescription>
+              Control which results students can see. Students with paid fees only see what you enable here.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {([
+              { key: 'first_term_visible', term: 'first' as const, label: 'First Term' },
+              { key: 'second_term_visible', term: 'second' as const, label: 'Second Term' },
+              { key: 'third_term_visible', term: 'third' as const, label: 'Third Term' },
+            ] as { key: keyof typeof activeYearVisibility; term: 'first' | 'second' | 'third'; label: string }[]).map(({ key, term, label }) => {
+              const visible = activeYearVisibility[key];
+              return (
+                <div key={term} className="flex items-center justify-between p-3 bg-muted rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full ${visible ? 'bg-primary' : 'bg-muted-foreground'}`} />
+                    <span className="text-sm font-medium">{label}</span>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${visible ? 'bg-primary/10 text-primary' : 'bg-background text-muted-foreground'}`}>
+                      {visible ? 'Visible' : 'Hidden'}
+                    </span>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant={visible ? 'outline' : 'default'}
+                    disabled={togglingResults === term}
+                    onClick={async () => {
+                      setTogglingResults(term);
+                      try {
+                        const res = await toggleResultsVisibility(activeYearId, !visible, term);
+                        setActiveYearVisibility(prev => ({ ...prev, [key]: res[key] }));
+                        toast.success(`${label} results ${res[key] ? 'visible' : 'hidden'} for students`);
+                      } catch {
+                        toast.error('Failed to update');
+                      } finally {
+                        setTogglingResults(null);
+                      }
+                    }}
+                  >
+                    {togglingResults === term ? 'Updating...' : visible
+                      ? <><EyeOff className="h-3.5 w-3.5 mr-1" />Hide</>
+                      : <><Eye className="h-3.5 w-3.5 mr-1" />Show</>
+                    }
+                  </Button>
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>

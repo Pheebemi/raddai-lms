@@ -931,6 +931,19 @@ export const subjectsApi = {
   },
 };
 
+export const toggleResultsVisibility = async (
+  academicYearId: string,
+  visible: boolean,
+  term?: 'first' | 'second' | 'third'
+) => {
+  const response = await fetch(`${API_BASE_URL}/academic-years/toggle-results/`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+    body: JSON.stringify({ academic_year_id: academicYearId, visible, term }),
+  });
+  return handleApiResponse<any>(response);
+};
+
 export const fetchAcademicYears = async () => {
   const response = await fetch(`${API_BASE_URL}/academic-years/`, {
     headers: getAuthHeaders(),

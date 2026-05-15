@@ -17,7 +17,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock } from 'lucide-react';
-import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, handleApiError } from '@/lib/api';
+import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 
@@ -32,10 +32,29 @@ export function ResultsContent() {
   const [classRankings, setClassRankings] = useState<ClassRanking | null>(null);
   const [showRankings, setShowRankings] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [visibleTerms, setVisibleTerms] = useState<Set<string>>(new Set(['first', 'second', 'third']));
+  const [anyTermVisible, setAnyTermVisible] = useState<boolean | null>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
+        if (user?.role === 'student') {
+          const years = await fetchAcademicYears();
+          const active = years.find((y: any) => y.is_active) || years[0];
+          if (active) {
+            const visible = new Set<string>();
+            if (active.first_term_visible) visible.add('first');
+            if (active.second_term_visible) visible.add('second');
+            if (active.third_term_visible) visible.add('third');
+            setVisibleTerms(visible);
+            setAnyTermVisible(visible.size > 0);
+            if (visible.size === 0) {
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+
         const data = await resultsApi.getList();
         setResults(data);
         setFilteredResults(data);
@@ -47,23 +66,26 @@ export function ResultsContent() {
     };
 
     fetchResults();
-  }, []);
+  }, [user]);
 
   useEffect(() => {
     let filtered = results;
 
-    // Always filter by selected year (no "all" option)
     if (selectedYear) {
       filtered = filtered.filter(result => result.academicYear === selectedYear);
     }
 
-    // Filter by term if specific term selected, otherwise show all terms for the selected year
     if (selectedTerm !== 'all') {
       filtered = filtered.filter(result => result.term === selectedTerm);
     }
 
+    // For students, only show results for terms management has enabled
+    if (user?.role === 'student' && visibleTerms.size < 3) {
+      filtered = filtered.filter(result => visibleTerms.has(result.term));
+    }
+
     setFilteredResults(filtered);
-  }, [results, selectedTerm, selectedYear]);
+  }, [results, selectedTerm, selectedYear, visibleTerms, user]);
 
   // Load class rankings when filters change (for PNG download)
   useEffect(() => {
@@ -561,6 +583,29 @@ export function ResultsContent() {
       setIsDownloading(null);
     }
   };
+
+  // Results hidden by management
+  if (anyTermVisible === false && user?.role === 'student') {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Academic Results</h1>
+          <p className="text-muted-foreground">View your academic performance</p>
+        </div>
+        <Card className="border border-border rounded-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center">
+              <Lock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold text-foreground">Results Not Yet Available</h2>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              Your results have not been released yet. Please check back later or contact the school administration.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (

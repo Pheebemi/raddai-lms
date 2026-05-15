@@ -32,7 +32,8 @@ import {
   MessageSquare,
   Trophy,
   Heart,
-  Download
+  Download,
+  Eye,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
@@ -228,6 +229,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         href: '/dashboard/management/results',
         icon: 'Download',
       },
+      {
+        title: 'Results Visibility',
+        href: '/management/results-visibility',
+        icon: 'Eye',
+      },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
@@ -284,6 +290,7 @@ const iconMap = {
   Trophy,
   Heart,
   Download,
+  Eye,
 };
 
 interface AppLayoutProps {
