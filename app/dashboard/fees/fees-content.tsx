@@ -85,22 +85,26 @@ export function FeesContent() {
     const fetchData = async () => {
       try {
         setAuthError(false);
-        const [paymentsData, yearsData, feeStructuresData, classesData] = await Promise.all([
+        const [paymentsData, yearsData, feeStructuresData] = await Promise.all([
           feesApi.getPayments(),
           fetchAcademicYears(),
           feeStructureApi.getAll(),
-          classesApi.getAll(),
         ]);
 
         setPayments(paymentsData);
         setAcademicYears(yearsData);
         setFeeStructures(feeStructuresData);
 
-        // Resolve student grade directly from class data — no fragile string parsing
-        const classId = user?.profile?.current_class_id;
-        if (classId) {
-          const studentClass = classesData.find((c: any) => String(c.id) === String(classId));
-          if (studentClass) setStudentGrade(studentClass.grade);
+        // Resolve student grade separately so it never blocks the main data
+        try {
+          const classId = user?.profile?.current_class_id;
+          if (classId) {
+            const classesData = await classesApi.getAll();
+            const studentClass = classesData.find((c: any) => String(c.id) === String(classId));
+            if (studentClass) setStudentGrade(studentClass.grade);
+          }
+        } catch {
+          // Grade lookup failure doesn't break the fees page
         }
 
         // Set default academic year to current/latest
