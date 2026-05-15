@@ -34,9 +34,10 @@ import {
   BarChart3,
   Receipt
 } from 'lucide-react';
-import { dashboardApi, feesApi, feeStructureApi, fetchAcademicYears, handleApiError } from '@/lib/api';
+import { dashboardApi, feesApi, feeStructureApi, classesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
 import { DashboardStats, FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
+
 
 export function FinanceManagementContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -45,6 +46,20 @@ export function FinanceManagementContent() {
   const [selectedPeriod, setSelectedPeriod] = useState<string>('this_month');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
+  const [classes, setClasses] = useState<any[]>([]);
+
+  // Build grade → label map dynamically from actual classes in DB
+  const gradeLabelMap = classes.reduce((acc, cls) => {
+    if (!acc[cls.grade]) acc[cls.grade] = cls.name.replace(/ [A-Za-z0-9]+$/, '').trim();
+    return acc;
+  }, {} as Record<number, string>);
+
+  const gradeLabel = (grade: number) => gradeLabelMap[grade] || `Grade ${grade}`;
+
+  // Unique grades from classes for the dropdown
+  const uniqueGrades = Object.entries(gradeLabelMap)
+    .map(([grade, label]) => ({ grade: Number(grade), label: label as string }))
+    .sort((a, b) => a.grade - b.grade);
 
   const [isStructureDialogOpen, setIsStructureDialogOpen] = useState(false);
   const [isSavingStructure, setIsSavingStructure] = useState(false);
@@ -63,27 +78,22 @@ export function FinanceManagementContent() {
         setLoading(true);
 
         // Fetch dashboard stats, fee transactions, fee structures, and academic years
-        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData] = await Promise.all([
+        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData] = await Promise.all([
           dashboardApi.getStats(),
           feesApi.getPayments(),
           feeStructureApi.getAll(),
           fetchAcademicYears(),
+          classesApi.getAll(),
         ]);
-
-        console.log('Dashboard stats:', dashboardStats);
-        console.log('Total revenue:', dashboardStats.totalRevenue);
-        console.log('Pending fees:', dashboardStats.pendingFees);
-        console.log('Fee transactions loaded:', feeTransactions.length);
-        console.log('Fee structures loaded:', feeStructuresData.length);
 
         setStats(dashboardStats);
         setTransactions(feeTransactions);
         setFeeStructures(feeStructuresData);
         setAcademicYears(academicYearsData);
+        setClasses(classesData);
       } catch (error: any) {
         const message = handleApiError(error);
         toast.error(message || 'Failed to load financial data');
-        console.error('Finance data error:', error);
       } finally {
         setLoading(false);
       }
@@ -181,7 +191,6 @@ export function FinanceManagementContent() {
       setIsStructureDialogOpen(false);
       setEditingStructure(null);
     } catch (error) {
-      console.error('Failed to save fee structure:', error);
       toast.error('Failed to save fee structure.');
     } finally {
       setIsSavingStructure(false);
@@ -189,7 +198,7 @@ export function FinanceManagementContent() {
   };
 
   const handleDeleteStructure = async (structure: FeeStructure) => {
-    if (!window.confirm(`Delete fee structure for Grade ${structure.grade} (${structure.academicYear})?`)) {
+    if (!window.confirm(`Delete fee structure for ${gradeLabel(structure.grade)} (${structure.academicYear})?`)) {
       return;
     }
 
@@ -209,7 +218,6 @@ export function FinanceManagementContent() {
       setFeeStructures((prev) => prev.filter((fs) => fs.id !== structure.id));
       toast.success('Fee structure deleted.');
     } catch (error) {
-      console.error('Failed to delete fee structure:', error);
       toast.error('Failed to delete fee structure.');
     }
   };
@@ -252,19 +260,6 @@ export function FinanceManagementContent() {
   const pendingFees = Number(stats?.pendingFees) || pendingFeesFromTransactions || 0;
   const totalExpected = totalRevenue + pendingFees;
   const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
-
-  console.log('Financial calculations:', {
-    totalRevenueFromTransactions,
-    pendingFeesFromTransactions,
-    totalRevenue,
-    pendingFees,
-    statsRevenue: stats?.totalRevenue,
-    statsPendingFees: stats?.pendingFees,
-    transactionCount: transactions.length,
-    paidTransactions: transactions.filter(t => t.status === 'paid').length,
-    pendingTransactions: transactions.filter(t => t.status === 'pending').length,
-    overdueTransactions: transactions.filter(t => t.status === 'overdue').length,
-  });
 
   // Group transactions by status
   const paidTransactions = transactions.filter(t => t.status === 'paid');
@@ -573,7 +568,7 @@ export function FinanceManagementContent() {
                     {feeStructures.map((fs) => (
                       <TableRow key={fs.id}>
                         <TableCell>{fs.academicYear}</TableCell>
-                        <TableCell>Grade {fs.grade}</TableCell>
+                        <TableCell>{gradeLabel(fs.grade)}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{fs.feeType}</Badge>
                         </TableCell>
@@ -648,14 +643,21 @@ export function FinanceManagementContent() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>Grade *</Label>
-                    <Input
-                      type="number"
+                    <Label>Class Level *</Label>
+                    <Select
                       value={structureForm.grade}
-                      onChange={(e) =>
-                        setStructureForm((s) => ({ ...s, grade: e.target.value }))
-                      }
-                    />
+                      onValueChange={(v) => setStructureForm(s => ({ ...s, grade: v }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select class" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {uniqueGrades.map(({ grade, label }) => (
+                          <SelectItem key={grade} value={String(grade)}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">Applies to all sections (A, B, C…) of this level</p>
                   </div>
                   <div className="space-y-2">
                     <Label>Fee Type *</Label>
