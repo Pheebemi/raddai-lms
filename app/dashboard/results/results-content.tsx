@@ -599,14 +599,6 @@ export function ResultsContent() {
           <p className="text-muted-foreground">View your academic performance across all subjects</p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setShowRankings(!showRankings)}
-            disabled={!classRankings}
-          >
-            <Trophy className="mr-2 h-4 w-4" />
-            {showRankings ? 'Hide Rankings' : 'Show Rankings'}
-          </Button>
           {user?.role === 'staff' && (
             <Button
               variant="outline"
@@ -617,10 +609,6 @@ export function ResultsContent() {
               {isExporting ? 'Exporting...' : `Export ${selectedTerm === 'all' ? 'Results' : selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1) + ' Term'} CSV`}
             </Button>
           )}
-          <Button variant="outline">
-            <Download className="mr-2 h-4 w-4" />
-            Download Report
-          </Button>
         </div>
       </div>
 

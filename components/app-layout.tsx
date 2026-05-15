@@ -244,7 +244,6 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     student: [
       ...baseItems,
       { title: 'My Results', href: '/dashboard/results', icon: 'FileText' },
-      { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Assignments', href: '/assignments', icon: 'BookOpen' },
