@@ -15,6 +15,8 @@ import { GraduationCap, Plus, Trash2, Users, X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CLASS_PRESETS = [
+  { label: 'Nursery 1', grade: -2 },
+  { label: 'Nursery 2', grade: -1 },
   { label: 'Primary 1', grade: 1 },
   { label: 'Primary 2', grade: 2 },
   { label: 'Primary 3', grade: 3 },
@@ -102,11 +104,14 @@ export default function ClassManagementPage() {
     setCustomSection('');
   };
 
-  // Preview: what will be created
+  // Preview: what will be created — label derived from existing classes or preset list
   const preview = selectedLevels.flatMap(grade => {
-    const preset = CLASS_PRESETS.find(p => p.grade === grade)!;
+    const existing = classes.find(c => c.grade === grade);
+    const label = existing
+      ? existing.name.replace(/\s+\S+$/, '').trim()
+      : CLASS_PRESETS.find(p => p.grade === grade)?.label || `Grade ${grade}`;
     return selectedSections.map(section => ({
-      name: `${preset.label} ${section}`,
+      name: `${label} ${section}`,
       grade,
       section,
     }));
@@ -186,10 +191,20 @@ export default function ClassManagementPage() {
     ? classes.filter(c => c.academicYearId === filterYear)
     : classes;
 
-  const grouped = CLASS_PRESETS.map(preset => ({
-    ...preset,
-    classes: filteredClasses.filter(c => c.grade === preset.grade),
-  })).filter(g => g.classes.length > 0);
+  // Build groups dynamically from actual classes — works for any grade including custom ones
+  const grouped = Array.from(
+    filteredClasses.reduce((map, cls) => {
+      if (!map.has(cls.grade)) {
+        // Derive level label by stripping section from name e.g. "JSS 1 A" → "JSS 1"
+        const label = cls.name.replace(/\s+\S+$/, '').trim();
+        map.set(cls.grade, { grade: cls.grade, label, classes: [] });
+      }
+      map.get(cls.grade)!.classes.push(cls);
+      return map;
+    }, new Map<number, { grade: number; label: string; classes: any[] }>())
+  )
+    .map(([, group]) => group)
+    .sort((a, b) => a.grade - b.grade);
 
   return (
     <AppLayout>
