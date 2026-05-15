@@ -135,12 +135,11 @@ export default function LandingPage() {
                 About Us
               </span>
               <h2 className="text-4xl md:text-5xl font-semibold text-foreground tracking-tight mb-6">
-                Building innovators, not imitators
+                About Laazeere Academy
               </h2>
               <p className="text-base text-muted-foreground leading-relaxed mb-8">
-                Laazeere Academy is an educational institution that focuses on raising a young generation
-                capable of building new innovation — not just repeating what others have done. We are
-                located in Samunaka Sabon Gari, Jalingo, Taraba State.
+                Laazeere Academy is an educational institution that focuses on raising young generation
+                capable of building new innovation, not just repeating what others have done.
               </p>
               <div className="grid grid-cols-2 gap-3">
                 {['Modern Facilities', 'Qualified Teachers', 'Digital Learning', 'Sports & Arts', 'Safe Environment', 'Character Development'].map(item => (
@@ -156,18 +155,18 @@ export default function LandingPage() {
               {[
                 {
                   icon: Lightbulb,
-                  title: 'Our About',
-                  desc: 'Raising a young generation capable of building new innovation, not just repeating what others have done.',
+                  title: 'About Us',
+                  desc: 'Laazeere Academy is an educational institution that focuses on raising young generation capable of building new innovation, not just repeating what others have done.',
                 },
                 {
                   icon: Target,
                   title: 'Our Vision',
-                  desc: 'Creating relevant learning opportunities — inside and outside the classroom — to develop knowledge, critical thinking and character.',
+                  desc: 'Our Vision is to create relevant learning opportunities for students - both inside and outside the classroom - that help them develop knowledge, critical thinking skills and character necessary to succeed in a technologically advanced world.',
                 },
                 {
                   icon: Heart,
                   title: 'Our Mission',
-                  desc: 'Preparing all students to become lifelong learners and responsible citizens, in partnership with families and community.',
+                  desc: 'We strive to prepare all students to become lifelong learners and responsible Citizens ready to meet the challenges of the future. In partnership with Families and Community.',
                 },
                 {
                   icon: Shield,
