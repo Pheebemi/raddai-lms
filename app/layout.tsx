@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/contexts/auth-context";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -32,6 +33,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <Toaster />
+            <Analytics />
           </AuthProvider>
         </ThemeProvider>
       </body>
