@@ -887,6 +887,48 @@ export const fetchSubjects = async () => {
   return handleApiResponse<any>(response);
 };
 
+export const subjectsApi = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/subjects/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    const items = Array.isArray(data) ? data : data.results || [];
+    return items.map((s: any) => ({
+      id: s.id.toString(),
+      name: s.name,
+      code: s.code || '',
+      description: s.description || '',
+    }));
+  },
+
+  create: async (payload: { name: string; code?: string; description?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/subjects/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  update: async (id: string, payload: { name?: string; code?: string; description?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/subjects/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/subjects/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete subject');
+  },
+};
+
 export const fetchAcademicYears = async () => {
   const response = await fetch(`${API_BASE_URL}/academic-years/`, {
     headers: getAuthHeaders(),

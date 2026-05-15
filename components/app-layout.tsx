@@ -189,6 +189,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         icon: 'BookOpen',
       },
       {
+        title: 'Subjects',
+        href: '/management/subjects',
+        icon: 'FileText',
+      },
+      {
         title: 'Students',
         href: '/management/students',
         icon: 'GraduationCap',
