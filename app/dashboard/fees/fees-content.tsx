@@ -272,9 +272,7 @@ export function FeesContent() {
           throw paymentError;
         }
 
-      } catch (error) {
-        console.error('❌ Payment recording failed:', error);
-        console.error('❌ Error details:', error.response?.data || error.message);
+      } catch (error: unknown) {
         toast.error('Payment was successful but failed to record: ' + handleApiError(error));
       }
     };
