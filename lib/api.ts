@@ -888,10 +888,11 @@ export const fetchSubjects = async () => {
 };
 
 export const subjectsApi = {
-  getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/subjects/`, {
-      headers: getAuthHeaders(),
-    });
+  getAll: async (grade?: number) => {
+    const url = grade
+      ? `${API_BASE_URL}/subjects/?grade=${grade}`
+      : `${API_BASE_URL}/subjects/`;
+    const response = await fetch(url, { headers: getAuthHeaders() });
     const data = await handleApiResponse<any>(response);
     const items = Array.isArray(data) ? data : data.results || [];
     return items.map((s: any) => ({
@@ -899,10 +900,11 @@ export const subjectsApi = {
       name: s.name,
       code: s.code || '',
       description: s.description || '',
+      grades: s.grades || [],
     }));
   },
 
-  create: async (payload: { name: string; code?: string; description?: string }) => {
+  create: async (payload: { name: string; code?: string; description?: string; grades?: number[] }) => {
     const response = await fetch(`${API_BASE_URL}/subjects/`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -911,7 +913,7 @@ export const subjectsApi = {
     return handleApiResponse<any>(response);
   },
 
-  update: async (id: string, payload: { name?: string; code?: string; description?: string }) => {
+  update: async (id: string, payload: { name?: string; code?: string; description?: string; grades?: number[] }) => {
     const response = await fetch(`${API_BASE_URL}/subjects/${id}/`, {
       method: 'PATCH',
       headers: getAuthHeaders(),

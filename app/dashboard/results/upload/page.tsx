@@ -14,7 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Upload, Save, X, Plus, Download } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchClasses, fetchSubjects, fetchAcademicYears, usersApi, resultsApi } from '@/lib/api';
+import { fetchClasses, fetchAcademicYears, usersApi, resultsApi, subjectsApi } from '@/lib/api';
 
 interface StudentResult {
   id: string;
@@ -76,9 +76,8 @@ export default function UploadResultsPage() {
         console.log('Loading initial data for user:', user);
         console.log('Auth token exists:', !!localStorage.getItem('edumanage_token'));
 
-        const [classesData, subjectsData, yearsData, staffData] = await Promise.all([
+        const [classesData, yearsData, staffData] = await Promise.all([
           fetchClasses(),
-          fetchSubjects(),
           fetchAcademicYears(),
           usersApi.getStaff(),
         ]);
@@ -86,10 +85,11 @@ export default function UploadResultsPage() {
         // Find the current user's staff profile
         const currentStaff = staffData.find((s: any) => s.user.id === user?.id);
 
-        // Format classes data (include academic year and class teacher for filtering)
+        // Format classes data (include academic year, grade and class teacher for filtering)
         const formattedClasses = (classesData.results || classesData).map((cls: any) => ({
           id: cls.id.toString(),
           name: cls.name,
+          grade: cls.grade,
           academicYearId: cls.academic_year?.toString(),
           classTeacherId: cls.class_teacher ? cls.class_teacher.toString() : undefined,
         }));
@@ -109,12 +109,6 @@ export default function UploadResultsPage() {
           }
         }
 
-        // Format subjects data
-        const formattedSubjects = (subjectsData.results || subjectsData).map((subj: any) => ({
-          id: subj.id.toString(),
-          name: subj.name,
-        }));
-
         // Format academic years data
         const formattedYears = (yearsData.results || yearsData).map((year: any) => ({
           id: year.id.toString(),
@@ -122,7 +116,7 @@ export default function UploadResultsPage() {
         }));
 
         setClasses(filteredClassesList);
-        setSubjects(formattedSubjects);
+        setSubjects([]); // subjects loaded when class is selected
         setAcademicYears(formattedYears);
 
         // Store full classes data (already filtered for staff where applicable) for filtering later
@@ -137,6 +131,17 @@ export default function UploadResultsPage() {
 
     loadInitialData();
   }, [user]);
+
+  // When class changes, load subjects filtered by that class's grade
+  useEffect(() => {
+    if (!selectedClass) { setSubjects([]); return; }
+    const cls = allClasses.find(c => c.id === selectedClass);
+    if (!cls) return;
+    subjectsApi.getAll(cls.grade).then(setSubjects).catch(() => {
+      toast.error('Failed to load subjects for this class');
+    });
+    setSelectedSubject('');
+  }, [selectedClass, allClasses]);
 
   // Filter classes by selected academic year
   useEffect(() => {

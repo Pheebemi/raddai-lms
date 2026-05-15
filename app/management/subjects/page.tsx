@@ -11,12 +11,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { subjectsApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { BookOpen, Plus, Trash2, Pencil, Search } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
+const GRADE_LABELS: Record<number, string> = {
+  1: 'Primary 1', 2: 'Primary 2', 3: 'Primary 3',
+  4: 'Primary 4', 5: 'Primary 5', 6: 'Primary 6',
+  7: 'JSS 1', 8: 'JSS 2', 9: 'JSS 3',
+  10: 'SS 1', 11: 'SS 2', 12: 'SS 3',
+};
 
 interface Subject {
   id: string;
   name: string;
   code: string;
   description: string;
+  grades: number[];
 }
 
 export default function SubjectsPage() {
@@ -25,7 +34,7 @@ export default function SubjectsPage() {
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<Subject | null>(null);
-  const [form, setForm] = useState({ name: '', code: '', description: '' });
+  const [form, setForm] = useState({ name: '', code: '', description: '', grades: [] as number[] });
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
 
@@ -44,14 +53,23 @@ export default function SubjectsPage() {
 
   const openCreate = () => {
     setEditTarget(null);
-    setForm({ name: '', code: '', description: '' });
+    setForm({ name: '', code: '', description: '', grades: [] });
     setDialogOpen(true);
   };
 
   const openEdit = (subject: Subject) => {
     setEditTarget(subject);
-    setForm({ name: subject.name, code: subject.code, description: subject.description });
+    setForm({ name: subject.name, code: subject.code, description: subject.description, grades: subject.grades });
     setDialogOpen(true);
+  };
+
+  const toggleGrade = (grade: number) => {
+    setForm(f => ({
+      ...f,
+      grades: f.grades.includes(grade)
+        ? f.grades.filter(g => g !== grade)
+        : [...f.grades, grade].sort((a, b) => a - b),
+    }));
   };
 
   const handleSave = async () => {
@@ -99,7 +117,7 @@ export default function SubjectsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-semibold tracking-tight">Subjects</h1>
-            <p className="text-muted-foreground">Manage school subjects</p>
+            <p className="text-muted-foreground">Manage school subjects and assign them to class levels</p>
           </div>
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
@@ -143,48 +161,48 @@ export default function SubjectsPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-muted-foreground hover:text-primary"
-                        onClick={() => openEdit(subject)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-muted-foreground hover:text-primary" onClick={() => openEdit(subject)}>
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                        disabled={deleting === subject.id}
-                        onClick={() => handleDelete(subject.id, subject.name)}
-                      >
+                      <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:text-destructive" disabled={deleting === subject.id} onClick={() => handleDelete(subject.id, subject.name)}>
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
                 </CardHeader>
-                {subject.description && (
-                  <CardContent className="pt-0">
+                <CardContent className="pt-0 space-y-2">
+                  {subject.description && (
                     <p className="text-xs text-muted-foreground">{subject.description}</p>
-                  </CardContent>
-                )}
+                  )}
+                  {/* Grade badges */}
+                  <div className="flex flex-wrap gap-1">
+                    {subject.grades.length === 0 ? (
+                      <span className="text-xs text-muted-foreground italic">All grades</span>
+                    ) : (
+                      subject.grades.map(g => (
+                        <span key={g} className="bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-full">
+                          {GRADE_LABELS[g] || `Grade ${g}`}
+                        </span>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
               </Card>
             ))}
           </div>
         )}
 
-        {/* Subject count */}
         {!isLoading && subjects.length > 0 && (
           <p className="text-sm text-muted-foreground">{filtered.length} of {subjects.length} subjects</p>
         )}
 
         {/* Create / Edit dialog */}
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>{editTarget ? 'Edit Subject' : 'Add Subject'}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-2">
+            <div className="space-y-5 py-2">
               <div className="space-y-2">
                 <Label>Subject Name <span className="text-destructive">*</span></Label>
                 <Input
@@ -193,6 +211,7 @@ export default function SubjectsPage() {
                   onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label>Code <span className="text-muted-foreground text-xs">(optional)</span></Label>
                 <Input
@@ -201,6 +220,7 @@ export default function SubjectsPage() {
                   onChange={e => setForm(f => ({ ...f, code: e.target.value }))}
                 />
               </div>
+
               <div className="space-y-2">
                 <Label>Description <span className="text-muted-foreground text-xs">(optional)</span></Label>
                 <Input
@@ -209,7 +229,39 @@ export default function SubjectsPage() {
                   onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
                 />
               </div>
+
+              {/* Grade assignment */}
+              <div className="space-y-2">
+                <Label>
+                  Assign to Class Levels
+                  <span className="text-muted-foreground text-xs ml-2">(leave empty = all grades)</span>
+                </Label>
+                <div className="grid grid-cols-4 gap-2">
+                  {Object.entries(GRADE_LABELS).map(([grade, label]) => {
+                    const g = Number(grade);
+                    const selected = form.grades.includes(g);
+                    return (
+                      <button
+                        key={grade}
+                        onClick={() => toggleGrade(g)}
+                        className={cn(
+                          'text-xs px-2 py-2 rounded-xl border transition-all',
+                          selected
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-background border-border hover:border-primary/40'
+                        )}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {form.grades.length === 0 && (
+                  <p className="text-xs text-muted-foreground">No grades selected — subject will appear for all classes.</p>
+                )}
+              </div>
             </div>
+
             <DialogFooter>
               <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
               <Button onClick={handleSave} disabled={saving}>
