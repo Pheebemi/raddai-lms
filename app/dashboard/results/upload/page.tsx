@@ -304,10 +304,10 @@ export default function UploadResultsPage() {
       setSelectedAcademicYear('');
       setSelectedTerm('');
       setStudents([]);
-    } catch (error) {
-      console.error('Error saving results:', error);
+    } catch (error: unknown) {
       const action = isEditingExisting ? 'update' : 'upload';
-      toast.error(`Failed to ${action} results: ${error.message || 'Unknown error'}`);
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      toast.error(`Failed to ${action} results: ${msg}`);
     } finally {
       setIsLoading(false);
     }
