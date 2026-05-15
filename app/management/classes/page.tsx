@@ -195,16 +195,13 @@ export default function ClassManagementPage() {
   const grouped = Array.from(
     filteredClasses.reduce((map, cls) => {
       if (!map.has(cls.grade)) {
-        // Derive level label by stripping section from name e.g. "JSS 1 A" → "JSS 1"
         const label = cls.name.replace(/\s+\S+$/, '').trim();
-        map.set(cls.grade, { grade: cls.grade, label, classes: [] });
+        map.set(cls.grade, { grade: cls.grade, label, classes: [] as any[] });
       }
       map.get(cls.grade)!.classes.push(cls);
       return map;
-    }, new Map<number, { grade: number; label: string; classes: any[] }>())
-  )
-    .map(([, group]) => group as { grade: number; label: string; classes: any[] })
-    .sort((a, b) => a.grade - b.grade);
+    }, new Map<number, { grade: number; label: string; classes: any[] }>()).values()
+  ).sort((a, b) => a.grade - b.grade);
 
   return (
     <AppLayout>
