@@ -486,7 +486,7 @@ export function StaffDashboard() {
               {classRankings.map((ranking, index) => (
                 <div key={index}>
                   <h3 className="text-lg font-semibold mb-4">
-                    {ranking.class_info.class_name || 'Class'} - {ranking.class_info.term.charAt(0).toUpperCase() + ranking.class_info.term.slice(1)} Term {ranking.class_info.academic_year}
+                    {'Class'} - {ranking.class_info.term.charAt(0).toUpperCase() + ranking.class_info.term.slice(1)} Term {ranking.class_info.academic_year}
                   </h3>
                   <div className="space-y-3">
                   {ranking.rankings?.slice(0, 10).map((student, studentIndex) => (

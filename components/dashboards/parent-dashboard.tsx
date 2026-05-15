@@ -223,7 +223,7 @@ export function ParentDashboard() {
                               <Badge variant={result.grade === 'A+' ? 'default' : 'secondary'}>
                                 {result.grade}
                               </Badge>
-                              <p className="text-sm font-medium mt-1">{result.marks}/{result.maxMarks}</p>
+                              <p className="text-sm font-medium mt-1">{result.marks_obtained}/{result.total_marks}</p>
                             </div>
                           </div>
                         ))

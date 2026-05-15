@@ -216,20 +216,15 @@ export const resultsApi = {
       const allItems: any[] = [];
 
       while (url) {
-        const response = await fetch(url, {
+        const response: Response = await fetch(url, {
           headers: getAuthHeaders(),
         });
 
-        console.log('Results API page response status:', response.status, 'for url:', url);
-        console.log('Results API response headers:', Object.fromEntries(response.headers.entries()));
-
         if (!response.ok) {
-          console.error('Results API error response:', response.status, response.statusText);
           break;
         }
 
-        const data = await response.json().catch((error) => {
-          console.error('Results API JSON parse error:', error);
+        const data = await response.json().catch(() => {
           return null;
         });
 

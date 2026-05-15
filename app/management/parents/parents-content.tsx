@@ -110,7 +110,7 @@ export function ParentsManagementContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {parents.reduce((sum, parent) => sum + (parent.childrenCount || 0), 0)}
+              {parents.reduce((sum, parent) => sum + (parent.children?.length || 0), 0)}
             </div>
             <p className="text-xs text-muted-foreground">
               Children enrolled
@@ -125,7 +125,7 @@ export function ParentsManagementContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {parents.length > 0 ? (parents.reduce((sum, parent) => sum + (parent.childrenCount || 0), 0) / parents.length).toFixed(1) : 0}
+              {parents.length > 0 ? (parents.reduce((sum, parent) => sum + (parent.children?.length || 0), 0) / parents.length).toFixed(1) : 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Children per parent
@@ -199,11 +199,11 @@ export function ParentsManagementContent() {
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-muted-foreground">Parent ID</p>
-                  <p className="font-medium">{parent.parentId}</p>
+                  <p className="font-medium">{parent.id}</p>
                 </div>
                 <div>
                   <p className="text-muted-foreground">Children</p>
-                  <p className="font-medium">{parent.childrenCount || 0}</p>
+                  <p className="font-medium">{parent.children?.length || 0}</p>
                 </div>
               </div>
 

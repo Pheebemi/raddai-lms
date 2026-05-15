@@ -48,10 +48,10 @@ export function useDashboardData() {
           studentsData = allResults[4] as Student[];
         }
 
-        setDashboardStats(statsData);
-        setAnnouncements(announcementsData);
-        setResults(resultsData);
-        setFeeTransactions(feesData);
+        setDashboardStats(statsData as DashboardStats);
+        setAnnouncements(announcementsData as Announcement[]);
+        setResults(resultsData as Result[]);
+        setFeeTransactions(feesData as FeeTransaction[]);
 
         // Set student profile if available
         if (user.role === 'student' && studentsData.length > 0) {
