@@ -741,9 +741,6 @@ export function FeesContent() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">School Fees</h1>
           <p className="text-muted-foreground">Manage your term-based fee payments</p>
-          <div className="mt-2 text-sm text-blue-600 bg-blue-50 px-3 py-1 rounded-md inline-block">
-            💰 Term fees are set per grade/class in the Django admin panel
-          </div>
         </div>
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
           <DialogTrigger asChild>
