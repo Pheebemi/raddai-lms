@@ -67,10 +67,10 @@ export function AdminDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            System Administration 👑
+            System Administration
           </h1>
           <p className="text-muted-foreground">
-            Monitor and manage the Raddai Metropolitan School system.
+            Monitor and manage the Laazeere Academy system.
           </p>
         </div>
         <div className="flex gap-2">
@@ -237,19 +237,19 @@ export function AdminDashboard() {
         <CardContent>
           <div className="grid gap-4 md:grid-cols-3">
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-blue-600 mb-1">{totalStudents}</div>
+              <div className="text-2xl font-bold text-primary mb-1">{totalStudents}</div>
               <p className="text-sm text-muted-foreground">Students</p>
               <p className="text-xs text-muted-foreground mt-1">Active accounts</p>
             </div>
 
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-green-600 mb-1">{totalStaff}</div>
+              <div className="text-2xl font-bold text-primary mb-1">{totalStaff}</div>
               <p className="text-sm text-muted-foreground">Staff Members</p>
               <p className="text-xs text-muted-foreground mt-1">Teaching faculty</p>
             </div>
 
             <div className="text-center p-4 border rounded-lg">
-              <div className="text-2xl font-bold text-purple-600 mb-1">
+              <div className="text-2xl font-bold text-primary mb-1">
                 {mockUsers.filter(u => u.role === 'parent').length}
               </div>
               <p className="text-sm text-muted-foreground">Parents</p>

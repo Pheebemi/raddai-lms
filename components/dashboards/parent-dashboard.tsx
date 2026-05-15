@@ -57,7 +57,7 @@ export function ParentDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome, {user.firstName}! 👋
+            Welcome, {user.firstName}
           </h1>
           <p className="text-muted-foreground">
             Monitor your {parent.children.length === 1 ? 'child&apos;s' : 'children&apos;s'} progress and stay connected.
@@ -100,7 +100,7 @@ export function ParentDashboard() {
                   <p className="text-xs text-muted-foreground">Attendance</p>
                 </div>
                 <div className="space-y-1">
-                  <p className="text-2xl font-bold text-blue-600">
+                  <p className="text-2xl font-bold text-primary">
                     {child.results.length > 0 ? child.results[0].grade : 'N/A'}
                   </p>
                   <p className="text-xs text-muted-foreground">Latest Grade</p>
@@ -295,8 +295,8 @@ export function ParentDashboard() {
             {recentAnnouncements.map((announcement) => (
               <div key={announcement.id} className="flex gap-3 p-4 border rounded-lg">
                 <div className={`h-3 w-3 rounded-full mt-1 ${
-                  announcement.priority === 'high' ? 'bg-red-500' :
-                  announcement.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                  announcement.priority === 'high' ? 'bg-destructive' :
+                  announcement.priority === 'medium' ? 'bg-accent-foreground' : 'bg-primary'
                 }`} />
                 <div className="flex-1">
                   <p className="font-medium">{announcement.title}</p>

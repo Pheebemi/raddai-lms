@@ -191,10 +191,10 @@ export function ManagementDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user.firstName}! 👋
+            Welcome back, {user.firstName}
           </h1>
           <p className="text-muted-foreground">
-            Here&apos;s your Raddai Metropolitan School management overview.
+            Here&apos;s your Laazeere Academy management overview.
           </p>
         </div>
         <div className="flex gap-2">
@@ -433,13 +433,13 @@ export function ManagementDashboard() {
                 </div>
               </div>
 
-              <div className="flex items-start gap-3 p-3 border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950 rounded-lg">
-                <CheckCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="flex items-start gap-3 p-3 border border-border bg-secondary rounded-lg">
+                <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
                 <div>
-                  <p className="font-medium text-blue-900 dark:text-blue-100">
+                  <p className="font-medium text-foreground">
                     Result Upload Complete
                   </p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
+                  <p className="text-sm text-muted-foreground">
                     Term 1 results have been uploaded for all Class 10 students
                   </p>
                 </div>

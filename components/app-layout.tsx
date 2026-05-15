@@ -52,8 +52,10 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigationItems, user, 
       {/* Logo */}
       <div className="flex h-14 items-center border-b px-4">
         <Link href="/dashboard" className="flex items-center gap-2 font-semibold">
-          <GraduationCap className="h-6 w-6" />
-          <span>Raddai Metropolitan School</span>
+          <div className="w-7 h-7 bg-primary rounded-lg flex items-center justify-center shrink-0">
+            <GraduationCap className="h-4 w-4 text-primary-foreground" />
+          </div>
+          <span>Laazeere Academy</span>
         </Link>
       </div>
 
@@ -81,7 +83,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigationItems, user, 
                         href={child.href}
                         className={cn(
                           'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent',
-                          isChildActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                          isChildActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
                         )}
                         onClick={() => setSidebarOpen(false)}
                       >
@@ -106,7 +108,7 @@ const SidebarContent: React.FC<SidebarContentProps> = ({ navigationItems, user, 
               href={item.href}
               className={cn(
                 'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors hover:bg-accent',
-                isActive ? 'bg-accent text-accent-foreground' : 'text-muted-foreground'
+                isActive ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
               )}
               onClick={() => setSidebarOpen(false)}
             >

@@ -109,7 +109,7 @@ export function StudentDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Welcome back, {user.firstName}! 👋
+            Welcome back, {user.firstName}
           </h1>
           <p className="text-muted-foreground">
             Here&apos;s what&apos;s happening with your studies today.
@@ -268,8 +268,8 @@ export function StudentDashboard() {
               {recentAnnouncements.map((announcement) => (
                 <div key={announcement.id} className="flex gap-3">
                   <div className={`h-2 w-2 rounded-full mt-2 ${
-                    announcement.priority === 'high' ? 'bg-red-500' :
-                    announcement.priority === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                    announcement.priority === 'high' ? 'bg-destructive' :
+                    announcement.priority === 'medium' ? 'bg-accent-foreground' : 'bg-primary'
                   }`} />
                   <div className="flex-1">
                     <p className="font-medium text-sm">{announcement.title}</p>

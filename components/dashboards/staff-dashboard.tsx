@@ -206,7 +206,7 @@ export function StaffDashboard() {
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">
-            Good morning, {user.firstName}! 👋
+            Good morning, {user.firstName}
           </h1>
           <p className="text-muted-foreground">
             Here&apos;s your teaching dashboard overview.
