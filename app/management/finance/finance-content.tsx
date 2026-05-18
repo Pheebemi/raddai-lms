@@ -41,6 +41,120 @@ import { toast } from 'sonner';
 
 const PAGE_SIZE = 15;
 
+function TransactionsListCard({
+  transactions,
+  title,
+  description,
+  defaultLimit,
+}: {
+  transactions: any[];
+  title: string;
+  description: string;
+  defaultLimit?: number;
+}) {
+  const [search, setSearch] = useState('');
+  const [filterTerm, setFilterTerm] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [page, setPage] = useState(1);
+
+  const sorted = [...transactions].sort(
+    (a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime()
+  );
+
+  const filtered = sorted.filter(t => {
+    if (filterTerm !== 'all' && t.term !== filterTerm) return false;
+    if (filterStatus !== 'all' && t.status !== filterStatus) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!t.studentName?.toLowerCase().includes(q) && !t.transactionId?.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
+
+  const limit = defaultLimit || PAGE_SIZE;
+  const totalPages = Math.ceil(filtered.length / limit);
+  const paginated = filtered.slice((page - 1) * limit, page * limit);
+  const reset = () => setPage(1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-3">
+          <Input
+            placeholder="Search student..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); reset(); }}
+            className="max-w-xs"
+          />
+          <Select value={filterTerm} onValueChange={v => { setFilterTerm(v); reset(); }}>
+            <SelectTrigger className="w-36"><SelectValue placeholder="All Terms" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Terms</SelectItem>
+              <SelectItem value="first">First Term</SelectItem>
+              <SelectItem value="second">Second Term</SelectItem>
+              <SelectItem value="third">Third Term</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); reset(); }}>
+            <SelectTrigger className="w-36"><SelectValue placeholder="All Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground self-center">{filtered.length} records</span>
+        </div>
+
+        <div className="space-y-2">
+          {paginated.map(t => (
+            <div key={t.id} className="flex items-center justify-between p-3 rounded-xl border hover:bg-muted/50 transition-colors">
+              <div className="flex items-center gap-3">
+                <Avatar className="h-9 w-9">
+                  <AvatarFallback className="text-xs">
+                    {t.studentName ? t.studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : '?'}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <p className="text-sm font-medium">{t.studentName || 'Unknown Student'}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {t.term ? `${t.term} term` : '—'} · {t.paymentDate ? new Date(t.paymentDate).toLocaleDateString() : 'No date'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <Badge variant={t.status === 'paid' ? 'default' : t.status === 'overdue' ? 'destructive' : 'secondary'}>
+                  {t.status}
+                </Badge>
+                <p className="text-sm font-medium">₦{(t.totalAmount ?? t.amount).toLocaleString()}</p>
+              </div>
+            </div>
+          ))}
+          {paginated.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No transactions match your filters.</p>
+          )}
+        </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-muted-foreground">Page {page} of {totalPages}</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+              <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 function PaymentsTab({ transactions }: { transactions: any[] }) {
   const [search, setSearch] = useState('');
   const [filterTerm, setFilterTerm] = useState('all');
@@ -349,6 +463,12 @@ export function FinanceManagementContent() {
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
   const overdueTransactions = transactions.filter(t => t.status === 'overdue');
 
+  // Real overdue = actual outstanding balance on overdue records
+  const overdueAmount = overdueTransactions.reduce((sum, t) => {
+    const outstanding = Math.max((t.totalAmount ?? t.amount) - t.amount, 0);
+    return sum + outstanding;
+  }, 0);
+
   // Calculate payment method breakdown
   const paymentMethods = transactions.reduce((acc, transaction) => {
     const method = transaction.paymentMethod || 'Cash';
@@ -448,10 +568,12 @@ export function FinanceManagementContent() {
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">₦{(pendingFees * 0.3).toLocaleString()}</div>
+            <div className="text-2xl font-bold text-red-600">
+              ₦{overdueAmount.toLocaleString()}
+            </div>
             <p className="text-xs text-muted-foreground flex items-center">
               <TrendingDown className="h-3 w-3 mr-1 text-red-600" />
-              30% of pending fees
+              {overdueTransactions.length} overdue payment{overdueTransactions.length !== 1 ? 's' : ''}
             </p>
           </CardContent>
         </Card>
@@ -496,7 +618,7 @@ export function FinanceManagementContent() {
                       <div className="w-3 h-3 bg-red-500 rounded-full"></div>
                       <span className="text-sm font-medium">Overdue</span>
                     </div>
-                    <span className="text-sm font-medium">₦{(pendingFees * 0.3).toLocaleString()}</span>
+                    <span className="text-sm font-medium">₦{overdueAmount.toLocaleString()}</span>
                   </div>
                 </div>
 
@@ -541,89 +663,13 @@ export function FinanceManagementContent() {
             </Card>
           </div>
 
-          {/* Recent Transactions */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Transactions</CardTitle>
-              <CardDescription>Latest fee payments and transactions</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[...transactions]
-                  .sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime())
-                  .slice(0, 5)
-                  .map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-10 w-10">
-                        <AvatarFallback>
-                          {transaction.studentName ? transaction.studentName.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'U'}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="font-medium">
-                          {transaction.studentName || 'Unknown Student'}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {transaction.feeStructureName || 'School Fee'} • {transaction.term || 'N/A'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <Badge variant={transaction.status === 'paid' ? 'default' : 'secondary'}>
-                        {transaction.status}
-                      </Badge>
-                      <p className="text-sm font-medium mt-1">₦{transaction.totalAmount?.toLocaleString() || transaction.amount.toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
-
-                {transactions.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-8">
-                    No transactions found
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {/* Recent Transactions — overview shows top 10 newest */}
+          <TransactionsListCard transactions={transactions} title="Recent Transactions" description="Latest fee payments" defaultLimit={10} />
         </TabsContent>
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>All Transactions</CardTitle>
-              <CardDescription>Complete transaction history</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {[...transactions]
-                  .sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime())
-                  .map((transaction) => (
-                  <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${
-                        transaction.status === 'paid' ? 'bg-green-500' :
-                        transaction.status === 'pending' ? 'bg-yellow-500' : 'bg-red-500'
-                      }`}></div>
-                      <div>
-                        <p className="font-medium">{transaction.studentName || 'Unknown Student'}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {transaction.feeStructureName} • {transaction.term} • {transaction.paymentMethod}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-medium">₦{transaction.totalAmount?.toLocaleString() || transaction.amount.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {transaction.paymentDate ? new Date(transaction.paymentDate).toLocaleDateString() : 'N/A'}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <TransactionsListCard transactions={transactions} title="All Transactions" description="Complete transaction history" />
         </TabsContent>
 
         {/* Fee Structures Tab */}
