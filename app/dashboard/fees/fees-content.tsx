@@ -365,8 +365,15 @@ export function FeesContent() {
       ctx.font = '30px Arial';
       ctx.fillStyle = '#374151';
       const infoValueX = leftX + 280;
-      ctx.fillText(`${user.firstName} ${user.lastName}`, infoValueX, y);
-      ctx.fillText(user.id, infoValueX, y + 55);
+      // Use selected child's details for parents, own details for students
+      const studentName = (user?.role === 'parent' && selectedChild)
+        ? `${selectedChild.user?.firstName || ''} ${selectedChild.user?.lastName || ''}`.trim()
+        : `${user.firstName} ${user.lastName}`;
+      const studentIdLabel = (user?.role === 'parent' && selectedChild)
+        ? selectedChild.studentId || selectedChild.id
+        : user.id;
+      ctx.fillText(studentName, infoValueX, y);
+      ctx.fillText(studentIdLabel, infoValueX, y + 55);
       // Show the class/session for the year this payment belongs to, not the student's current class
       const classOrSessionLabel = payment.academicYear
         ? `${payment.academicYear} • ${termLabel}`
@@ -502,7 +509,9 @@ export function FeesContent() {
     customer: {
       email: user?.email || '',
       phone_number: user?.phone || '',
-      name: user ? `${user.firstName} ${user.lastName}` : '',
+      name: (user?.role === 'parent' && selectedChild)
+        ? `${selectedChild.user?.firstName || ''} ${selectedChild.user?.lastName || ''}`.trim()
+        : user ? `${user.firstName} ${user.lastName}` : '',
     },
     customizations: {
       title: `Laazeere Academy -${paymentData.term.charAt(0).toUpperCase() + paymentData.term.slice(1)} Term Fee`,

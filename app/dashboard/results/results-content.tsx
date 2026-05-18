@@ -418,10 +418,21 @@ export function ResultsContent() {
       ctx.fillText(`TERM: ${term.toUpperCase()}`, width - marginRight, y);
       y += 50;
 
+      // Use selected child's details for parents
+      const selectedChildData = user?.role === 'parent'
+        ? parentChildren.find((c: any) => c.id === selectedChildId)
+        : null;
+      const printName = selectedChildData
+        ? `${selectedChildData.user.firstName} ${selectedChildData.user.lastName}`
+        : `${user.firstName || ''} ${user.lastName || ''}`;
+      const printId = selectedChildData
+        ? selectedChildData.studentId || selectedChildData.id
+        : user.id;
+
       ctx.textAlign = 'left';
-      ctx.fillText(`NAME: ${user.firstName?.toUpperCase() || ''} ${user.lastName?.toUpperCase() || ''}`, marginLeft, y);
+      ctx.fillText(`NAME: ${printName.toUpperCase()}`, marginLeft, y);
       ctx.textAlign = 'right';
-      ctx.fillText(`ID. NO: ${user.id}`, width - marginRight, y);
+      ctx.fillText(`ID. NO: ${printId}`, width - marginRight, y);
       y += 10;
 
       // Bottom border for info section
