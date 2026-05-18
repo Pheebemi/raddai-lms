@@ -39,6 +39,136 @@ import { DashboardStats, FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
 
+const PAGE_SIZE = 15;
+
+function PaymentsTab({ transactions }: { transactions: any[] }) {
+  const [search, setSearch] = useState('');
+  const [filterTerm, setFilterTerm] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [page, setPage] = useState(1);
+
+  const sorted = [...transactions].sort(
+    (a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime()
+  );
+
+  const filtered = sorted.filter(t => {
+    if (filterTerm !== 'all' && t.term !== filterTerm) return false;
+    if (filterStatus !== 'all' && t.status !== filterStatus) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (
+        !t.studentName?.toLowerCase().includes(q) &&
+        !t.studentId?.toLowerCase().includes(q) &&
+        !t.transactionId?.toLowerCase().includes(q)
+      ) return false;
+    }
+    return true;
+  });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  const reset = () => setPage(1);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Fee Payments</CardTitle>
+        <CardDescription>All recorded fee payments — newest first.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Filters */}
+        <div className="flex flex-wrap gap-3">
+          <Input
+            placeholder="Search student or transaction ID..."
+            value={search}
+            onChange={e => { setSearch(e.target.value); reset(); }}
+            className="max-w-xs"
+          />
+          <Select value={filterTerm} onValueChange={v => { setFilterTerm(v); reset(); }}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="All Terms" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Terms</SelectItem>
+              <SelectItem value="first">First Term</SelectItem>
+              <SelectItem value="second">Second Term</SelectItem>
+              <SelectItem value="third">Third Term</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={filterStatus} onValueChange={v => { setFilterStatus(v); reset(); }}>
+            <SelectTrigger className="w-36">
+              <SelectValue placeholder="All Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="partial">Partial</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+              <SelectItem value="overdue">Overdue</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-sm text-muted-foreground self-center">{filtered.length} records</span>
+        </div>
+
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Student</TableHead>
+                <TableHead>Term</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Amount Paid</TableHead>
+                <TableHead>Total Fee</TableHead>
+                <TableHead>Payment Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {paginated.map(t => (
+                <TableRow key={t.id}>
+                  <TableCell>
+                    <p className="font-medium">{t.studentName || t.studentId}</p>
+                    {t.transactionId && <p className="text-xs text-muted-foreground">{t.transactionId}</p>}
+                  </TableCell>
+                  <TableCell className="capitalize">{t.term || '—'}</TableCell>
+                  <TableCell>
+                    <Badge variant={t.status === 'paid' ? 'default' : t.status === 'overdue' ? 'destructive' : 'secondary'}>
+                      {t.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>₦{t.amount.toLocaleString()}</TableCell>
+                  <TableCell>₦{(t.totalAmount ?? t.amount).toLocaleString()}</TableCell>
+                  <TableCell>{t.paymentDate ? new Date(t.paymentDate).toLocaleDateString() : '—'}</TableCell>
+                </TableRow>
+              ))}
+              {paginated.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                    No payments match your filters.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between pt-2">
+            <p className="text-sm text-muted-foreground">
+              Page {page} of {totalPages}
+            </p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+              <Button size="sm" variant="outline" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Next</Button>
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function FinanceManagementContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<FeeTransaction[]>([]);
@@ -690,74 +820,7 @@ export function FinanceManagementContent() {
 
         {/* Fee Payments Tab (management view of all payments) */}
         <TabsContent value="fee_payments" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Fee Payments</CardTitle>
-              <CardDescription>
-                All recorded fee payments from students (online and manual).
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Student</TableHead>
-                      <TableHead>Fee Type</TableHead>
-                      <TableHead>Term</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Payment Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((t) => (
-                      <TableRow key={t.id}>
-                        <TableCell>{t.studentName || t.studentId}</TableCell>
-                        <TableCell>{t.feeStructureName || 'School Fee'}</TableCell>
-                        <TableCell className="capitalize">{t.term || '-'}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              t.status === 'paid'
-                                ? 'default'
-                                : t.status === 'overdue'
-                                ? 'destructive'
-                                : 'secondary'
-                            }
-                          >
-                            {t.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          ₦{(t.totalAmount ?? t.amount).toLocaleString()}
-                        </TableCell>
-                        <TableCell>
-                          {t.paymentDate
-                            ? new Date(t.paymentDate).toLocaleDateString()
-                            : 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {/* For now management can only view; deletions are risky because of reconciliation */}
-                          <span className="text-xs text-muted-foreground">
-                            View-only
-                          </span>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {transactions.length === 0 && (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center text-sm text-muted-foreground">
-                          No fee payments recorded yet.
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <PaymentsTab transactions={transactions} />
         </TabsContent>
 
         {/* Reports Tab */}
