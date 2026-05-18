@@ -1464,7 +1464,7 @@ export const usersApi = {
     });
     const createdUser = await handleApiResponse<any>(userResponse);
 
-    // 2. Create parent profile
+    // 2. Create parent profile (backend auto-generates parent_id)
     const parentResponse = await fetch(`${API_BASE_URL}/parents/`, {
       method: 'POST',
       headers: getAuthHeaders(),
