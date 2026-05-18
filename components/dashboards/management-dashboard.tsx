@@ -208,11 +208,13 @@ export function ManagementDashboard() {
     );
   }
 
-  // Extract stats for easier access
   const totalStudents = stats.totalStudents || 0;
   const totalStaff = stats.totalStaff || 0;
   const totalRevenue = stats.totalRevenue || 0;
   const pendingFees = stats.pendingFees || 0;
+  const overdueAmount = Number(stats.overdue_amount) || 0;
+  const totalExpected = Number(stats.total_expected) || (totalRevenue + pendingFees);
+  const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
   const averageAttendance = stats.averageAttendance || 0;
   const topPerformers = stats.topPerformers || [];
   const recentResults = stats.recentResults || [];
@@ -271,13 +273,13 @@ export function ManagementDashboard() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Monthly Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
             <p className="text-xs text-muted-foreground">
-              +12% from last month
+              {collectionRate}% collection rate
             </p>
           </CardContent>
         </Card>
@@ -309,7 +311,7 @@ export function ManagementDashboard() {
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-green-600">₦{totalRevenue.toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-primary">₦{totalRevenue.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Collected</p>
                 </div>
                 <div className="text-center">
@@ -317,7 +319,7 @@ export function ManagementDashboard() {
                   <p className="text-xs text-muted-foreground">Pending</p>
                 </div>
                 <div className="text-center">
-                  <p className="text-2xl font-bold text-red-600">₦{(pendingFees * 0.3).toLocaleString()}</p>
+                  <p className="text-2xl font-bold text-red-600">₦{overdueAmount.toLocaleString()}</p>
                   <p className="text-xs text-muted-foreground">Overdue</p>
                 </div>
               </div>
@@ -325,15 +327,18 @@ export function ManagementDashboard() {
               <div className="space-y-2">
                 <div className="flex justify-between text-sm">
                   <span>Collection Rate</span>
-                  <span>{totalRevenue + pendingFees > 0 ? Math.round((totalRevenue / (totalRevenue + pendingFees)) * 100) : 0}%</span>
+                  <span>{collectionRate}%</span>
                 </div>
-                <Progress value={totalRevenue + pendingFees > 0 ? (totalRevenue / (totalRevenue + pendingFees)) * 100 : 0} className="h-2" />
+                <Progress value={collectionRate} className="h-2" />
               </div>
 
               <div className="pt-4 border-t">
                 <h4 className="font-medium mb-3">Recent Transactions</h4>
                 <div className="space-y-2">
-                  {recentTransactions.length > 0 ? recentTransactions.map((transaction) => (
+                  {recentTransactions.length > 0 ? [...recentTransactions]
+                    .sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime())
+                    .slice(0, 5)
+                    .map((transaction) => (
                     <div key={transaction.id} className="flex items-center justify-between py-2">
                       <div className="flex items-center gap-3">
                         <Avatar className="h-8 w-8">
