@@ -931,6 +931,53 @@ export const subjectsApi = {
   },
 };
 
+export const academicYearsApi = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/academic-years/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    if (Array.isArray(data)) return data;
+    if (data?.results) return data.results;
+    return [];
+  },
+
+  create: async (payload: { name: string; start_date: string; end_date: string; is_active?: boolean }) => {
+    const response = await fetch(`${API_BASE_URL}/academic-years/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  update: async (id: string, payload: { name?: string; start_date?: string; end_date?: string; is_active?: boolean }) => {
+    const response = await fetch(`${API_BASE_URL}/academic-years/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  delete: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/academic-years/${id}/`, {
+      method: 'DELETE',
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error('Failed to delete academic year');
+  },
+
+  setActive: async (id: string) => {
+    const response = await fetch(`${API_BASE_URL}/academic-years/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ is_active: true }),
+    });
+    return handleApiResponse<any>(response);
+  },
+};
+
 export const toggleResultsVisibility = async (
   academicYearId: string,
   visible: boolean,

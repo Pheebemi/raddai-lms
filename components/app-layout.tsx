@@ -185,6 +185,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     management: [
       ...baseItems,
       {
+        title: 'Academic Years',
+        href: '/management/academic-years',
+        icon: 'Calendar',
+      },
+      {
         title: 'Classes',
         href: '/management/classes',
         icon: 'BookOpen',
