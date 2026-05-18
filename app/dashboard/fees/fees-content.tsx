@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { feesApi, feeStructureApi, classesApi, dashboardApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
+import { feesApi, feeStructureApi, classesApi, dashboardApi, usersApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
@@ -36,6 +36,8 @@ export function FeesContent() {
   const [studentGrade, setStudentGrade] = useState<number | null>(null);
   const [serverPendingFees, setServerPendingFees] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
+  const [parentChildren, setParentChildren] = useState<any[]>([]);
+  const [selectedChild, setSelectedChild] = useState<any | null>(null);
   const [selectedTerm, setSelectedTerm] = useState<string>('all');
   const [selectedYear, setSelectedYear] = useState<string>('all');
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -98,9 +100,20 @@ export function FeesContent() {
         setFeeStructures(feeStructuresData);
         if (statsData?.pendingFees) setServerPendingFees(Number(statsData.pendingFees));
 
+        // Load parent children if parent role
+        if (user?.role === 'parent') {
+          try {
+            const parents = await usersApi.getParents();
+            const me = parents.find((p: any) => p.user.id === user.id);
+            const children = me?.children || [];
+            setParentChildren(children);
+            if (children.length > 0) setSelectedChild(children[0]);
+          } catch { /* non-blocking */ }
+        }
+
         // Resolve student grade separately so it never blocks the main data
         try {
-          const classId = user?.profile?.current_class_id;
+          const classId = user?.role === 'parent' ? null : user?.profile?.current_class_id;
           if (classId) {
             const classesData = await classesApi.getAll();
             const studentClass = classesData.find((c: any) => String(c.id) === String(classId));
@@ -138,6 +151,17 @@ export function FeesContent() {
 
     fetchData();
   }, [logout]);
+
+  // When parent switches child, resolve the new child's grade
+  useEffect(() => {
+    if (user?.role !== 'parent' || !selectedChild) return;
+    setStudentGrade(null);
+    setCurrentFeeAmount(null);
+    classesApi.getAll().then(classesData => {
+      const cls = classesData.find((c: any) => String(c.id) === String(selectedChild.classId));
+      if (cls) setStudentGrade(cls.grade);
+    }).catch(() => {});
+  }, [selectedChild, user?.role]);
 
   // Get current full fee amount for the term (target total for that term)
   useEffect(() => {
@@ -522,7 +546,7 @@ export function FeesContent() {
 
     // Store payment data in sessionStorage for the redirect handler
     const paymentIntentData = {
-      studentId: user.profile?.id,
+      studentId: user?.role === 'parent' ? selectedChild?.id : user.profile?.id,
       academicYear: paymentData.academicYear,
       term: paymentData.term,
       amount: effectiveAmount,
@@ -551,6 +575,8 @@ export function FeesContent() {
   const filteredPayments = payments.filter(payment => {
     if (selectedTerm !== 'all' && payment.term !== selectedTerm) return false;
     if (selectedYear !== 'all' && payment.academicYear !== selectedYear) return false;
+    // For parents, only show selected child's payments
+    if (user?.role === 'parent' && selectedChild && payment.studentId !== selectedChild.id) return false;
     return true;
   });
 
@@ -567,8 +593,15 @@ export function FeesContent() {
   // Calculate summary statistics
   const totalPaid = filteredPayments.reduce((sum, p) => sum + p.amount, 0);
 
-  // Use server-calculated pending fees — accurate even with no payment records
-  const sessionPendingAmount = serverPendingFees;
+  // For parents: calculate from their selected child's payments; for students: use server stats
+  const sessionPendingAmount = (user?.role === 'parent' && selectedChild)
+    ? (() => {
+        const childPayments = payments.filter(p => p.studentId === selectedChild.id);
+        const paid = childPayments.filter(p => p.status === 'paid').reduce((s, p) => s + (p.totalAmount ?? p.amount), 0);
+        const total = currentFeeAmount !== null ? currentFeeAmount * 3 : 0;
+        return Math.max(total - paid, 0);
+      })()
+    : serverPendingFees;
 
   // Overdue amount across filtered payments, based on remaining per record
   const totalOverdue = filteredPayments
@@ -640,18 +673,45 @@ export function FeesContent() {
     );
   }
 
+  // Parent with no children
+  if (user?.role === 'parent' && !isLoading && parentChildren.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">School Fees</h1>
+          <p className="text-muted-foreground">Manage your children's fee payments</p>
+        </div>
+        <Card className="border border-border rounded-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center">
+              <AlertCircle className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold">No Child Attached Yet</h2>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              No children have been linked to your account yet. Please contact the school administration.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">School Fees</h1>
-          <p className="text-muted-foreground">Manage your term-based fee payments</p>
+          <p className="text-muted-foreground">
+            {user?.role === 'parent' ? 'Manage your children\'s fee payments' : 'Manage your term-based fee payments'}
+          </p>
         </div>
         <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
           <DialogTrigger asChild>
             <Button size="lg" className="bg-green-600 hover:bg-green-700">
               <CreditCard className="mr-2 h-5 w-5" />
-              Pay School Fees
+              {user?.role === 'parent' && selectedChild
+                ? `Pay for ${selectedChild.user?.firstName || 'Child'}`
+                : 'Pay School Fees'}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-y-auto">
@@ -883,6 +943,31 @@ export function FeesContent() {
         </Dialog>
       </div>
 
+      {/* Child selector for parents */}
+      {user?.role === 'parent' && parentChildren.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {parentChildren.map((child: any) => (
+            <div
+              key={child.id}
+              onClick={() => {
+                setSelectedChild(child);
+                setCurrentFeeAmount(null);
+                setStudentGrade(null);
+                setPaymentAmount('');
+              }}
+              className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                selectedChild?.id === child.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/40'
+              }`}
+            >
+              <p className="font-medium text-sm">{child.user.firstName} {child.user.lastName}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{child.studentId} · {child.class || 'No class'}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Term Payment Status */}
       {academicYears.length > 0 && (
         <Card>
@@ -905,7 +990,8 @@ export function FeesContent() {
                       const termPayment = payments.find(payment =>
                         payment.term === term &&
                         payment.academicYearId === academicYear.id.toString() &&
-                        payment.status === 'paid'
+                        payment.status === 'paid' &&
+                        (user?.role !== 'parent' || !selectedChild || payment.studentId === selectedChild.id)
                       );
                       return (
                         <div key={term} className="flex items-center gap-2 text-sm">

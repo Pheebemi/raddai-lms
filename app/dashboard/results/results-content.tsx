@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock } from 'lucide-react';
+import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock, Users } from 'lucide-react';
 import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
@@ -34,10 +34,27 @@ export function ResultsContent() {
   const [isExporting, setIsExporting] = useState(false);
   const [visibleTerms, setVisibleTerms] = useState<Set<string>>(new Set(['first', 'second', 'third']));
   const [anyTermVisible, setAnyTermVisible] = useState<boolean | null>(null);
+  const [parentChildren, setParentChildren] = useState<any[]>([]);
+  const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchResults = async () => {
       try {
+        // Load parent's children
+        if (user?.role === 'parent') {
+          try {
+            const parents = await usersApi.getParents();
+            const me = parents.find((p: any) => p.user.id === user.id);
+            const children = me?.children || [];
+            setParentChildren(children);
+            if (children.length > 0) setSelectedChildId(children[0].id);
+            else { setIsLoading(false); return; }
+          } catch {
+            setIsLoading(false);
+            return;
+          }
+        }
+
         if (user?.role === 'student') {
           const years = await fetchAcademicYears();
           const active = years.find((y: any) => y.is_active) || years[0];
@@ -84,8 +101,13 @@ export function ResultsContent() {
       filtered = filtered.filter(result => visibleTerms.has(result.term));
     }
 
+    // For parents, filter by selected child
+    if (user?.role === 'parent' && selectedChildId) {
+      filtered = filtered.filter(result => result.studentId === selectedChildId);
+    }
+
     setFilteredResults(filtered);
-  }, [results, selectedTerm, selectedYear, visibleTerms, user]);
+  }, [results, selectedTerm, selectedYear, visibleTerms, user, selectedChildId]);
 
   // Load class rankings when filters change (for PNG download)
   useEffect(() => {
@@ -584,6 +606,29 @@ export function ResultsContent() {
     }
   };
 
+  // Parent with no children linked
+  if (user?.role === 'parent' && !isLoading && parentChildren.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-semibold tracking-tight">Academic Results</h1>
+          <p className="text-muted-foreground">View your children's academic performance</p>
+        </div>
+        <Card className="border border-border rounded-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-20 gap-4">
+            <div className="w-16 h-16 bg-muted rounded-2xl flex items-center justify-center">
+              <Users className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <h2 className="text-xl font-semibold">No Child Attached Yet</h2>
+            <p className="text-sm text-muted-foreground text-center max-w-sm">
+              No children have been linked to your account yet. Please contact the school administration.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   // Results hidden by management
   if (anyTermVisible === false && user?.role === 'student') {
     return (
@@ -656,6 +701,26 @@ export function ResultsContent() {
           )}
         </div>
       </div>
+
+      {/* Child selector for parents */}
+      {user?.role === 'parent' && parentChildren.length > 0 && (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          {parentChildren.map((child: any) => (
+            <div
+              key={child.id}
+              onClick={() => setSelectedChildId(child.id)}
+              className={`cursor-pointer p-4 rounded-2xl border transition-all ${
+                selectedChildId === child.id
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border hover:border-primary/40'
+              }`}
+            >
+              <p className="font-medium text-sm">{child.user.firstName} {child.user.lastName}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">{child.studentId} · {child.class || 'No class'}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Filters */}
       <Card>
