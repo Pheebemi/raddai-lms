@@ -34,6 +34,14 @@ export function ParentsManagementContent() {
     username: '', password: '', phone: '', occupation: '',
   });
 
+  // Link children state
+  const [allStudents, setAllStudents] = useState<any[]>([]);
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkingParent, setLinkingParent] = useState<Parent | null>(null);
+  const [selectedChildren, setSelectedChildren] = useState<string[]>([]);
+  const [linking, setLinking] = useState(false);
+  const [studentSearch, setStudentSearch] = useState('');
+
   useEffect(() => {
     const fetchParents = async () => {
       try {
@@ -50,6 +58,23 @@ export function ParentsManagementContent() {
 
     fetchParents();
   }, []);
+
+  useEffect(() => {
+    usersApi.getStudents().then(setAllStudents).catch(() => {});
+  }, []);
+
+  const openLinkDialog = (parent: Parent) => {
+    setLinkingParent(parent);
+    setSelectedChildren(parent.children?.map(c => c.id) || []);
+    setStudentSearch('');
+    setLinkDialogOpen(true);
+  };
+
+  const toggleChild = (studentId: string) => {
+    setSelectedChildren(prev =>
+      prev.includes(studentId) ? prev.filter(id => id !== studentId) : [...prev, studentId]
+    );
+  };
 
   // Filter parents based on search
   const filteredParents = parents.filter(parent => {
@@ -228,10 +253,88 @@ export function ParentsManagementContent() {
                   Call
                 </Button>
               </div>
+              <Button size="sm" variant="tonal" className="w-full" onClick={() => openLinkDialog(parent)}>
+                <Heart className="h-3 w-3 mr-1" />
+                Link Children ({parent.children?.length || 0})
+              </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Link Children Dialog */}
+      <Dialog open={linkDialogOpen} onOpenChange={setLinkDialogOpen}>
+        <DialogContent className="max-w-md max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle>
+              Link Children — {linkingParent?.user.firstName} {linkingParent?.user.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 flex-1 overflow-hidden flex flex-col">
+            <Input
+              placeholder="Search students..."
+              value={studentSearch}
+              onChange={e => setStudentSearch(e.target.value)}
+            />
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {allStudents
+                .filter(s =>
+                  `${s.user.firstName} ${s.user.lastName}`.toLowerCase().includes(studentSearch.toLowerCase()) ||
+                  s.studentId?.toLowerCase().includes(studentSearch.toLowerCase())
+                )
+                .map(student => {
+                  const selected = selectedChildren.includes(student.id);
+                  return (
+                    <div
+                      key={student.id}
+                      onClick={() => toggleChild(student.id)}
+                      className={`flex items-center gap-3 p-3 rounded-xl border cursor-pointer transition-all ${
+                        selected ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/40'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 ${
+                        selected ? 'bg-primary border-primary' : 'border-muted-foreground'
+                      }`}>
+                        {selected && <span className="text-white text-xs">✓</span>}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">{student.user.firstName} {student.user.lastName}</p>
+                        <p className="text-xs text-muted-foreground">{student.studentId} · {student.class || 'No class'}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              {allStudents.length === 0 && (
+                <p className="text-sm text-muted-foreground text-center py-4">No students found</p>
+              )}
+            </div>
+            <p className="text-xs text-muted-foreground">{selectedChildren.length} student{selectedChildren.length !== 1 ? 's' : ''} selected</p>
+          </div>
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setLinkDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={linking}
+              onClick={async () => {
+                if (!linkingParent) return;
+                setLinking(true);
+                try {
+                  await usersApi.linkChildren(linkingParent.id, selectedChildren);
+                  toast.success('Children updated successfully');
+                  setLinkDialogOpen(false);
+                  const data = await usersApi.getParents();
+                  setParents(data);
+                } catch {
+                  toast.error('Failed to update children');
+                } finally {
+                  setLinking(false);
+                }
+              }}
+            >
+              {linking ? 'Saving...' : 'Save'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Add Parent Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
