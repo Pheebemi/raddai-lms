@@ -178,11 +178,12 @@ export function ResultsContent() {
 
   // Get student's ranking position (match by Student profile ID)
   const getStudentRanking = (): StudentRanking | null => {
-    if (!classRankings || !user?.profile?.id) return null;
+    if (!classRankings) return null;
+    const lookupId = user?.role === 'parent' ? selectedChildId : user?.profile?.id;
+    if (!lookupId) return null;
     return (
       classRankings.rankings.find(
-        (ranking: StudentRanking) =>
-          String(ranking.student_id) === String(user.profile?.id)
+        (ranking: StudentRanking) => String(ranking.student_id) === String(lookupId)
       ) || null
     );
   };
@@ -316,9 +317,10 @@ export function ResultsContent() {
               academicYearId
             );
 
-            // Match by student profile ID (backend returns student.id which is the Student model ID)
+            // For parents use selected child's ID; for students use own profile ID
+            const rankingStudentId = user?.role === 'parent' ? selectedChildId : user.profile?.id;
             const studentRanking = termRankings.rankings.find(
-              (r: StudentRanking) => String(r.student_id) === String(user.profile?.id)
+              (r: StudentRanking) => String(r.student_id) === String(rankingStudentId)
             );
             if (studentRanking) {
               const position = studentRanking.position;

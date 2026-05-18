@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -24,7 +24,6 @@ export function RankingsContent() {
   const [selectedTerm, setSelectedTerm] = useState<string>('first');
   const [selectedYear, setSelectedYear] = useState<string>('');
   const [isLoadingRankings, setIsLoadingRankings] = useState(false);
-  const isFetchingRef = useRef(false);
 
   useEffect(() => {
     const fetchInitialData = async () => {
@@ -132,33 +131,21 @@ export function RankingsContent() {
     const fetchRankings = async () => {
       if (!selectedClass || !selectedTerm || !selectedYear) return;
 
-      // Don't fetch if we're still loading initial data
       if (classes.length === 0 || academicYears.length === 0) return;
 
-      // Don't fetch if already fetching
-      if (isFetchingRef.current) return;
-
       try {
-        isFetchingRef.current = true;
         setIsLoadingRankings(true);
         const rankingsData = await rankingsApi.getClassRankings(selectedClass, selectedTerm, selectedYear);
         setRankings(rankingsData);
       } catch (error) {
-        console.error('Failed to fetch rankings:', error);
         toast.error('Failed to load rankings. Please check your selections.');
         setRankings(null);
       } finally {
         setIsLoadingRankings(false);
-        isFetchingRef.current = false;
       }
     };
 
     fetchRankings();
-
-    // Cleanup function to reset ref if effect is cancelled
-    return () => {
-      isFetchingRef.current = false;
-    };
   }, [selectedClass, selectedTerm, selectedYear]);
 
   const getPositionIcon = (position: number) => {
