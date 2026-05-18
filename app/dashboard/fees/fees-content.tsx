@@ -161,9 +161,16 @@ export function FeesContent() {
     setIsFeeAmountLoading(true);
   }, [selectedChild?.id, user?.role]);
 
-  // Fetch fee amount from server whenever academic year changes in dialog
+  // Fetch fee amount from server whenever academic year or selected child changes
   useEffect(() => {
     if (!paymentData.academicYear) {
+      setCurrentFeeAmount(null);
+      setIsFeeAmountLoading(false);
+      return;
+    }
+
+    // For parents, wait until a child is selected before fetching
+    if (user?.role === 'parent' && !selectedChild?.id) {
       setCurrentFeeAmount(null);
       setIsFeeAmountLoading(false);
       return;
@@ -173,9 +180,7 @@ export function FeesContent() {
     const studentId = user?.role === 'parent' ? selectedChild?.id : undefined;
 
     getStudentTermFee(paymentData.academicYear, studentId)
-      .then(data => {
-        setCurrentFeeAmount(data.fee ?? null);
-      })
+      .then(data => setCurrentFeeAmount(data.fee ?? null))
       .catch(() => setCurrentFeeAmount(null))
       .finally(() => setIsFeeAmountLoading(false));
   }, [paymentData.academicYear, user?.role, selectedChild?.id]);
