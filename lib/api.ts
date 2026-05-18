@@ -1429,6 +1429,52 @@ export const usersApi = {
       })) || [],
     }));
   },
+
+  linkChildren: async (parentId: string, studentIds: string[]) => {
+    const response = await fetch(`${API_BASE_URL}/parents/${parentId}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ children: studentIds.map(Number) }),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  createParent: async (data: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    username: string;
+    password: string;
+    phone?: string;
+    occupation?: string;
+  }) => {
+    // 1. Create user account
+    const userResponse = await fetch(`${API_BASE_URL}/users/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        first_name: data.firstName,
+        last_name: data.lastName,
+        email: data.email,
+        username: data.username,
+        password: data.password,
+        phone_number: data.phone || '',
+        role: 'parent',
+      }),
+    });
+    const createdUser = await handleApiResponse<any>(userResponse);
+
+    // 2. Create parent profile
+    const parentResponse = await fetch(`${API_BASE_URL}/parents/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        user: createdUser.id,
+        occupation: data.occupation || '',
+      }),
+    });
+    return handleApiResponse<any>(parentResponse);
+  },
 };
 
 // Classes API

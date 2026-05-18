@@ -16,8 +16,9 @@ import {
   Phone,
   User,
   Heart,
-  Calendar
 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { usersApi } from '@/lib/api';
 import { Parent } from '@/types';
 import { toast } from 'sonner';
@@ -26,6 +27,12 @@ export function ParentsManagementContent() {
   const [parents, setParents] = useState<Parent[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState({
+    firstName: '', lastName: '', email: '',
+    username: '', password: '', phone: '', occupation: '',
+  });
 
   useEffect(() => {
     const fetchParents = async () => {
@@ -76,16 +83,10 @@ export function ParentsManagementContent() {
             Manage parent accounts and their children relationships
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Add Parent
-          </Button>
-          <Button variant="outline">
-            <Plus className="mr-2 h-4 w-4" />
-            Bulk Import
-          </Button>
-        </div>
+        <Button onClick={() => { setForm({ firstName: '', lastName: '', email: '', username: '', password: '', phone: '', occupation: '' }); setDialogOpen(true); }}>
+          <Plus className="mr-2 h-4 w-4" />
+          Add Parent
+        </Button>
       </div>
 
       {/* Stats Cards */}
@@ -231,6 +232,73 @@ export function ParentsManagementContent() {
           </Card>
         ))}
       </div>
+
+      {/* Add Parent Dialog */}
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add Parent</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label>First Name *</Label>
+                <Input placeholder="First name" value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
+              </div>
+              <div className="space-y-1">
+                <Label>Last Name *</Label>
+                <Input placeholder="Last name" value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label>Email *</Label>
+              <Input type="email" placeholder="Email address" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Username *</Label>
+              <Input placeholder="Username for login" value={form.username} onChange={e => setForm(f => ({ ...f, username: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Password *</Label>
+              <Input type="password" placeholder="Set a password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Phone</Label>
+              <Input placeholder="Phone number" value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div className="space-y-1">
+              <Label>Occupation</Label>
+              <Input placeholder="Occupation" value={form.occupation} onChange={e => setForm(f => ({ ...f, occupation: e.target.value }))} />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
+            <Button
+              disabled={saving}
+              onClick={async () => {
+                if (!form.firstName || !form.lastName || !form.email || !form.username || !form.password) {
+                  toast.error('Please fill in all required fields');
+                  return;
+                }
+                setSaving(true);
+                try {
+                  await usersApi.createParent(form);
+                  toast.success('Parent account created successfully');
+                  setDialogOpen(false);
+                  const data = await usersApi.getParents();
+                  setParents(data);
+                } catch {
+                  toast.error('Failed to create parent account');
+                } finally {
+                  setSaving(false);
+                }
+              }}
+            >
+              {saving ? 'Creating...' : 'Create Parent'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {filteredParents.length === 0 && (
         <Card>
