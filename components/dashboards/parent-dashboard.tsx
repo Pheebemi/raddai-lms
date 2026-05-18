@@ -1,317 +1,272 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/auth-context';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import Link from 'next/link';
 import {
-  Users,
-  DollarSign,
-  Calendar,
-  FileText,
-  CreditCard,
-  MessageSquare
+  Users, DollarSign, FileText, MessageSquare,
+  GraduationCap, CheckCircle, Clock, AlertCircle, ArrowRight, Bell,
 } from 'lucide-react';
-import { mockResults, mockFeeTransactions, mockAnnouncements, getMockParentByUserId } from '@/lib/mock-data';
+import { usersApi, feesApi, resultsApi, announcementsApi } from '@/lib/api';
+import { toast } from 'sonner';
 
 export function ParentDashboard() {
   const { user } = useAuth();
+  const [children, setChildren] = useState<any[]>([]);
+  const [payments, setPayments] = useState<any[]>([]);
+  const [results, setResults] = useState<any[]>([]);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const parent = user ? getMockParentByUserId(user.id) : null;
-
-  // Get data for all children
-  const childrenData = useMemo(() => {
-    if (!parent?.children) return [];
-    return parent.children.map(child => {
-      const results = mockResults.filter(r => r.studentId === child.id);
-      const fees = mockFeeTransactions.filter(ft => ft.studentId === child.id);
-
-      return {
-        ...child,
-        results,
-        fees,
-        attendancePercentage: 85, // Mock attendance - fixed value to avoid Math.random
-      };
-    });
-  }, [parent?.children]);
+  useEffect(() => {
+    if (!user) return;
+    const fetchData = async () => {
+      try {
+        const [parents, paymentsData, resultsData, announcementsData] = await Promise.all([
+          usersApi.getParents(),
+          feesApi.getPayments(),
+          resultsApi.getList(),
+          announcementsApi.getList().catch(() => []),
+        ]);
+        const me = parents.find((p: any) => p.user.id === user.id);
+        setChildren(me?.children || []);
+        setPayments(paymentsData);
+        setResults(resultsData);
+        setAnnouncements(announcementsData.slice(0, 3));
+      } catch {
+        toast.error('Failed to load dashboard data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchData();
+  }, [user]);
 
   if (!user) return null;
-  if (!parent || !parent.children.length) return null;
 
-  const totalPendingFees = childrenData.reduce((sum, child) =>
-    sum + child.fees.filter(f => f.status === 'pending' || f.status === 'overdue')
-      .reduce((feeSum, fee) => feeSum + fee.amount, 0), 0
-  );
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <div className="h-8 bg-muted rounded w-48 animate-pulse" />
+          <div className="h-4 bg-muted rounded w-64 mt-2 animate-pulse" />
+        </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1,2,3].map(i => <Card key={i} className="animate-pulse h-28 rounded-2xl" />)}
+        </div>
+      </div>
+    );
+  }
 
-  const recentAnnouncements = mockAnnouncements
-    .filter(a => a.targetRoles.includes('parent'))
-    .slice(0, 3);
+  // Summary stats
+  const totalChildren = children.length;
+  const totalPendingFees = payments
+    .filter(p => p.status === 'pending' || p.status === 'partial' || p.status === 'overdue')
+    .reduce((sum, p) => sum + ((p.totalAmount ?? p.amount) - p.amount), 0);
+  const totalPaidFees = payments
+    .filter(p => p.status === 'paid')
+    .reduce((sum, p) => sum + p.amount, 0);
+
+  const getChildSummary = (childId: string) => {
+    const childPayments = payments.filter(p => p.studentId === childId);
+    const childResults = results.filter(r => r.studentId === childId);
+    const paidTerms = ['first', 'second', 'third'].filter(term =>
+      childPayments.some(p => p.term === term && p.status === 'paid')
+    );
+    const avgPercentage = childResults.length > 0
+      ? Math.round(childResults.reduce((s, r) => s + r.percentage, 0) / childResults.length)
+      : null;
+    return { paidTerms, avgPercentage, resultCount: childResults.length };
+  };
 
   return (
     <div className="space-y-6">
-      {/* Welcome Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Welcome, {user.firstName}
-          </h1>
-          <p className="text-muted-foreground">
-            Monitor your {parent.children.length === 1 ? 'child&apos;s' : 'children&apos;s'} progress and stay connected.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button>
-            <DollarSign className="mr-2 h-4 w-4" />
-            Pay Fees
-          </Button>
-          <Button variant="outline">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Contact Teachers
-          </Button>
-        </div>
+
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-semibold tracking-tight">
+          Welcome, {user.firstName}
+        </h1>
+        <p className="text-muted-foreground mt-1">
+          Here's an overview of your {totalChildren > 1 ? 'children' : 'child'}'s progress
+        </p>
       </div>
 
-      {/* Children Overview */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {childrenData.map((child) => (
-          <Card key={child.id} className="relative">
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-3">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={child.user.avatar} />
-                  <AvatarFallback>
-                    {child.user.firstName[0]}{child.user.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
-                <div>
-                  <CardTitle className="text-lg">{child.user.firstName} {child.user.lastName}</CardTitle>
-                  <CardDescription>Class {child.class}-{child.section} • Roll No: {child.rollNumber}</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-center">
-                <div className="space-y-1">
-                  <p className="text-2xl font-bold text-green-600">{child.attendancePercentage}%</p>
-                  <p className="text-xs text-muted-foreground">Attendance</p>
-                </div>
-                <div className="space-y-1">
-                  <p className="text-2xl font-bold text-primary">
-                    {child.results.length > 0 ? child.results[0].grade : 'N/A'}
-                  </p>
-                  <p className="text-xs text-muted-foreground">Latest Grade</p>
-                </div>
-              </div>
-              <div className="space-y-2">
-                <div className="flex justify-between text-sm">
-                  <span>Performance</span>
-                  <span>{child.results.length > 0 ? 'Good' : 'No data'}</span>
-                </div>
-                <Progress
-                  value={child.results.length > 0 ? 85 : 0}
-                  className="h-2"
-                />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      {/* Summary cards */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Total Children</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{parent.children.length}</div>
-            <p className="text-xs text-muted-foreground">
-              Enrolled in school
-            </p>
+            <div className="text-2xl font-bold">{totalChildren}</div>
+            <p className="text-xs text-muted-foreground">Enrolled in school</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Fees Paid</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₦{totalPendingFees.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              Across all children
-            </p>
+            <div className="text-2xl font-bold text-primary">₦{totalPaidFees.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">Across all children</p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Attendance</CardTitle>
-            <Calendar className="h-4 w-4 text-muted-foreground" />
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {Math.round(childrenData.reduce((sum, child) => sum + child.attendancePercentage, 0) / childrenData.length)}%
+            <div className={`text-2xl font-bold ${totalPendingFees > 0 ? 'text-destructive' : 'text-primary'}`}>
+              ₦{totalPendingFees.toLocaleString()}
             </div>
-            <p className="text-xs text-muted-foreground">
-              This month
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Recent Results</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {childrenData.reduce((sum, child) => sum + child.results.length, 0)}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Total results uploaded
-            </p>
+            <p className="text-xs text-muted-foreground">Outstanding balance</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Detailed View with Tabs */}
-      <Tabs defaultValue={parent.children[0]?.id} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2 lg:grid-cols-3">
-          {parent.children.map((child) => (
-            <TabsTrigger key={child.id} value={child.id} className="text-sm">
-              {child.user.firstName}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+      {/* No children state */}
+      {totalChildren === 0 && (
+        <Card className="border border-border rounded-2xl">
+          <CardContent className="flex flex-col items-center justify-center py-16 gap-4">
+            <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center">
+              <Users className="h-7 w-7 text-muted-foreground" />
+            </div>
+            <h2 className="text-lg font-semibold">No Child Attached Yet</h2>
+            <p className="text-sm text-muted-foreground text-center max-w-xs">
+              No children have been linked to your account. Contact the school administration.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
-        {parent.children.map((child) => {
-          const childData = childrenData.find(c => c.id === child.id);
-          if (!childData) return null;
-
-          return (
-            <TabsContent key={child.id} value={child.id} className="space-y-4">
-              <div className="grid gap-6 md:grid-cols-2">
-                {/* Recent Results */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Results</CardTitle>
-                    <CardDescription>
-                      {child.user.firstName}&apos;s latest academic performance
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {childData.results.length > 0 ? (
-                        childData.results.slice(0, 3).map((result) => (
-                          <div key={result.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                              <p className="font-medium">
-                                {result.subjectId === 'sub-1' ? 'Mathematics' :
-                                 result.subjectId === 'sub-2' ? 'Physics' : 'Chemistry'}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                Term {result.term} • {result.academicYear}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant={result.grade === 'A+' ? 'default' : 'secondary'}>
-                                {result.grade}
-                              </Badge>
-                              <p className="text-sm font-medium mt-1">{result.marks_obtained}/{result.total_marks}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-6 text-muted-foreground">
-                          <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No results available yet</p>
-                        </div>
+      {/* Children cards */}
+      {totalChildren > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">My Children</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {children.map((child: any) => {
+              const { paidTerms, avgPercentage, resultCount } = getChildSummary(child.id);
+              return (
+                <Card key={child.id} className="border border-border rounded-2xl hover:shadow-sm transition-all">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 bg-primary/10 rounded-2xl flex items-center justify-center shrink-0">
+                        <GraduationCap className="h-5 w-5 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <CardTitle className="text-base truncate">
+                          {child.user.firstName} {child.user.lastName}
+                        </CardTitle>
+                        <p className="text-xs text-muted-foreground">
+                          {child.studentId} · {child.class || 'No class'}
+                        </p>
+                      </div>
+                      {avgPercentage !== null && (
+                        <Badge variant="secondary" className="shrink-0">{avgPercentage}% avg</Badge>
                       )}
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {/* Fee status */}
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {['first', 'second', 'third'].map(term => {
+                        const paid = paidTerms.includes(term);
+                        return (
+                          <div key={term} className={`rounded-xl p-2 text-center text-xs ${paid ? 'bg-primary/10' : 'bg-muted'}`}>
+                            {paid
+                              ? <CheckCircle className="h-3.5 w-3.5 text-primary mx-auto mb-1" />
+                              : <Clock className="h-3.5 w-3.5 text-muted-foreground mx-auto mb-1" />
+                            }
+                            <p className="capitalize font-medium leading-none">{term}</p>
+                            <p className={`text-xs mt-0.5 ${paid ? 'text-primary' : 'text-muted-foreground'}`}>
+                              {paid ? 'Paid' : 'Unpaid'}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Results count */}
+                    <div className="flex items-center justify-between text-sm bg-muted rounded-xl px-3 py-2">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <FileText className="h-3.5 w-3.5" />
+                        Results uploaded
+                      </div>
+                      <span className="font-medium">{resultCount}</span>
                     </div>
                   </CardContent>
                 </Card>
-
-                {/* Fee Status */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Fee Status</CardTitle>
-                    <CardDescription>
-                      Payment overview for {child.user.firstName}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-4">
-                      {childData.fees.length > 0 ? (
-                        childData.fees.slice(0, 3).map((fee) => (
-                          <div key={fee.id} className="flex items-center justify-between p-3 border rounded-lg">
-                            <div>
-                              <p className="font-medium">{fee.feeStructureId === 'fee-1' ? 'Tuition Fee' : 'Other Fee'}</p>
-                              <p className="text-sm text-muted-foreground">
-                                Due: {new Date(fee.dueDate).toLocaleDateString()}
-                              </p>
-                            </div>
-                            <div className="text-right">
-                              <Badge variant={
-                                fee.status === 'paid' ? 'default' :
-                                fee.status === 'overdue' ? 'destructive' : 'secondary'
-                              }>
-                                {fee.status}
-                              </Badge>
-                              <p className="text-sm font-medium mt-1">₦{fee.amount}</p>
-                            </div>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="text-center py-6 text-muted-foreground">
-                          <CreditCard className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">No fee records available</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </TabsContent>
-          );
-        })}
-      </Tabs>
-
-      {/* Announcements */}
-      <Card>
-        <CardHeader>
-          <CardTitle>School Announcements</CardTitle>
-          <CardDescription>
-            Latest updates from the school
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {recentAnnouncements.map((announcement) => (
-              <div key={announcement.id} className="flex gap-3 p-4 border rounded-lg">
-                <div className={`h-3 w-3 rounded-full mt-1 ${
-                  announcement.priority === 'high' ? 'bg-destructive' :
-                  announcement.priority === 'medium' ? 'bg-accent-foreground' : 'bg-primary'
-                }`} />
-                <div className="flex-1">
-                  <p className="font-medium">{announcement.title}</p>
-                  <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                    {announcement.content}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-2">
-                    {new Date(announcement.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      )}
+
+      {/* Quick links + Announcements */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Quick Actions</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {[
+              { label: 'View Results', href: '/dashboard/results', icon: FileText },
+              { label: 'Pay Fees', href: '/dashboard/fees', icon: DollarSign },
+              { label: 'My Children', href: '/parent/children', icon: Users },
+              { label: 'Announcements', href: '/announcements', icon: MessageSquare },
+            ].map(({ label, href, icon: Icon }) => (
+              <Link
+                key={label}
+                href={href}
+                className="flex items-center justify-between p-3 rounded-xl bg-muted hover:bg-secondary transition-colors"
+              >
+                <div className="flex items-center gap-2">
+                  <Icon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{label}</span>
+                </div>
+                <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+              </Link>
+            ))}
+          </CardContent>
+        </Card>
+
+        <Card className="border border-border rounded-2xl">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">Announcements</CardTitle>
+              <Bell className="h-4 w-4 text-muted-foreground" />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {announcements.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-4">No announcements</p>
+            ) : (
+              announcements.map((a: any) => (
+                <div key={a.id} className="flex gap-3 p-3 bg-muted rounded-xl">
+                  <div className={`w-2 h-2 rounded-full mt-1.5 shrink-0 ${
+                    a.priority === 'urgent' || a.priority === 'high' ? 'bg-destructive' :
+                    a.priority === 'medium' ? 'bg-accent-foreground' : 'bg-primary'
+                  }`} />
+                  <div>
+                    <p className="text-sm font-medium">{a.title}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{a.content}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
     </div>
   );
 }
