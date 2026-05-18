@@ -207,20 +207,11 @@ export function FinanceManagementContent() {
     );
   }
 
-  // Calculate financial metrics from transactions data (matching Django backend logic)
-  const totalRevenueFromTransactions = transactions
-    .filter(t => t.status === 'paid')
-    .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
-
-  // Django calculates pending fees as sum of total_amount for pending/overdue payments
-  const pendingFeesFromTransactions = transactions
-    .filter(t => t.status === 'pending' || t.status === 'overdue')
-    .reduce((sum, t) => sum + (t.totalAmount || t.amount), 0);
-
-  // Use dashboard stats as primary (they come from Django backend), fallback to our calculations
-  const totalRevenue = Number(stats?.totalRevenue) || totalRevenueFromTransactions || 0;
-  const pendingFees = Number(stats?.pendingFees) || pendingFeesFromTransactions || 0;
-  const totalExpected = totalRevenue + pendingFees;
+  // All from server — Django calculates these correctly
+  const totalRevenue = Number(stats?.totalRevenue) || 0;
+  const pendingFees = Number(stats?.pendingFees) || 0;
+  // total_expected = sum of (students_per_grade × fee × 3 terms) for active year
+  const totalExpected = Number((stats as any)?.total_expected) || (totalRevenue + pendingFees);
   const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
 
   // Group transactions by status
@@ -428,7 +419,10 @@ export function FinanceManagementContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {transactions.slice(0, 5).map((transaction) => (
+                {[...transactions]
+                  .sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime())
+                  .slice(0, 5)
+                  .map((transaction) => (
                   <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
                     <div className="flex items-center gap-3">
                       <Avatar className="h-10 w-10">
@@ -473,7 +467,9 @@ export function FinanceManagementContent() {
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                {transactions.map((transaction) => (
+                {[...transactions]
+                  .sort((a, b) => new Date(b.paymentDate || 0).getTime() - new Date(a.paymentDate || 0).getTime())
+                  .map((transaction) => (
                   <div key={transaction.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50">
                     <div className="flex items-center gap-4">
                       <div className={`w-3 h-3 rounded-full ${
