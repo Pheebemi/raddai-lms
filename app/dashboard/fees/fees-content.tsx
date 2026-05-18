@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/table';
 import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
-import { feesApi, feeStructureApi, classesApi, dashboardApi, usersApi, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
+import { feesApi, feeStructureApi, classesApi, dashboardApi, usersApi, getStudentTermFee, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
 import { toast } from 'sonner';
 
@@ -34,6 +34,7 @@ export function FeesContent() {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [studentGrade, setStudentGrade] = useState<number | null>(null);
+  const [serverFeeAmount, setServerFeeAmount] = useState<number | null>(null);
   const [serverPendingFees, setServerPendingFees] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(true);
   const [parentChildren, setParentChildren] = useState<any[]>([]);
@@ -47,7 +48,9 @@ export function FeesContent() {
   // Get fee amount for student's grade and academic year
   // Returns null when we cannot reliably determine the configured fee
   const getFeeAmount = (term: string, academicYear: string): number | null => {
-    // Use grade resolved directly from the classes API — no fragile string parsing
+    // Server already calculated the exact fee — use it directly, no closure issues
+    if (serverFeeAmount !== null) return serverFeeAmount;
+
     if (studentGrade === null) return null;
 
     const feeStructure = feeStructures.find(fs =>
@@ -56,12 +59,7 @@ export function FeesContent() {
       String(fs.academicYearId) === String(academicYear)
     );
 
-    if (!feeStructure) {
-      return null;
-    }
-
-    const result = feeStructure.amount;
-    return result;
+    return feeStructure?.amount ?? null;
   };
 
   // Payment form state
@@ -99,6 +97,9 @@ export function FeesContent() {
         setAcademicYears(yearsData);
         setFeeStructures(feeStructuresData);
         if (statsData?.pendingFees) setServerPendingFees(Number(statsData.pendingFees));
+        if (statsData?.per_term_fee && statsData.per_term_fee > 0) {
+          setServerFeeAmount(Number(statsData.per_term_fee));
+        }
 
         // Load parent children if parent role
         if (user?.role === 'parent') {
@@ -152,18 +153,15 @@ export function FeesContent() {
     fetchData();
   }, [logout]);
 
-  // When parent switches child, resolve the new child's grade
+  // When parent switches child, reset fee amount so it re-fetches
   useEffect(() => {
-    if (user?.role !== 'parent' || !selectedChild) return;
-    setStudentGrade(null);
+    if (user?.role !== 'parent') return;
     setCurrentFeeAmount(null);
-    classesApi.getAll().then(classesData => {
-      const cls = classesData.find((c: any) => String(c.id) === String(selectedChild.classId));
-      if (cls) setStudentGrade(cls.grade);
-    }).catch(() => {});
-  }, [selectedChild, user?.role]);
+    setServerFeeAmount(null);
+    setIsFeeAmountLoading(true);
+  }, [selectedChild?.id, user?.role]);
 
-  // Get current full fee amount for the term (target total for that term)
+  // Fetch fee amount from server whenever academic year changes in dialog
   useEffect(() => {
     if (!paymentData.academicYear) {
       setCurrentFeeAmount(null);
@@ -171,17 +169,16 @@ export function FeesContent() {
       return;
     }
 
-    // Still fetching fee structures — show spinner and wait
-    if (isLoading || feeStructures.length === 0) {
-      setIsFeeAmountLoading(true);
-      return;
-    }
-
     setIsFeeAmountLoading(true);
-    const amount = getFeeAmount(paymentData.term, paymentData.academicYear);
-    setCurrentFeeAmount(amount);
-    setIsFeeAmountLoading(false);
-  }, [paymentData.term, paymentData.academicYear, feeStructures, studentGrade, isLoading]);
+    const studentId = user?.role === 'parent' ? selectedChild?.id : undefined;
+
+    getStudentTermFee(paymentData.academicYear, studentId)
+      .then(data => {
+        setCurrentFeeAmount(data.fee ?? null);
+      })
+      .catch(() => setCurrentFeeAmount(null))
+      .finally(() => setIsFeeAmountLoading(false));
+  }, [paymentData.academicYear, user?.role, selectedChild?.id]);
 
   // Handle redirect back from Flutterwave
   useEffect(() => {
@@ -246,11 +243,12 @@ export function FeesContent() {
     term: paymentData.term
   });
 
-  // Existing payment record for the selected term/year (if any)
+  // Existing payment record for the selected term/year (filtered by child for parents)
   const currentTermPayment = payments.find(
     (payment) =>
       payment.term === paymentData.term &&
-      payment.academicYearId === paymentData.academicYear
+      payment.academicYearId === paymentData.academicYear &&
+      (user?.role !== 'parent' || !selectedChild || payment.studentId === selectedChild.id)
   );
 
   const alreadyPaid = currentTermPayment?.amount ?? 0;
@@ -737,7 +735,8 @@ export function FeesContent() {
                       const isPaid = payments.some(payment =>
                         payment.term === term &&
                         payment.academicYearId === paymentData.academicYear &&
-                        payment.status === 'paid'
+                        payment.status === 'paid' &&
+                        (user?.role !== 'parent' || !selectedChild || payment.studentId === selectedChild.id)
                       );
                       return (
                         <SelectItem

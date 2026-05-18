@@ -978,6 +978,15 @@ export const academicYearsApi = {
   },
 };
 
+export const getStudentTermFee = async (academicYearId: string, studentId?: string) => {
+  const params = new URLSearchParams({ academic_year: academicYearId });
+  if (studentId) params.append('student_id', studentId);
+  const response = await fetch(`${API_BASE_URL}/fees/student-term-fee/?${params}`, {
+    headers: getAuthHeaders(),
+  });
+  return handleApiResponse<any>(response);
+};
+
 export const toggleResultsVisibility = async (
   academicYearId: string,
   visible: boolean,

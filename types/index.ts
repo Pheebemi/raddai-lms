@@ -230,6 +230,8 @@ export interface DashboardStats {
   totalStaff?: number;
   totalRevenue?: number;
   pendingFees?: number;
+  per_term_fee?: number;
+  academic_year_id?: number;
   averageAttendance?: number;
   topPerformers?: Student[];
   recentResults?: Result[];
