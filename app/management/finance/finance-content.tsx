@@ -287,7 +287,7 @@ export function FinanceManagementContent() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [transactions, setTransactions] = useState<FeeTransaction[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('this_month');
+  const [selectedYear, setSelectedYear] = useState<string>('active');
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
@@ -320,10 +320,8 @@ export function FinanceManagementContent() {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-
-        // Fetch dashboard stats, fee transactions, fee structures, and academic years
         const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData] = await Promise.all([
-          dashboardApi.getStats(),
+          dashboardApi.getStats(selectedYear === 'all' ? 'all' : selectedYear === 'active' ? undefined : selectedYear),
           feesApi.getPayments(),
           feeStructureApi.getAll(),
           fetchAcademicYears(),
@@ -334,6 +332,10 @@ export function FinanceManagementContent() {
         setTransactions(feeTransactions);
         setFeeStructures(feeStructuresData);
         setAcademicYears(academicYearsData);
+        if (selectedYear === 'active') {
+          const active = academicYearsData.find((y: any) => y.is_active);
+          if (active) setSelectedYear(active.id.toString());
+        }
         setClasses(classesData);
       } catch (error: any) {
         const message = handleApiError(error);
@@ -344,7 +346,7 @@ export function FinanceManagementContent() {
     };
 
     fetchFinanceData();
-  }, []);
+  }, [selectedYear]);
 
   const openCreateStructureDialog = () => {
     setEditingStructure(null);
@@ -454,8 +456,7 @@ export function FinanceManagementContent() {
   // All from server — Django calculates these correctly
   const totalRevenue = Number(stats?.totalRevenue) || 0;
   const pendingFees = Number(stats?.pendingFees) || 0;
-  // total_expected = sum of (students_per_grade × fee × 3 terms) for active year
-  const totalExpected = Number((stats as any)?.total_expected) || (totalRevenue + pendingFees);
+  const totalExpected = Number(stats?.total_expected) || (totalRevenue + pendingFees);
   const collectionRate = totalExpected > 0 ? Math.round((totalRevenue / totalExpected) * 100) : 0;
 
   // Group transactions by status
@@ -463,8 +464,8 @@ export function FinanceManagementContent() {
   const pendingTransactions = transactions.filter(t => t.status === 'pending');
   const overdueTransactions = transactions.filter(t => t.status === 'overdue');
 
-  // Real overdue = actual outstanding balance on overdue records
-  const overdueAmount = overdueTransactions.reduce((sum, t) => {
+  // Use server-calculated overdue (from previous unpaid years)
+  const overdueAmount = Number(stats?.overdue_amount) || overdueTransactions.reduce((sum, t) => {
     const outstanding = Math.max((t.totalAmount ?? t.amount) - t.amount, 0);
     return sum + outstanding;
   }, 0);
@@ -498,25 +499,29 @@ export function FinanceManagementContent() {
         </div>
       </div>
 
-      {/* Period Filter */}
+      {/* Academic Year Filter */}
       <Card>
         <CardContent className="pt-6">
           <div className="flex items-center gap-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Time Period</label>
-              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+              <label className="text-sm font-medium">Academic Year</label>
+              <Select value={selectedYear} onValueChange={setSelectedYear}>
                 <SelectTrigger className="w-48">
-                  <SelectValue />
+                  <SelectValue placeholder="Select year" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="this_month">This Month</SelectItem>
-                  <SelectItem value="last_month">Last Month</SelectItem>
-                  <SelectItem value="this_term">This Term</SelectItem>
-                  <SelectItem value="this_year">This Year</SelectItem>
-                  <SelectItem value="all_time">All Time</SelectItem>
+                  <SelectItem value="all">All Time</SelectItem>
+                  {academicYears.map((y: any) => (
+                    <SelectItem key={y.id} value={y.id.toString()}>
+                      {y.name}{y.is_active ? ' (Active)' : ''}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+            <p className="text-sm text-muted-foreground self-end">
+              {selectedYear === 'all' ? 'Showing all-time data' : `Showing data for selected academic year`}
+            </p>
           </div>
         </CardContent>
       </Card>

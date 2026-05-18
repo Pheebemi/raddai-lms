@@ -232,6 +232,8 @@ export interface DashboardStats {
   pendingFees?: number;
   per_term_fee?: number;
   academic_year_id?: number;
+  overdue_amount?: number;
+  total_expected?: number;
   averageAttendance?: number;
   topPerformers?: Student[];
   recentResults?: Result[];

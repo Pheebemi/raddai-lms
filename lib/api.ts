@@ -115,8 +115,11 @@ export const authApi = {
 
 // Dashboard API
 export const dashboardApi = {
-  getStats: async (): Promise<DashboardStats> => {
-    const response = await fetch(`${API_BASE_URL}/dashboard/stats/`, {
+  getStats: async (academicYear?: string): Promise<DashboardStats> => {
+    const url = academicYear && academicYear !== 'active'
+      ? `${API_BASE_URL}/dashboard/stats/?academic_year=${academicYear}`
+      : `${API_BASE_URL}/dashboard/stats/`;
+    const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
     const data = await handleApiResponse<any>(response);
