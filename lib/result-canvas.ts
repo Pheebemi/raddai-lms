@@ -157,22 +157,7 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
   ctx.fillText(`Total Marks Obtained: ${totalMarks}  |  Average Score: ${avg}%`, marginLeft, y + 30);
   y += 80;
 
-  // Grading key
-  ctx.font = 'bold 30px serif';
-  ctx.fillText('GRADING KEY:', marginLeft, y);
-  y += 40;
-  ctx.font = '26px serif';
-  const gradeKeys = ['A+ (90-100)', 'A (80-89)', 'B+ (70-79)', 'B (60-69)', 'C+ (50-59)', 'C (40-49)', 'D (30-39)', 'F (Below 30)'];
-  for (let row = 0; row < 2; row++) {
-    let gx = marginLeft;
-    for (let col = 0; col < 4; col++) {
-      const idx = row * 4 + col;
-      if (idx < gradeKeys.length) ctx.fillText(gradeKeys[idx], gx, y);
-      gx += contentWidth / 4;
-    }
-    y += 40;
-  }
-  y += 40;
+  y += 20;
 
   // Remarks
   const remarks = opts.rows.filter(r => r.remarks).map(r => `${r.subjectName}: ${r.remarks}`).join(', ');

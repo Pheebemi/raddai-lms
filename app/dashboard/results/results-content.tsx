@@ -518,29 +518,7 @@ export function ResultsContent() {
       ctx.fillText(`Total Marks Obtained: ${totalMarksSummary}  |  Average Score: ${averagePercentage}%`, marginLeft, y + 30);
       y += 80;
 
-      // --- Grading Key ---
-      ctx.font = 'bold 30px serif';
-      ctx.fillText('GRADING KEY:', marginLeft, y);
-      y += 40;
-      ctx.font = '26px serif';
-      const grades = [
-        'A+ (90-100)',  'A (80-89)',  'B+ (70-79)',  'B (60-69)',
-        'C+ (50-59)',   'C (40-49)',  'D (30-39)',   'F (Below 30)',
-      ];
-      // Draw in two rows of four
-      for (let row = 0; row < 2; row++) {
-        let gx = marginLeft;
-        for (let col = 0; col < 4; col++) {
-          const idx = row * 4 + col;
-          if (idx < grades.length) {
-            ctx.fillText(grades[idx], gx, y);
-          }
-          gx += contentWidth / 4;
-        }
-        y += 40;
-      }
-
-      y += 40;
+      y += 20;
 
       // --- Remarks ---
       const remarksText = termResults
