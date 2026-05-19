@@ -281,199 +281,183 @@ export function FeesContent() {
       canvas.width = width;
       canvas.height = height;
 
-      // Background gradient for a modern look
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, '#f3f4ff');
-      gradient.addColorStop(0.4, '#ffffff');
-      gradient.addColorStop(1, '#f9fafb');
-      ctx.fillStyle = gradient;
+      // White background
+      ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, width, height);
 
-      ctx.fillStyle = '#0f172a';
+      const marginX = 140;
+      let y = 100;
+
+      // --- Logo ---
+      const lSize = 220;
+      await new Promise<void>(resolve => {
+        const logoImg = new window.Image();
+        logoImg.onload = () => {
+          ctx.drawImage(logoImg, width / 2 - lSize / 2, y, lSize, lSize);
+          resolve();
+        };
+        logoImg.onerror = () => resolve();
+        logoImg.src = '/logo.png';
+      });
+      y += lSize + 60;
+
+      // --- School Name ---
       ctx.textAlign = 'center';
-
-      let y = 120;
-
-      // Card-style header
-      const cardPaddingX = 120;
-      const cardWidth = width - cardPaddingX * 2;
-      const headerHeight = 260;
-
-      // Header card shadow
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillRect(cardPaddingX - 8, y - 40, cardWidth + 16, headerHeight + 16);
-
-      // Header card background
-      const headerGradient = ctx.createLinearGradient(
-        cardPaddingX,
-        y - 40,
-        cardPaddingX + cardWidth,
-        y + headerHeight
-      );
-      headerGradient.addColorStop(0, '#111827');
-      headerGradient.addColorStop(1, '#1f2937');
-      ctx.fillStyle = headerGradient;
-      ctx.fillRect(cardPaddingX, y - 40, cardWidth, headerHeight);
-
-      // School header text
-      ctx.fillStyle = '#e5e7eb';
-      ctx.font = 'bold 60px Arial';
-      ctx.fillText('LAAZEERE ACADEMY', width / 2, y + 10);
+      ctx.font = 'bold 72px serif';
+      ctx.fillStyle = '#000000';
+      ctx.fillText('LAAZEERE ACADEMY', width / 2, y);
       y += 60;
 
-      ctx.font = '36px Arial';
-      ctx.fillStyle = '#9ca3af';
-      ctx.fillText('JALINGO', width / 2, y + 6);
-      y += 70;
+      ctx.font = '40px serif';
+      ctx.fillStyle = '#374151';
+      ctx.fillText('Samunaka Sabon Gari, Jalingo, Taraba State', width / 2, y);
+      y += 46;
 
-      // Receipt title + badge
-      ctx.font = 'bold 46px Arial';
-      ctx.fillStyle = '#e5e7eb';
-      ctx.fillText('SCHOOL FEES RECEIPT', width / 2, y + 10);
-      y += 70;
+      ctx.font = '36px serif';
+      ctx.fillText('Tel: 08066115707 | 09060405589', width / 2, y);
+      y += 60;
 
-      // Term/session pill
-      ctx.font = '28px Arial';
-      ctx.fillStyle = '#d1d5db';
+      // Divider
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(width - marginX, y);
+      ctx.stroke();
+      y += 10;
+
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(width - marginX, y);
+      ctx.stroke();
+      y += 50;
+
+      // Receipt title
+      ctx.font = 'bold 64px serif';
+      ctx.fillStyle = '#000000';
+      ctx.fillText('SCHOOL FEES RECEIPT', width / 2, y);
+      y += 60;
+
       const termLabel = payment.term
         ? `${payment.term.charAt(0).toUpperCase() + payment.term.slice(1)} Term`
         : 'Term';
-      const sessionText = `${termLabel} • ${payment.academicYear || 'Session'}`;
-      ctx.fillText(sessionText, width / 2, y + 4);
-      y += headerHeight + 40;
+      ctx.font = '40px serif';
+      ctx.fillStyle = '#374151';
+      ctx.fillText(`${termLabel} • ${payment.academicYear || 'Session'}`, width / 2, y);
+      y += 60;
 
-      // Student and payment info box
-      ctx.textAlign = 'left';
-      const leftX = cardPaddingX;
-      const rightX = width - cardPaddingX;
-
-      // Info card background
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#e5e7eb';
-      ctx.lineWidth = 2;
+      // Divider
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(leftX, y - 30, rightX - leftX, 260, 16);
-      ctx.fill();
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(width - marginX, y);
       ctx.stroke();
+      y += 60;
 
-      ctx.font = 'bold 30px Arial';
-      ctx.fillStyle = '#111827';
-      ctx.fillText('Student Name', leftX + 32, y);
-      ctx.fillText('Student ID', leftX + 32, y + 55);
-      ctx.fillText('Class', leftX + 32, y + 110);
-      ctx.fillText('Payment Date', leftX + 32, y + 165);
-
+      // Student details
       const paymentDate = payment.paymentDate
         ? new Date(payment.paymentDate).toLocaleString()
         : 'N/A';
-
-      ctx.font = '30px Arial';
-      ctx.fillStyle = '#374151';
-      const infoValueX = leftX + 280;
-      // Use selected child's details for parents, own details for students
       const studentName = (user?.role === 'parent' && selectedChild)
         ? `${selectedChild.user?.firstName || ''} ${selectedChild.user?.lastName || ''}`.trim()
         : `${user.firstName} ${user.lastName}`;
       const studentIdLabel = (user?.role === 'parent' && selectedChild)
         ? selectedChild.studentId || selectedChild.id
         : user.id;
-      ctx.fillText(studentName, infoValueX, y);
-      ctx.fillText(studentIdLabel, infoValueX, y + 55);
-      // Show the class/session for the year this payment belongs to, not the student's current class
-      const classOrSessionLabel = payment.academicYear
-        ? `${payment.academicYear} • ${termLabel}`
-        : termLabel;
-      ctx.fillText(classOrSessionLabel, infoValueX, y + 110);
-      ctx.fillText(paymentDate, infoValueX, y + 165);
 
-      y += 260 + 60;
+      const drawRow = (label: string, value: string) => {
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 36px serif';
+        ctx.fillStyle = '#374151';
+        ctx.fillText(label, marginX, y);
+        ctx.font = '36px serif';
+        ctx.fillStyle = '#000000';
+        ctx.textAlign = 'right';
+        ctx.fillText(value, width - marginX, y);
+        y += 56;
+        ctx.strokeStyle = '#f3f4f6';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(marginX, y - 12);
+        ctx.lineTo(width - marginX, y - 12);
+        ctx.stroke();
+      };
 
-      // Amount and status section
-      ctx.font = 'bold 34px Arial';
-      ctx.fillStyle = '#111827';
-      ctx.fillText('Payment Details', leftX, y);
-      y += 40;
+      drawRow('Student Name', studentName);
+      drawRow('Student ID', String(studentIdLabel));
+      drawRow('Academic Year', payment.academicYear || 'N/A');
+      drawRow('Payment Date', paymentDate);
 
-      ctx.font = '30px Arial';
-      ctx.fillStyle = '#374151';
+      y += 20;
+      ctx.strokeStyle = '#9ca3af';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(width - marginX, y);
+      ctx.stroke();
+      y += 60;
+
+      // Payment details
+      ctx.textAlign = 'center';
+      ctx.font = 'bold 48px serif';
+      ctx.fillStyle = '#000000';
+      ctx.fillText('PAYMENT DETAILS', width / 2, y);
+      y += 60;
+
       const perTermTotal = payment.totalAmount ?? payment.amount;
-      const outstandingForThisRecord = Math.max(perTermTotal - payment.amount, 0);
+      const outstanding = Math.max(perTermTotal - payment.amount, 0);
 
-      const lines = [
-        `Amount Paid: ₦${payment.amount.toLocaleString()}`,
-        `Total Fee for This Term: ₦${perTermTotal.toLocaleString()}`,
-        `Outstanding for This Term: ₦${outstandingForThisRecord.toLocaleString()}`,
-        `Status: ${payment.status.charAt(0).toUpperCase() + payment.status.slice(1)}`,
-        `Payment Method: ${payment.paymentMethod || 'N/A'}`,
-        `Transaction ID: ${payment.transactionId || 'N/A'}`,
-      ];
+      drawRow('Amount Paid', `₦${payment.amount.toLocaleString()}`);
+      drawRow('Total Term Fee', `₦${perTermTotal.toLocaleString()}`);
+      drawRow('Outstanding', `₦${outstanding.toLocaleString()}`);
+      drawRow('Status', payment.status.charAt(0).toUpperCase() + payment.status.slice(1));
+      drawRow('Payment Method', payment.paymentMethod || 'N/A');
+      drawRow('Transaction ID', payment.transactionId || 'N/A');
 
-      for (const line of lines) {
-        ctx.fillText(line, leftX, y);
-        y += 45;
-      }
+      y += 60;
 
-      y += 80;
+      // Signature section
+      const cardWidth = width - marginX * 2;
+      const sigWidth = (cardWidth - 60) / 2;
+      const sigHeight = 160;
 
-      // Signature fields row (Principal & Bursar)
-      const sigTop = y;
-      const sigHeight = 180;
-      const sigGap = 40;
-      const sigWidth = (cardWidth - sigGap) / 2;
+      ctx.strokeStyle = '#374151';
+      ctx.lineWidth = 1;
 
-      ctx.strokeStyle = '#d1d5db';
-      ctx.lineWidth = 2;
-      ctx.font = '24px Arial';
-      ctx.fillStyle = '#4b5563';
+      ['Principal', 'Bursar'].forEach((title, i) => {
+        const sx = marginX + i * (sigWidth + 60);
+        ctx.beginPath();
+        ctx.moveTo(sx + 30, y + sigHeight - 50);
+        ctx.lineTo(sx + sigWidth - 30, y + sigHeight - 50);
+        ctx.stroke();
+        ctx.textAlign = 'center';
+        ctx.font = '30px serif';
+        ctx.fillStyle = '#374151';
+        ctx.fillText(title, sx + sigWidth / 2, y + sigHeight - 10);
+      });
 
-      // Principal signature box
+      y += sigHeight + 60;
+
+      // Footer
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.roundRect(cardPaddingX, sigTop, sigWidth, sigHeight, 12);
+      ctx.moveTo(marginX, y);
+      ctx.lineTo(width - marginX, y);
       ctx.stroke();
-      // Line
-      ctx.beginPath();
-      ctx.moveTo(cardPaddingX + 40, sigTop + sigHeight - 60);
-      ctx.lineTo(cardPaddingX + sigWidth - 40, sigTop + sigHeight - 60);
-      ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.fillText(
-        'Principal',
-        cardPaddingX + sigWidth / 2,
-        sigTop + sigHeight - 20
-      );
-
-      // Bursar signature box
-      const bursarLeft = cardPaddingX + sigWidth + sigGap;
-      ctx.beginPath();
-      ctx.roundRect(bursarLeft, sigTop, sigWidth, sigHeight, 12);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(bursarLeft + 40, sigTop + sigHeight - 60);
-      ctx.lineTo(bursarLeft + sigWidth - 40, sigTop + sigHeight - 60);
-      ctx.stroke();
-      ctx.fillText(
-        'Bursar',
-        bursarLeft + sigWidth / 2,
-        sigTop + sigHeight - 20
-      );
-
-      y = sigTop + sigHeight + 80;
-
-      // Footer / disclaimer
-      ctx.textAlign = 'center';
-      ctx.font = '22px Arial';
-      ctx.fillStyle = '#6b7280';
-      ctx.fillText(
-        'Thank you for your payment. Please keep this receipt for your records.',
-        width / 2,
-        y
-      );
       y += 40;
-      ctx.fillText(
-        `Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`,
-        width / 2,
-        y
-      );
+
+      ctx.textAlign = 'center';
+      ctx.font = '28px serif';
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText('Thank you for your payment. Please keep this receipt for your records.', width / 2, y);
+      y += 40;
+      ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, width / 2, y);
+      y += 36;
+      ctx.fillText('This is an official fee receipt from Laazeere Academy, Jalingo', width / 2, y);
 
       // Download PNG
       canvas.toBlob((blob) => {

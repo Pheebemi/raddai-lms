@@ -362,25 +362,28 @@ export function ResultsContent() {
       ctx.fillStyle = '#000000';
       let y = 100;
 
-      // --- School Crest / Logo placeholder (circle with text) ---
-      const crestX = width / 2;
-      const crestY = y + 100;
-      const crestRadius = 90;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(crestX, crestY, crestRadius, 0, Math.PI * 2);
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      ctx.font = 'bold 28px serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#000000';
-      ctx.fillText('LA', crestX, crestY);
-      ctx.restore();
-      y = crestY + crestRadius + 100;
+      // --- School Logo ---
+      const logoSize = 260;
+      const logoX = width / 2 - logoSize / 2;
+      const logoY = y;
+      await new Promise<void>(resolve => {
+        const logoImg = new window.Image();
+        logoImg.onload = () => {
+          ctx.drawImage(logoImg, logoX, logoY, logoSize, logoSize);
+          resolve();
+        };
+        logoImg.onerror = () => {
+          ctx.font = 'bold 40px serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('LA', width / 2, logoY + logoSize / 2);
+          resolve();
+        };
+        logoImg.src = '/logo.png';
+      });
+      y = logoY + logoSize + 80;
 
-      // --- School Name (large, bold, centered) ---
+      // --- School Name ---
       ctx.textAlign = 'center';
       ctx.textBaseline = 'alphabetic';
       ctx.font = 'bold 72px serif';
@@ -388,9 +391,12 @@ export function ResultsContent() {
       ctx.fillText('LAAZEERE ACADEMY', width / 2, y);
       y += 60;
 
-      // Subtitle line
-      ctx.font = '44px serif';
-      ctx.fillText('Jalingo, Taraba State', width / 2, y);
+      ctx.font = '40px serif';
+      ctx.fillText('Samunaka Sabon Gari, Jalingo, Taraba State', width / 2, y);
+      y += 44;
+
+      ctx.font = '36px serif';
+      ctx.fillText('Tel: 08066115707 | 09060405589', width / 2, y);
       y += 50;
 
       // Department/class info
