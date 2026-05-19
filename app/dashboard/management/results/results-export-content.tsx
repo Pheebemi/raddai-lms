@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Download, FileText, Filter, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { fetchClasses, fetchSubjects, fetchAcademicYears, resultsApi } from '@/lib/api';
+import { fetchClasses, fetchSubjects, fetchAcademicYears, resultsApi, rankingsApi } from '@/lib/api';
 
 interface ResultExportData {
   id: string;
@@ -44,6 +44,8 @@ export function ResultsExportContent() {
   const [results, setResults] = useState<ResultExportData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isBatchDownloading, setIsBatchDownloading] = useState(false);
+  const [batchProgress, setBatchProgress] = useState(0);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [classes, setClasses] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
@@ -252,6 +254,230 @@ export function ResultsExportContent() {
     }
   };
 
+  const handleBatchPNGDownload = async () => {
+    if (!selectedClass || !selectedTerm || !selectedAcademicYear) {
+      toast.error('Please select a class, term and academic year first');
+      return;
+    }
+
+    // Group results by student
+    const byStudent: Record<string, ResultExportData[]> = {};
+    results.forEach(r => {
+      if (!byStudent[r.studentId]) byStudent[r.studentId] = [];
+      byStudent[r.studentId].push(r);
+    });
+
+    const studentIds = Object.keys(byStudent);
+    if (studentIds.length === 0) {
+      toast.error('No results to download');
+      return;
+    }
+
+    setIsBatchDownloading(true);
+    setBatchProgress(0);
+
+    // Fetch rankings so position is accurate per student
+    let rankings: any[] = [];
+    try {
+      const rankData = await rankingsApi.getClassRankings(selectedClass, selectedTerm, selectedAcademicYear);
+      rankings = rankData.rankings || [];
+      console.log('Rankings fetched:', rankings.length, 'Sample student_id:', rankings[0]?.student_id);
+      console.log('Student IDs in results:', studentIds.slice(0, 3));
+    } catch (e) {
+      console.error('Rankings fetch failed:', e);
+      toast.error('Could not fetch rankings — positions will show N/A');
+    }
+
+    const className = classes.find(c => c.id === selectedClass)?.name || 'Class';
+    const termLabel = `${selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1)} Term`;
+    const yearLabel = academicYears.find(y => y.id.toString() === selectedAcademicYear)?.name || selectedAcademicYear;
+
+    try {
+      const { default: JSZip } = await import('jszip');
+      const zip = new JSZip();
+
+      for (let i = 0; i < studentIds.length; i++) {
+        const studentId = studentIds[i];
+        const studentResults = byStudent[studentId];
+        const studentName = studentResults[0]?.studentName || 'Unknown';
+
+        // Find position for this student from rankings
+        const ranking = rankings.find((r: any) => String(r.student_id) === String(studentId));
+        const position = ranking?.position;
+        const positionLabel = position
+          ? `${position}${position === 1 ? 'st' : position === 2 ? 'nd' : position === 3 ? 'rd' : 'th'}`
+          : 'N/A';
+
+        const canvas = document.createElement('canvas');
+        const width = 2480;
+        const height = 3508;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+
+        // White background
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        const marginLeft = 160;
+        const marginRight = 160;
+        let y = 100;
+
+        // Logo
+        const logoSize = 260;
+        await new Promise<void>(resolve => {
+          const img = new window.Image();
+          img.onload = () => { ctx.drawImage(img, width / 2 - logoSize / 2, y, logoSize, logoSize); resolve(); };
+          img.onerror = () => resolve();
+          img.src = '/logo.png';
+        });
+        y += logoSize + 60;
+
+        // School name
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 80px serif';
+        ctx.fillStyle = '#000000';
+        ctx.fillText('LAAZEERE ACADEMY', width / 2, y);
+        y += 66;
+        ctx.font = '44px serif';
+        ctx.fillStyle = '#374151';
+        ctx.fillText('Samunaka Sabon Gari, Jalingo, Taraba State', width / 2, y);
+        y += 50;
+        ctx.font = '38px serif';
+        ctx.fillText('Tel: 08066115707 | 09060405589', width / 2, y);
+        y += 60;
+
+        // Dividers
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+        y += 8;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+        y += 50;
+
+        ctx.font = 'bold 68px serif';
+        ctx.fillStyle = '#000';
+        ctx.fillText('STUDENT ACADEMIC RESULT', width / 2, y);
+        y += 60;
+        ctx.font = '46px serif';
+        ctx.fillStyle = '#374151';
+        ctx.fillText(`(${className})`, width / 2, y);
+        y += 70;
+
+        // Student info row
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 40px serif';
+        ctx.fillStyle = '#000';
+        ctx.fillText(`NAME: ${studentName.toUpperCase()}`, marginLeft, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`ID. NO: ${studentResults[0]?.studentId || ''}`, width - marginRight, y);
+        y += 10;
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+        y += 16;
+        ctx.textAlign = 'left';
+        ctx.fillText(`SESSION: ${yearLabel}`, marginLeft, y);
+        ctx.textAlign = 'right';
+        ctx.fillText(`TERM: ${termLabel.toUpperCase()}`, width - marginRight, y);
+        y += 10;
+        ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+        y += 16;
+        ctx.textAlign = 'left';
+        ctx.fillText(`POSITION IN CLASS: ${positionLabel}`, marginLeft, y + 30);
+        y += 70;
+
+        // Results table header
+        const cols = [marginLeft, 760, 1020, 1280, 1540, 1800, 2060, width - marginRight];
+        const headers = ['SUBJECT', 'CA1', 'CA2', 'CA3', 'CA4', 'EXAM', 'TOTAL', 'GRADE'];
+        const rowH = 90;
+
+        ctx.fillStyle = '#000';
+        ctx.fillRect(marginLeft, y, width - marginLeft - marginRight, rowH);
+        ctx.font = 'bold 36px Arial';
+        ctx.fillStyle = '#fff';
+        headers.forEach((h, idx) => {
+          ctx.textAlign = idx === 0 ? 'left' : 'center';
+          const cx = idx === 0 ? cols[idx] + 20 : (cols[idx] + cols[idx + 1]) / 2;
+          ctx.fillText(h, cx, y + 60);
+        });
+        y += rowH;
+
+        // Result rows
+        studentResults.forEach((r, ri) => {
+          ctx.fillStyle = ri % 2 === 0 ? '#f9fafb' : '#ffffff';
+          ctx.fillRect(marginLeft, y, width - marginLeft - marginRight, rowH);
+          ctx.strokeStyle = '#e5e7eb';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(marginLeft, y, width - marginLeft - marginRight, rowH);
+
+          ctx.fillStyle = '#000';
+          ctx.font = '34px Arial';
+          const vals = [r.subjectName, r.ca1_score, r.ca2_score, r.ca3_score, r.ca4_score, r.exam_score, r.marks_obtained, r.grade];
+          vals.forEach((v, idx) => {
+            ctx.textAlign = idx === 0 ? 'left' : 'center';
+            const cx = idx === 0 ? cols[idx] + 20 : (cols[idx] + cols[idx + 1]) / 2;
+            ctx.fillText(String(v), cx, y + 58);
+          });
+          y += rowH;
+        });
+
+        y += 50;
+
+        // Totals
+        const totalMarks = studentResults.reduce((s, r) => s + r.marks_obtained, 0);
+        const maxMarks = studentResults.reduce((s, r) => s + r.total_marks, 0);
+        const avg = maxMarks > 0 ? ((totalMarks / maxMarks) * 100).toFixed(1) : '0.0';
+
+        ctx.textAlign = 'left';
+        ctx.font = 'bold 40px Arial';
+        ctx.fillStyle = '#000';
+        ctx.fillText(`Total Marks Obtained: ${totalMarks}  |  Average Score: ${avg}%  |  Position: ${positionLabel}`, marginLeft, y + 30);
+        y += 80;
+
+        // Footer
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+        y += 40;
+        ctx.textAlign = 'center';
+        ctx.font = '32px Arial';
+        ctx.fillStyle = '#6b7280';
+        ctx.fillText(`Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}`, width / 2, y);
+        y += 36;
+        ctx.fillText('This is an official academic result document from Laazeere Academy, Jalingo', width / 2, y);
+
+        // Convert to blob and add to zip
+        const blob = await new Promise<Blob>(resolve =>
+          canvas.toBlob(b => resolve(b!), 'image/png')
+        );
+        const safeStudentName = studentName.replace(/[^a-zA-Z0-9]/g, '_');
+        zip.file(`${safeStudentName}_${termLabel}_Result.png`, blob);
+
+        setBatchProgress(Math.round(((i + 1) / studentIds.length) * 100));
+      }
+
+      const zipBlob = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(zipBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${className}_${termLabel}_${yearLabel}_Results.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+
+      toast.success(`Downloaded ${studentIds.length} result sheets successfully!`);
+    } catch (err) {
+      console.error(err);
+      toast.error('Batch download failed. Make sure filters are set correctly.');
+    } finally {
+      setIsBatchDownloading(false);
+      setBatchProgress(0);
+    }
+  };
+
   const clearFilters = () => {
     setSelectedClass('');
     setSelectedSubject('');
@@ -288,10 +514,23 @@ export function ResultsExportContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          {results.length > 0 && selectedClass && selectedTerm && selectedAcademicYear && (
+            <Button
+              variant="outline"
+              onClick={handleBatchPNGDownload}
+              disabled={isBatchDownloading}
+              className="gap-2"
+            >
+              <Download className="h-4 w-4" />
+              {isBatchDownloading
+                ? `Generating... ${batchProgress}%`
+                : `Download Class PNGs (${Object.keys(results.reduce((acc, r) => ({ ...acc, [r.studentId]: 1 }), {})).length} students)`}
+            </Button>
+          )}
           {results.length > 0 && (
             <Button onClick={handleExport} disabled={isExporting} className="gap-2">
               <Download className="h-4 w-4" />
-              {isExporting ? 'Exporting...' : `Export ${results.length} Results`}
+              {isExporting ? 'Exporting...' : `Export ${results.length} Results CSV`}
             </Button>
           )}
         </div>
