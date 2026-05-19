@@ -289,7 +289,9 @@ export function ResultsExportContent() {
       toast.error('Could not fetch rankings — positions will show N/A');
     }
 
-    const className = classes.find(c => c.id === selectedClass)?.name || 'Class';
+    // Use class name from results data (already resolved) or fallback to classes list
+    const className = results[0]?.className ||
+      classes.find(c => String(c.id) === String(selectedClass))?.name || 'Class';
     const termLabel = `${selectedTerm.charAt(0).toUpperCase() + selectedTerm.slice(1)} Term`;
     const yearLabel = academicYears.find(y => y.id.toString() === selectedAcademicYear)?.name || selectedAcademicYear;
 
