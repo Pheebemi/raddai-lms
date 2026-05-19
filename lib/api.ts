@@ -264,15 +264,6 @@ export const resultsApi = {
         url = typeof data.next === 'string' && data.next.length > 0 ? data.next : null;
       }
 
-      console.log('Total raw results from API (all pages):', allItems.length);
-      console.log('Sample results from API:', allItems.slice(0, 5).map((r: any) => ({
-        id: r.id,
-        student: r.student,
-        subject: r.subject,
-        academic_year: r.academic_year,
-        term: r.term
-      })));
-
       // Convert Django format to frontend format
       const converted = allItems.map((item: any) => ({
         id: item.id.toString(),
@@ -326,7 +317,6 @@ export const resultsApi = {
     exam_score: number;
     remarks?: string;
   }): Promise<Result> => {
-    console.log('Creating result with data:', resultData);
     const response = await fetch(`${API_BASE_URL}/results/`, {
       method: 'POST',
       headers: getAuthHeaders(),
@@ -613,16 +603,12 @@ export const rankingsApi = {
     });
 
     const url = `${API_BASE_URL}/rankings/class/?${params}`;
-    console.log('Fetching rankings from:', url);
 
     const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
 
-    console.log('Rankings API response status:', response.status);
-
     const result = await handleApiResponse<any>(response);
-    console.log('Rankings API response data:', result);
     return result;
   },
 };
@@ -1098,8 +1084,6 @@ export const usersApi = {
         role: 'student',
       };
 
-      console.log('Creating user with payload:', userPayload);
-
       const userResponse = await fetch(`${API_BASE_URL}/users/`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -1107,7 +1091,6 @@ export const usersApi = {
       });
 
       const createdUser = await handleApiResponse<any>(userResponse);
-      console.log('User created successfully:', createdUser);
 
       // 2) Create the student profile linked to that user
       const studentPayload = {
@@ -1116,8 +1099,6 @@ export const usersApi = {
         current_class: data.classId,
       };
 
-      console.log('Creating student with payload:', studentPayload);
-
       const studentResponse = await fetch(`${API_BASE_URL}/students/`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -1125,7 +1106,6 @@ export const usersApi = {
       });
 
       const createdStudent = await handleApiResponse<any>(studentResponse);
-      console.log('Student created successfully:', createdStudent);
 
     // 3) Normalize into our Student type
     const className = createdStudent.current_class_name || '';
@@ -1250,8 +1230,6 @@ export const usersApi = {
         role: 'staff',
       };
 
-      console.log('Creating staff user with payload:', userPayload);
-
       const userResponse = await fetch(`${API_BASE_URL}/users/`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -1259,7 +1237,6 @@ export const usersApi = {
       });
 
       const createdUser = await handleApiResponse<any>(userResponse);
-      console.log('Staff user created successfully:', createdUser);
 
       // 2) Create the staff profile linked to that user
       const staffPayload = {
@@ -1269,8 +1246,6 @@ export const usersApi = {
         joining_date: data.joiningDate || new Date().toISOString().split('T')[0], // Today's date if not provided
       };
 
-      console.log('Creating staff profile with payload:', staffPayload);
-
       const staffResponse = await fetch(`${API_BASE_URL}/staff/`, {
         method: 'POST',
         headers: getAuthHeaders(),
@@ -1278,7 +1253,6 @@ export const usersApi = {
       });
 
       const createdStaff = await handleApiResponse<any>(staffResponse);
-      console.log('Staff profile created successfully:', createdStaff);
 
       // 3) Optionally assign this staff as class teacher for a class
       if (data.classId) {
