@@ -9,7 +9,9 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/auth-context';
 import { attendanceApi, usersApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { Calendar, CheckCircle, XCircle, Clock, FileText, Save, Users } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
+import { Calendar, Save, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -33,6 +35,8 @@ export default function AttendancePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
+  const [allRecords, setAllRecords] = useState<any[]>([]);
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
 
   // Load students and staff profile on mount
   useEffect(() => {
@@ -134,7 +138,32 @@ export default function AttendancePage() {
     setIsSaving(false);
   };
 
-  // Summary counts
+  // Load all records for summary tab
+  const loadSummary = async () => {
+    setIsLoadingSummary(true);
+    try {
+      const records = await attendanceApi.getAll();
+      setAllRecords(records);
+    } catch {
+      toast.error('Failed to load attendance summary');
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  // Build per-student summary from allRecords
+  const studentSummary = students.map(student => {
+    const recs = allRecords.filter(r => r.studentId === student.id);
+    const present = recs.filter(r => r.status === 'present').length;
+    const absent = recs.filter(r => r.status === 'absent').length;
+    const late = recs.filter(r => r.status === 'late').length;
+    const excused = recs.filter(r => r.status === 'excused').length;
+    const total = recs.length;
+    const percentage = total > 0 ? Math.round(((present + late) / total) * 100) : 0;
+    return { student, present, absent, late, excused, total, percentage };
+  }).sort((a, b) => b.percentage - a.percentage);
+
+  // Summary counts for daily view
   const counts = Object.values(attendance).reduce((acc, status) => {
     acc[status] = (acc[status] || 0) + 1;
     return acc;
@@ -215,69 +244,144 @@ export default function AttendancePage() {
           </div>
         )}
 
-        {/* Quick mark all */}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">Mark all:</span>
-          {STATUS_OPTIONS.map(({ value, label }) => (
-            <Button key={value} size="sm" variant="outline" onClick={() => markAll(value)}>
-              {label}
-            </Button>
-          ))}
-        </div>
+        <Tabs defaultValue="mark">
+          <TabsList>
+            <TabsTrigger value="mark">Mark Attendance</TabsTrigger>
+            <TabsTrigger value="summary" onClick={loadSummary}>Session Summary</TabsTrigger>
+          </TabsList>
 
-        {/* Students list */}
-        <Card className="border border-border rounded-2xl">
-          <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                {selectedDate === today ? "Today's Attendance" : `Attendance — ${new Date(selectedDate).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}`}
-              </CardTitle>
-              {isLoadingAttendance && (
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
-              )}
+          {/* Mark Attendance Tab */}
+          <TabsContent value="mark" className="space-y-4 mt-4">
+            {/* Quick mark all */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-sm text-muted-foreground">Mark all:</span>
+              {STATUS_OPTIONS.map(({ value, label }) => (
+                <Button key={value} size="sm" variant="outline" onClick={() => markAll(value)}>
+                  {label}
+                </Button>
+              ))}
             </div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {students.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">No students in your class</p>
-            ) : (
-              students.map((student, idx) => {
-                const status = attendance[student.id];
-                const isRecorded = !!existingRecords[student.id];
-                return (
-                  <div key={student.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                    <span className="text-xs text-muted-foreground w-6 text-center">{idx + 1}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
-                        {student.user.firstName} {student.user.lastName}
-                      </p>
-                      <p className="text-xs text-muted-foreground">{student.studentId}</p>
-                    </div>
-                    {isRecorded && (
-                      <span className="text-xs text-muted-foreground shrink-0">saved</span>
-                    )}
-                    <div className="flex gap-1.5 shrink-0">
-                      {STATUS_OPTIONS.map(({ value, label, color }) => (
-                        <button
-                          key={value}
-                          onClick={() => setStatus(student.id, value)}
-                          className={cn(
-                            'text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-all',
-                            status === value
-                              ? color
-                              : 'bg-background border-border text-muted-foreground hover:border-primary/40'
-                          )}
-                        >
-                          {label}
-                        </button>
-                      ))}
-                    </div>
+
+            <Card className="border border-border rounded-2xl">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="text-base">
+                    {selectedDate === today
+                      ? "Today's Attendance"
+                      : `Attendance — ${new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' })}`}
+                  </CardTitle>
+                  {isLoadingAttendance && (
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent" />
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {students.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No students in your class</p>
+                ) : (
+                  students.map((student, idx) => {
+                    const status = attendance[student.id];
+                    const isRecorded = !!existingRecords[student.id];
+                    return (
+                      <div key={student.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
+                        <span className="text-xs text-muted-foreground w-6 text-center">{idx + 1}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {student.user.firstName} {student.user.lastName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">{student.studentId}</p>
+                        </div>
+                        {isRecorded && (
+                          <span className="text-xs text-muted-foreground shrink-0">saved</span>
+                        )}
+                        <div className="flex gap-1.5 shrink-0 flex-wrap justify-end">
+                          {STATUS_OPTIONS.map(({ value, label, color }) => (
+                            <button
+                              key={value}
+                              onClick={() => setStatus(student.id, value)}
+                              className={cn(
+                                'text-xs px-2.5 py-1.5 rounded-lg border font-medium transition-all',
+                                status === value
+                                  ? color
+                                  : 'bg-background border-border text-muted-foreground hover:border-primary/40'
+                              )}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Session Summary Tab */}
+          <TabsContent value="summary" className="mt-4">
+            <Card className="border border-border rounded-2xl">
+              <CardHeader>
+                <CardTitle className="text-base">Cumulative Attendance — Full Session</CardTitle>
+                <CardDescription>
+                  Total attendance across all recorded days for each student
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingSummary ? (
+                  <div className="flex justify-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
                   </div>
-                );
-              })
-            )}
-          </CardContent>
-        </Card>
+                ) : studentSummary.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No attendance records yet</p>
+                ) : (
+                  <div className="space-y-3">
+                    {studentSummary.map(({ student, present, absent, late, excused, total, percentage }, idx) => (
+                      <div key={student.id} className="p-4 rounded-xl border border-border space-y-2">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-muted-foreground w-5">{idx + 1}</span>
+                            <div>
+                              <p className="text-sm font-medium">
+                                {student.user.firstName} {student.user.lastName}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{student.studentId} · {total} days recorded</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className={`text-lg font-bold ${percentage >= 75 ? 'text-primary' : percentage >= 50 ? 'text-amber-600' : 'text-destructive'}`}>
+                              {percentage}%
+                            </p>
+                            <p className="text-xs text-muted-foreground">attendance</p>
+                          </div>
+                        </div>
+                        <Progress value={percentage} className="h-1.5" />
+                        <div className="grid grid-cols-4 gap-2 text-center text-xs">
+                          <div className="bg-primary/10 rounded-lg p-1.5">
+                            <p className="font-bold text-primary">{present}</p>
+                            <p className="text-muted-foreground">Present</p>
+                          </div>
+                          <div className="bg-destructive/10 rounded-lg p-1.5">
+                            <p className="font-bold text-destructive">{absent}</p>
+                            <p className="text-muted-foreground">Absent</p>
+                          </div>
+                          <div className="bg-amber-100 rounded-lg p-1.5 dark:bg-amber-900/20">
+                            <p className="font-bold text-amber-700 dark:text-amber-400">{late}</p>
+                            <p className="text-muted-foreground">Late</p>
+                          </div>
+                          <div className="bg-muted rounded-lg p-1.5">
+                            <p className="font-bold">{excused}</p>
+                            <p className="text-muted-foreground">Excused</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
       </div>
     </AppLayout>

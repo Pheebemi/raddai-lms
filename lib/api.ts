@@ -1546,6 +1546,23 @@ export const attendanceApi = {
     });
     return handleApiResponse<any>(response);
   },
+
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/attendance/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    const items = Array.isArray(data) ? data : data.results || [];
+    return items.map((a: any) => ({
+      id: a.id.toString(),
+      studentId: a.student.toString(),
+      studentName: a.student_name,
+      date: a.date,
+      status: a.status as 'present' | 'absent' | 'late' | 'excused',
+      classPeriodId: a.class_period.toString(),
+      remarks: a.remarks || '',
+    }));
+  },
 };
 
 export const classesApi = {
