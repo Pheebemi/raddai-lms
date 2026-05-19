@@ -1505,6 +1505,49 @@ export const usersApi = {
 };
 
 // Classes API
+export const attendanceApi = {
+  getByDate: async (date: string) => {
+    const response = await fetch(`${API_BASE_URL}/attendance/?date=${date}`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    const items = Array.isArray(data) ? data : data.results || [];
+    return items.map((a: any) => ({
+      id: a.id.toString(),
+      studentId: a.student.toString(),
+      studentName: a.student_name,
+      date: a.date,
+      status: a.status as 'present' | 'absent' | 'late' | 'excused',
+      classPeriodId: a.class_period.toString(),
+      remarks: a.remarks || '',
+    }));
+  },
+
+  mark: async (payload: {
+    student: number;
+    date: string;
+    status: string;
+    class_period: number;
+    remarks?: string;
+  }) => {
+    const response = await fetch(`${API_BASE_URL}/attendance/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+
+  update: async (id: string, payload: { status: string; remarks?: string }) => {
+    const response = await fetch(`${API_BASE_URL}/attendance/${id}/`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    return handleApiResponse<any>(response);
+  },
+};
+
 export const classesApi = {
   getAll: async (): Promise<Class[]> => {
     const response = await fetch(`${API_BASE_URL}/classes/`, {

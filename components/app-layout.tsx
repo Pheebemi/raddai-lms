@@ -244,11 +244,9 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     ],
     staff: [
       ...baseItems,
-      { title: 'My Classes', href: '/staff/classes', icon: 'BookOpen' },
+      { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
       { title: 'Upload Results', href: '/dashboard/results/upload', icon: 'Upload' },
       { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
-      { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
-      { title: 'Student Performance', href: '/staff/performance', icon: 'BarChart3' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Profile', href: '/profile', icon: 'User' },
     ],
