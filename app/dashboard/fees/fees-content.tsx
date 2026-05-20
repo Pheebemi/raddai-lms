@@ -199,7 +199,7 @@ export function FeesContent() {
       return;
     }
 
-    if (normalize !== 'success' && normalize !== 'successful') {
+    if (normalize !== 'success' && normalize !== 'successful' && normalize !== 'completed') {
       router.replace('/dashboard/fees');
       return;
     }
