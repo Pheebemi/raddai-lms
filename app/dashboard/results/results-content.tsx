@@ -109,72 +109,31 @@ export function ResultsContent() {
     setFilteredResults(filtered);
   }, [results, selectedTerm, selectedYear, visibleTerms, user, selectedChildId]);
 
-  // Load class rankings when filters change (for PNG download)
+  // Load class rankings when term/year/child changes
   useEffect(() => {
     const loadRankings = async () => {
-      if (selectedTerm !== 'all' && selectedYear && user?.profile?.current_class_id) {
-        try {
-          const rankings = await rankingsApi.getClassRankings(
-            String(user.profile.current_class_id),
-            selectedTerm,
-            selectedYear
-          );
-          setClassRankings(rankings);
-        } catch (error) {
-          console.error('Failed to load rankings for PNG download:', error);
-          setClassRankings(null);
-        }
-      } else {
+      // For parents use selected child's class, for students use their own class
+      const classId = user?.role === 'parent'
+        ? parentChildren.find((c: any) => c.id === selectedChildId)?.classId
+        : user?.profile?.current_class_id
+          ? String(user.profile.current_class_id)
+          : null;
+
+      if (!classId || selectedTerm === 'all' || !selectedYear) {
+        setClassRankings(null);
+        return;
+      }
+
+      try {
+        const rankings = await rankingsApi.getClassRankings(classId, selectedTerm, selectedYear);
+        setClassRankings(rankings);
+      } catch {
         setClassRankings(null);
       }
     };
 
     loadRankings();
-  }, [selectedTerm, selectedYear, user?.profile?.current_class_id]);
-
-  // Load class rankings when filters change
-  useEffect(() => {
-    const loadRankings = async () => {
-      if (selectedTerm !== 'all' && selectedYear !== 'all' && user?.profile?.current_class_id) {
-        try {
-          // Debug logging
-          console.log('Loading rankings for user:', user.id);
-          console.log('User profile:', user.profile);
-          console.log('Current class name:', user.profile.current_class);
-          console.log('Current class ID (from profile):', user.profile.current_class_id);
-
-          const classId = user.profile.current_class_id
-            ? String(user.profile.current_class_id)
-            : undefined;
-          if (!classId) {
-            console.error('No class ID found for user - cannot load rankings');
-            setClassRankings(null);
-            return;
-          }
-
-          console.log('Calling rankings API with:', { classId, selectedTerm, selectedYear });
-          const rankings = await rankingsApi.getClassRankings(
-            classId,
-            selectedTerm,
-            selectedYear
-          );
-          setClassRankings(rankings);
-        } catch (error) {
-          console.error('Failed to load rankings:', error);
-          setClassRankings(null);
-        }
-      } else {
-          console.log('Skipping rankings load - conditions not met:', {
-            selectedTerm,
-            selectedYear,
-            hasCurrentClassId: !!user?.profile?.current_class_id,
-          });
-        setClassRankings(null);
-      }
-    };
-
-    loadRankings();
-  }, [selectedTerm, selectedYear, user?.profile?.current_class]);
+  }, [selectedTerm, selectedYear, user?.profile?.current_class_id, selectedChildId, parentChildren]);
 
   // Get student's ranking position (match by Student profile ID)
   const getStudentRanking = (): StudentRanking | null => {
