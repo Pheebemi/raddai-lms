@@ -74,13 +74,13 @@ export function AdminDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <Settings className="mr-2 h-4 w-4" />
-            System Settings
+          <Button asChild>
+            <a href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</a>
           </Button>
-          <Button variant="outline">
-            <Database className="mr-2 h-4 w-4" />
-            Database Backup
+          <Button asChild variant="outline">
+            <a href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/admin/`} target="_blank">
+              <Database className="mr-2 h-4 w-4" />Django Admin
+            </a>
           </Button>
         </div>
       </div>
@@ -260,17 +260,14 @@ export function AdminDashboard() {
           <Separator className="my-4" />
 
           <div className="flex gap-2">
-            <Button variant="outline" size="sm">
-              <Users className="mr-2 h-4 w-4" />
-              Manage Users
+            <Button asChild variant="outline" size="sm">
+              <a href="/management/students"><Users className="mr-2 h-4 w-4" />Manage Students</a>
             </Button>
-            <Button variant="outline" size="sm">
-              <Shield className="mr-2 h-4 w-4" />
-              Role Permissions
+            <Button asChild variant="outline" size="sm">
+              <a href="/management/staff"><Shield className="mr-2 h-4 w-4" />Manage Staff</a>
             </Button>
-            <Button variant="outline" size="sm">
-              <Settings className="mr-2 h-4 w-4" />
-              System Config
+            <Button asChild variant="outline" size="sm">
+              <a href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</a>
             </Button>
           </div>
         </CardContent>
@@ -286,21 +283,19 @@ export function AdminDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Database className="h-6 w-6" />
-              Database Maintenance
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/students"><Users className="h-6 w-6" />Students</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Shield className="h-6 w-6" />
-              Security Audit
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/staff"><Shield className="h-6 w-6" />Staff</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Settings className="h-6 w-6" />
-              System Configuration
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/finance"><Activity className="h-6 w-6" />Finance</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Activity className="h-6 w-6" />
-              System Logs
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api', '')}/admin/`} target="_blank">
+                <Database className="h-6 w-6" />Django Admin
+              </a>
             </Button>
           </div>
         </CardContent>

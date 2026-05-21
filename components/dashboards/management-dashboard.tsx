@@ -232,13 +232,11 @@ export function ManagementDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <BarChart3 className="mr-2 h-4 w-4" />
-            View Analytics
-          </Button>
-          <Button variant="outline">
-            <MessageSquare className="mr-2 h-4 w-4" />
-            Send Announcement
+          <Button asChild variant="outline">
+            <a href="/announcements">
+              <MessageSquare className="mr-2 h-4 w-4" />
+              Announcements
+            </a>
           </Button>
         </div>
       </div>
@@ -576,17 +574,14 @@ export function ManagementDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Users className="h-6 w-6" />
-              Manage Students
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/students"><Users className="h-6 w-6" />Manage Students</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <BookOpen className="h-6 w-6" />
-              Manage Staff
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/staff"><BookOpen className="h-6 w-6" />Manage Staff</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <DollarSign className="h-6 w-6" />
-              Financial Reports
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/management/finance"><DollarSign className="h-6 w-6" />Finance</a>
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2" onClick={openPromoteDialog}>
               <GraduationCap className="h-6 w-6" />

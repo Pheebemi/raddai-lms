@@ -213,17 +213,14 @@ export function StaffDashboard() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button>
-            <Upload className="mr-2 h-4 w-4" />
-            Upload Results
+          <Button asChild>
+            <a href="/dashboard/results/upload"><Upload className="mr-2 h-4 w-4" />Upload Results</a>
           </Button>
-          <Button variant="outline">
-            <Trophy className="mr-2 h-4 w-4" />
-            View Rankings
+          <Button asChild variant="outline">
+            <a href="/dashboard/rankings"><Trophy className="mr-2 h-4 w-4" />Rankings</a>
           </Button>
-          <Button variant="outline">
-            <Calendar className="mr-2 h-4 w-4" />
-            Mark Attendance
+          <Button asChild variant="outline">
+            <a href="/attendance"><Calendar className="mr-2 h-4 w-4" />Attendance</a>
           </Button>
         </div>
       </div>
@@ -592,21 +589,17 @@ export function StaffDashboard() {
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Upload className="h-6 w-6" />
-              Upload Results
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/dashboard/results/upload"><Upload className="h-6 w-6" />Upload Results</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Trophy className="h-6 w-6" />
-              Class Rankings
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/dashboard/rankings"><Trophy className="h-6 w-6" />Class Rankings</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Users className="h-6 w-6" />
-              View Students
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/attendance"><Calendar className="h-6 w-6" />Mark Attendance</a>
             </Button>
-            <Button variant="outline" className="h-20 flex-col gap-2">
-              <Calendar className="h-6 w-6" />
-              Mark Attendance
+            <Button asChild variant="outline" className="h-20 flex-col gap-2">
+              <a href="/settings"><Users className="h-6 w-6" />Settings</a>
             </Button>
           </div>
         </CardContent>
