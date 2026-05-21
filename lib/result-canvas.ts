@@ -107,8 +107,8 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
   y += 60;
 
   // Table
-  const colWidths = [80, 500, 100, 100, 100, 100, 180, 200, 140];
-  const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'CA4', 'EXAM', 'TOTAL', 'GRADE'];
+  const colWidths = [80, 560, 120, 120, 120, 220, 240, 160];
+  const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'EXAM', 'TOTAL', 'GRADE'];
   const rowHeight = 60;
   const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
   const scaledColWidths = colWidths.map(w => (w / totalColWidth) * contentWidth);
@@ -139,7 +139,6 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
       row.ca1.toString(),
       row.ca2.toString(),
       row.ca3.toString(),
-      row.ca4.toString(),
       row.exam.toString(),
       row.total.toString(),
       row.grade,

@@ -319,7 +319,7 @@ export default function UploadResultsPage() {
   };
 
   const calculateTotal = (student: StudentResult) => {
-    const caTotal = student.ca1_score + student.ca2_score + student.ca3_score + student.ca4_score;
+    const caTotal = student.ca1_score + student.ca2_score + student.ca3_score;
     return caTotal + student.exam_score;
   };
 
@@ -489,21 +489,20 @@ export default function UploadResultsPage() {
             </CardTitle>
             <CardDescription>
               {isEditingExisting
-                ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 60) for each student.`
-                : 'Fill in the CA test scores (max 10 each) and final exam score (max 60) for each student'
+                ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student.`
+                : 'Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student'
               }
             </CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
               {/* Header */}
-              <div className="grid grid-cols-12 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+              <div className="grid grid-cols-11 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
                 <div className="col-span-3">Student</div>
                 <div className="col-span-1 text-center">CA1</div>
                 <div className="col-span-1 text-center">CA2</div>
                 <div className="col-span-1 text-center">CA3</div>
-                <div className="col-span-1 text-center">CA4</div>
-                <div className="col-span-2 text-center">Exam (60)</div>
+                <div className="col-span-2 text-center">Exam (70)</div>
                 <div className="col-span-2 text-center">Total</div>
                 <div className="col-span-1 text-center">Grade</div>
               </div>
@@ -578,34 +577,17 @@ export default function UploadResultsPage() {
                       />
                     </div>
 
-                    <div className="col-span-1">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={student.ca4_score}
-                        onChange={(e) =>
-                          updateStudentResult(
-                            student.id,
-                            'ca4_score',
-                            normalizeScore(e.target.value, 10)
-                          )
-                        }
-                        className="text-center"
-                      />
-                    </div>
-
                     <div className="col-span-2">
                       <Input
                         type="number"
                         min="0"
-                        max="60"
+                        max="70"
                         value={student.exam_score}
                         onChange={(e) =>
                           updateStudentResult(
                             student.id,
                             'exam_score',
-                            normalizeScore(e.target.value, 60)
+                            normalizeScore(e.target.value, 70)
                           )
                         }
                         className="text-center"
@@ -615,7 +597,7 @@ export default function UploadResultsPage() {
                     <div className="col-span-2 text-center">
                       <div className="font-medium">{total}/100</div>
                       <div className="text-sm text-muted-foreground">
-                        CA: {(student.ca1_score + student.ca2_score + student.ca3_score + student.ca4_score)}/40
+                        CA: {(student.ca1_score + student.ca2_score + student.ca3_score)}/30
                       </div>
                     </div>
 

@@ -416,8 +416,8 @@ export function ResultsContent() {
       y += 60;
 
       // === RESULTS TABLE (bordered cells like the PDF) ===
-      const colWidths = [80, 500, 100, 100, 100, 100, 180, 200, 140];
-      const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'CA4', 'EXAM', 'TOTAL', 'GRADE'];
+      const colWidths = [80, 560, 120, 120, 120, 220, 240, 160];
+      const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'EXAM', 'TOTAL', 'GRADE'];
       const rowHeight = 60;
       const tableX = marginLeft;
       const tableWidth = contentWidth;
@@ -458,7 +458,6 @@ export function ResultsContent() {
           result.ca1_score.toString(),
           result.ca2_score.toString(),
           result.ca3_score.toString(),
-          result.ca4_score.toString(),
           result.exam_score.toString(),
           result.marks_obtained.toString(),
           result.grade,
@@ -813,7 +812,6 @@ export function ResultsContent() {
                         <TableHead className="text-center">CA1</TableHead>
                         <TableHead className="text-center">CA2</TableHead>
                         <TableHead className="text-center">CA3</TableHead>
-                        <TableHead className="text-center">CA4</TableHead>
                         <TableHead className="text-center">Exam</TableHead>
                         <TableHead className="text-center">Grade</TableHead>
                       </TableRow>
@@ -827,7 +825,6 @@ export function ResultsContent() {
                           <TableCell className="text-center">{result.ca1_score}</TableCell>
                           <TableCell className="text-center">{result.ca2_score}</TableCell>
                           <TableCell className="text-center">{result.ca3_score}</TableCell>
-                          <TableCell className="text-center">{result.ca4_score}</TableCell>
                           <TableCell className="text-center">{result.exam_score}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant={

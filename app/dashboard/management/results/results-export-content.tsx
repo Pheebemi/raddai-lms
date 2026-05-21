@@ -200,7 +200,6 @@ export function ResultsExportContent() {
           'CA1 Score',
           'CA2 Score',
           'CA3 Score',
-          'CA4 Score',
           'CA Total',
           'Exam Score',
           'Total Marks',
@@ -220,8 +219,7 @@ export function ResultsExportContent() {
           result.ca1_score,
           result.ca2_score,
           result.ca3_score,
-          result.ca4_score,
-          result.ca1_score + result.ca2_score + result.ca3_score + result.ca4_score,
+          result.ca1_score + result.ca2_score + result.ca3_score,
           result.exam_score,
           result.marks_obtained,
           result.percentage,
@@ -324,7 +322,7 @@ export function ResultsExportContent() {
             ca1: r.ca1_score,
             ca2: r.ca2_score,
             ca3: r.ca3_score,
-            ca4: r.ca4_score,
+            ca4: 0,
             exam: r.exam_score,
             total: r.marks_obtained,
             grade: r.grade,
@@ -559,7 +557,7 @@ export function ResultsExportContent() {
                           <td className="p-3">{result.academicYear}</td>
                           <td className="p-3">
                             <div className="text-sm space-y-1">
-                              <div>CA: {result.ca1_score + result.ca2_score + result.ca3_score + result.ca4_score}/40</div>
+                              <div>CA: {result.ca1_score + result.ca2_score + result.ca3_score}/40</div>
                               <div>Exam: {result.exam_score}/60</div>
                             </div>
                           </td>
