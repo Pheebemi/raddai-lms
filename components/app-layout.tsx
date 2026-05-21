@@ -248,16 +248,14 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       { title: 'Upload Results', href: '/dashboard/results/upload', icon: 'Upload' },
       { title: 'Class Rankings', href: '/dashboard/rankings', icon: 'Trophy' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
-      { title: 'Profile', href: '/profile', icon: 'User' },
+      { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
     student: [
       ...baseItems,
       { title: 'My Results', href: '/dashboard/results', icon: 'FileText' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
-      { title: 'Attendance', href: '/attendance', icon: 'Calendar' },
-      { title: 'Assignments', href: '/assignments', icon: 'BookOpen' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
-      { title: 'Profile', href: '/profile', icon: 'User' },
+      { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
     parent: [
       ...baseItems,
@@ -265,7 +263,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       { title: 'Results', href: '/dashboard/results', icon: 'FileText' },
       { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
-      { title: 'Profile', href: '/profile', icon: 'User' },
+      { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
   };
 
