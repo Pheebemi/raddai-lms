@@ -448,51 +448,65 @@ export function ManagementDashboard() {
           </CardContent>
         </Card>
 
-        {/* System Alerts */}
+        {/* System Alerts — real data */}
         <Card>
           <CardHeader>
             <CardTitle>System Alerts</CardTitle>
-            <CardDescription>
-              Important notifications requiring attention
-            </CardDescription>
+            <CardDescription>Important items requiring attention</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-start gap-3 p-3 border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950 rounded-lg">
-                <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-yellow-900 dark:text-yellow-100">
-                    Fee Payment Due
-                  </p>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
-                    15 students have overdue fee payments exceeding ₦50,000
-                  </p>
-                </div>
-              </div>
+            <div className="space-y-3">
 
-              <div className="flex items-start gap-3 p-3 border border-border bg-secondary rounded-lg">
-                <CheckCircle className="h-5 w-5 text-primary mt-0.5" />
-                <div>
-                  <p className="font-medium text-foreground">
-                    Result Upload Complete
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Term 1 results have been uploaded for all Class 10 students
-                  </p>
+              {/* Overdue fees alert */}
+              {overdueAmount > 0 && (
+                <div className="flex items-start gap-3 p-3 border border-yellow-200 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950 rounded-xl">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-yellow-900 dark:text-yellow-100">Overdue Fee Payments</p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                      ₦{overdueAmount.toLocaleString()} outstanding from previous academic year(s)
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div className="flex items-start gap-3 p-3 border border-green-200 bg-green-50 dark:border-green-800 dark:bg-green-950 rounded-lg">
-                <TrendingUp className="h-5 w-5 text-green-600 mt-0.5" />
-                <div>
-                  <p className="font-medium text-green-900 dark:text-green-100">
-                    Attendance Improvement
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">
-                    Overall attendance has improved by 5% this month
-                  </p>
+              {/* Pending fees */}
+              {pendingFees > 0 && (
+                <div className="flex items-start gap-3 p-3 border border-border bg-muted rounded-xl">
+                  <AlertTriangle className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">Pending Fees</p>
+                    <p className="text-sm text-muted-foreground">
+                      ₦{pendingFees.toLocaleString()} in fees not yet collected for the current year
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Recent results uploaded */}
+              {recentResults.length > 0 && (
+                <div className="flex items-start gap-3 p-3 border border-border bg-secondary rounded-xl">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">Recent Results Uploaded</p>
+                    <p className="text-sm text-muted-foreground">
+                      {recentResults.length} result{recentResults.length !== 1 ? 's' : ''} uploaded recently — latest by {(recentResults[0] as any)?.uploadedBy || 'a teacher'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* All clear */}
+              {overdueAmount === 0 && pendingFees === 0 && recentResults.length === 0 && (
+                <div className="flex items-start gap-3 p-3 border border-border bg-muted rounded-xl">
+                  <CheckCircle className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium text-foreground">All Clear</p>
+                    <p className="text-sm text-muted-foreground">No urgent items require attention right now</p>
+                  </div>
+                </div>
+              )}
+
             </div>
           </CardContent>
         </Card>
