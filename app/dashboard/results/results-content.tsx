@@ -587,7 +587,18 @@ export function ResultsContent() {
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
-          a.download = `Laazeere_Academy_${term}_term_results_${termResults[0]?.academicYear}.png`;
+          const dlName = user?.role === 'parent' && selectedChildId
+            ? parentChildren.find((c: any) => c.id === selectedChildId)
+            : null;
+          const dlStudentName = dlName
+            ? `${dlName.user.firstName}_${dlName.user.lastName}`
+            : `${user?.firstName}_${user?.lastName}`;
+          const dlClass = termResults[0]?.class || studentClass;
+          const dlSession = termResults[0]?.academicYear || '';
+          const safeName = dlStudentName.replace(/[^a-zA-Z0-9]/g, '_');
+          const safeClass = dlClass.replace(/[^a-zA-Z0-9]/g, '_');
+          const safeSession = dlSession.replace(/[^a-zA-Z0-9]/g, '_');
+          a.download = `${safeName}_${safeClass}_${safeSession}_${term}_Term_Result.png`;
           document.body.appendChild(a);
           a.click();
           document.body.removeChild(a);
