@@ -212,29 +212,37 @@ export function SalaryManagementContent() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Header
-      ctx.fillStyle = '#1e40af';
-      ctx.fillRect(0, 0, canvas.width, 120);
-
+      // Header — logo + school details
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 32px Arial';
+      ctx.fillRect(0, 0, canvas.width, 160);
+      await new Promise<void>(resolve => {
+        const img = new window.Image();
+        img.onload = () => { ctx.drawImage(img, canvas.width / 2 - 55, 10, 110, 110); resolve(); };
+        img.onerror = () => resolve();
+        img.src = '/logo.png';
+      });
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', canvas.width / 2, 50);
+      ctx.fillText('LAAZEERE ACADEMY', canvas.width / 2, 135);
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#444';
+      ctx.fillText('Samunaka Sabon Gari, Jalingo, Taraba State  |  Tel: 08066115707', canvas.width / 2, 155);
 
-      ctx.font = '20px Arial';
-      ctx.fillText('MONTHLY SALARY REPORT', canvas.width / 2, 85);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(20, 165); ctx.lineTo(canvas.width - 20, 165); ctx.stroke();
 
-      // Month and Year
+      ctx.font = 'bold 20px Arial';
+      ctx.fillStyle = '#000';
+      ctx.fillText('MONTHLY SALARY REPORT', canvas.width / 2, 188);
+
       const monthName = MONTHS.find(m => m.value.toString() === selectedMonth)?.label || selectedMonth;
       const academicYearName = academicYears.find(y => y.id.toString() === selectedAcademicYear)?.name || selectedAcademicYear;
-      ctx.fillText(`${monthName} ${academicYearName}`, canvas.width / 2, 110);
+      ctx.font = '16px Arial';
+      ctx.fillText(`${monthName} ${academicYearName}`, canvas.width / 2, 210);
 
-      // Border
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-      let yPosition = 160;
+      let yPosition = 230;
 
       // Report Summary
       ctx.fillStyle = '#000000';
@@ -349,24 +357,32 @@ export function SalaryManagementContent() {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Header
-      ctx.fillStyle = '#1e40af';
-      ctx.fillRect(0, 0, canvas.width, 100);
-
+      // Header — logo + school details
       ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, 160);
+      await new Promise<void>(resolve => {
+        const img = new window.Image();
+        img.onload = () => { ctx.drawImage(img, canvas.width / 2 - 55, 10, 110, 110); resolve(); };
+        img.onerror = () => resolve();
+        img.src = '/logo.png';
+      });
+      ctx.fillStyle = '#000000';
       ctx.font = 'bold 28px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText('RADDAI METROPOLITAN SCHOOL', canvas.width / 2, 40);
+      ctx.fillText('LAAZEERE ACADEMY', canvas.width / 2, 135);
+      ctx.font = '14px Arial';
+      ctx.fillStyle = '#444';
+      ctx.fillText('Samunaka Sabon Gari, Jalingo, Taraba State  |  Tel: 08066115707', canvas.width / 2, 155);
 
-      ctx.font = '18px Arial';
-      ctx.fillText('SALARY VOUCHER', canvas.width / 2, 70);
-
-      // Border
-      ctx.strokeStyle = '#000000';
+      ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
-      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+      ctx.beginPath(); ctx.moveTo(20, 165); ctx.lineTo(canvas.width - 20, 165); ctx.stroke();
 
-      let yPosition = 140;
+      ctx.font = 'bold 22px Arial';
+      ctx.fillStyle = '#000';
+      ctx.fillText('SALARY VOUCHER', canvas.width / 2, 190);
+
+      let yPosition = 220;
 
       // Staff Information
       ctx.fillStyle = '#000000';
