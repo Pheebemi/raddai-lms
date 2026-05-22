@@ -19,6 +19,7 @@ import {
 import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock, Users } from 'lucide-react';
 import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, attendanceApi, handleApiError } from '@/lib/api';
 import { drawResultCanvas } from '@/lib/result-canvas';
+import { generateResultComment } from '@/lib/result-comment';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 
@@ -299,6 +300,22 @@ export function ResultsContent() {
         console.log('Could not fetch student position data:', error);
         studentPosition = 'N/A';
       }
+      // Calculate previous term average for improvement comparison
+      const termOrder = ['first', 'second', 'third'] as const;
+      const currentTermIdx = termOrder.indexOf(term as any);
+      let previousAvgPercentage: number | null = null;
+      if (currentTermIdx > 0) {
+        const prevTerm = termOrder[currentTermIdx - 1];
+        const prevResults = results.filter(r =>
+          r.term === prevTerm && r.academicYear === termResults[0]?.academicYear
+        );
+        if (prevResults.length > 0) {
+          previousAvgPercentage = Math.round(
+            prevResults.reduce((s, r) => s + r.percentage, 0) / prevResults.length
+          );
+        }
+      }
+
       // Fetch attendance for this student and term
       let attendanceSummary;
       try {
@@ -316,6 +333,20 @@ export function ResultsContent() {
         const percentage = totalDays > 0 ? Math.round((present / totalDays) * 100) : 0;
         if (totalDays > 0) attendanceSummary = { totalDays, present, absent, percentage };
       } catch { /* attendance optional */ }
+
+      // Generate auto comment
+      const currentAvg = termResults.length > 0
+        ? Math.round(termResults.reduce((s, r) => s + r.percentage, 0) / termResults.length)
+        : 0;
+      const rankingForComment = classRankings?.rankings?.find(
+        (r: any) => String(r.student_id) === String(user?.role === 'parent' ? selectedChildId : user?.profile?.id)
+      );
+      const autoComment = generateResultComment({
+        avgPercentage: currentAvg,
+        position: rankingForComment?.position ?? null,
+        totalStudents: classRankings?.total_students ?? 0,
+        previousAvgPercentage,
+      });
 
       // Create canvas for the result sheet
       const canvas = document.createElement('canvas');
@@ -571,10 +602,25 @@ export function ResultsContent() {
         ctx.strokeRect(bx, y, boxW, boxH);
         ctx.font = 'bold 24px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#000';
         ctx.fillText(title, bx + boxW / 2, y + 30);
+        // Auto comment in class teacher box
+        if (i === 0 && autoComment) {
+          ctx.font = '22px serif'; ctx.fillStyle = '#222'; ctx.textAlign = 'left';
+          const words = autoComment.split(' ');
+          let line = ''; let lineY = y + 85;
+          const maxW = boxW - 40;
+          for (const word of words) {
+            const test = line + (line ? ' ' : '') + word;
+            if (ctx.measureText(test).width > maxW && line) {
+              ctx.fillText(line, bx + 20, lineY); lineY += 28; line = word;
+              if (lineY > y + boxH - 70) break;
+            } else { line = test; }
+          }
+          if (line) ctx.fillText(line, bx + 20, lineY);
+        }
         ctx.setLineDash([6, 6]);
         ctx.beginPath(); ctx.moveTo(bx + 30, y + boxH - 50); ctx.lineTo(bx + boxW - 30, y + boxH - 50); ctx.stroke();
         ctx.setLineDash([]);
-        ctx.font = '22px serif'; ctx.fillStyle = '#555';
+        ctx.font = '22px serif'; ctx.fillStyle = '#555'; ctx.textAlign = 'center';
         ctx.fillText('Signature', bx + boxW / 2, y + boxH - 20);
       });
       y += boxH + 40;

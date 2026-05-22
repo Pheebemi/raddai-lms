@@ -32,6 +32,7 @@ export interface ResultCanvasOptions {
   position: string;
   rows: ResultRow[];
   attendance?: AttendanceSummary;
+  autoComment?: string;
 }
 
 export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob> {
@@ -250,6 +251,29 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
     ctx.fillStyle = '#000';
     ctx.fillText(title, bx + boxW / 2, y + 30);
 
+    // Auto comment in class teacher box (left box only)
+    if (i === 0 && opts.autoComment) {
+      ctx.font = '22px serif';
+      ctx.fillStyle = '#222';
+      ctx.textAlign = 'left';
+      const words = opts.autoComment.split(' ');
+      let line = '';
+      let lineY = y + 85;
+      const maxW = boxW - 40;
+      for (const word of words) {
+        const test = line + (line ? ' ' : '') + word;
+        if (ctx.measureText(test).width > maxW && line) {
+          ctx.fillText(line, bx + 20, lineY);
+          lineY += 28;
+          line = word;
+          if (lineY > y + boxH - 70) break;
+        } else {
+          line = test;
+        }
+      }
+      if (line) ctx.fillText(line, bx + 20, lineY);
+    }
+
     // Signature line near bottom
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
@@ -260,6 +284,7 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
 
     ctx.font = '22px serif';
     ctx.fillStyle = '#555';
+    ctx.textAlign = 'center';
     ctx.fillText('Signature', bx + boxW / 2, y + boxH - 20);
   });
   y += boxH + 40;
