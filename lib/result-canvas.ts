@@ -16,14 +16,22 @@ export interface ResultRow {
   remarks?: string;
 }
 
+export interface AttendanceSummary {
+  totalDays: number;
+  present: number;
+  absent: number;
+  percentage: number;
+}
+
 export interface ResultCanvasOptions {
   studentName: string;
   studentId: string;
   className: string;
   term: string;
   academicYear: string;
-  position: string;       // e.g. "1st", "2nd", "N/A"
+  position: string;
   rows: ResultRow[];
+  attendance?: AttendanceSummary;
 }
 
 export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob> {
@@ -180,24 +188,81 @@ export async function drawResultCanvas(opts: ResultCanvasOptions): Promise<Blob>
     if (line) { ctx.fillText(line, marginLeft, y); y += 50; }
   }
 
-  // Signature lines
-  y += 60;
-  const lineLength = contentWidth * 0.55;
-  const sigLabels = ["CLASS TEACHER'S SIGNATURE:", "HEAD TEACHER'S SIGNATURE:", "PARENT'S SIGNATURE:"];
-  ctx.font = '32px serif';
-  ctx.fillStyle = '#000000';
-  for (const label of sigLabels) {
-    ctx.textAlign = 'left';
-    ctx.fillText(label, marginLeft, y);
-    const labelW = ctx.measureText(label).width;
+  // Attendance section
+  y += 30;
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+  y += 40;
+
+  ctx.font = 'bold 34px serif';
+  ctx.fillStyle = '#000';
+  ctx.textAlign = 'left';
+  ctx.fillText('ATTENDANCE RECORD', marginLeft, y);
+  y += 50;
+
+  const att = opts.attendance;
+  const attData = [
+    { label: 'Total School Days', value: att ? att.totalDays.toString() : '' },
+    { label: 'Days Present',      value: att ? att.present.toString() : '' },
+    { label: 'Days Absent',       value: att ? att.absent.toString() : '' },
+    { label: '% Attendance',      value: att ? `${att.percentage}%` : '' },
+  ];
+  const attColW = contentWidth / attData.length;
+  attData.forEach(({ label, value }, i) => {
+    const ax = marginLeft + i * attColW;
+    ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+    ctx.strokeRect(ax, y, attColW, 90);
+    ctx.font = 'bold 24px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#000';
+    ctx.fillText(label, ax + attColW / 2, y + 26);
+    if (value) {
+      ctx.font = 'bold 34px serif';
+      ctx.fillText(value, ax + attColW / 2, y + 68);
+    } else {
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(ax + 20, y + 68);
+      ctx.lineTo(ax + attColW - 20, y + 68);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+  });
+  y += 110;
+
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+  y += 50;
+
+  // Signature & Comment boxes
+  const boxW = (contentWidth - 60) / 2;
+  const boxH = 220;
+  const sigTitles = ["CLASS TEACHER'S SIGNATURE & COMMENT", "HEAD TEACHER'S SIGNATURE & COMMENT"];
+
+  sigTitles.forEach((title, i) => {
+    const bx = marginLeft + i * (boxW + 60);
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(bx, y, boxW, boxH);
+
+    ctx.font = 'bold 24px serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#000';
+    ctx.fillText(title, bx + boxW / 2, y + 30);
+
+    // Signature line near bottom
     ctx.setLineDash([6, 6]);
     ctx.beginPath();
-    ctx.moveTo(marginLeft + labelW + 20, y);
-    ctx.lineTo(marginLeft + lineLength, y);
+    ctx.moveTo(bx + 30, y + boxH - 50);
+    ctx.lineTo(bx + boxW - 30, y + boxH - 50);
     ctx.stroke();
     ctx.setLineDash([]);
-    y += 70;
-  }
+
+    ctx.font = '22px serif';
+    ctx.fillStyle = '#555';
+    ctx.fillText('Signature', bx + boxW / 2, y + boxH - 20);
+  });
+  y += boxH + 40;
 
   // Footer
   y += 30;

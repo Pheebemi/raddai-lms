@@ -17,7 +17,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock, Users } from 'lucide-react';
-import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
+import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, attendanceApi, handleApiError } from '@/lib/api';
+import { drawResultCanvas } from '@/lib/result-canvas';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
 import { toast } from 'sonner';
 
@@ -298,6 +299,24 @@ export function ResultsContent() {
         console.log('Could not fetch student position data:', error);
         studentPosition = 'N/A';
       }
+      // Fetch attendance for this student and term
+      let attendanceSummary;
+      try {
+        const allAtt = await attendanceApi.getAll();
+        const studentId = user?.role === 'parent' && selectedChildId
+          ? selectedChildId
+          : user?.profile?.id?.toString();
+        const termAtt = allAtt.filter((a: any) =>
+          String(a.studentId) === String(studentId)
+        );
+        const uniqueDates = new Set(termAtt.map((a: any) => a.date));
+        const totalDays = uniqueDates.size;
+        const present = termAtt.filter((a: any) => a.status === 'present' || a.status === 'late').length;
+        const absent = termAtt.filter((a: any) => a.status === 'absent').length;
+        const percentage = totalDays > 0 ? Math.round((present / totalDays) * 100) : 0;
+        if (totalDays > 0) attendanceSummary = { totalDays, present, absent, percentage };
+      } catch { /* attendance optional */ }
+
       // Create canvas for the result sheet
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
@@ -508,27 +527,57 @@ export function ResultsContent() {
         }
       }
 
-      // --- Signature Lines (like the PDF) ---
-      y += 60;
-      const lineLength = contentWidth * 0.55;
-      const sigLabels = ["CLASS TEACHER'S SIGNATURE:", "HEAD TEACHER'S SIGNATURE:", "PARENT'S SIGNATURE:"];
-      ctx.font = '32px serif';
-      ctx.fillStyle = '#000000';
-      for (const label of sigLabels) {
-        ctx.textAlign = 'left';
-        ctx.fillText(label, marginLeft, y);
-        // Dotted line
-        const labelW = ctx.measureText(label).width;
-        const lineStartX = marginLeft + labelW + 20;
-        const lineEndX = marginLeft + lineLength;
+      // --- Attendance Section ---
+      y += 30;
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+      y += 40;
+      ctx.font = 'bold 34px serif'; ctx.fillStyle = '#000'; ctx.textAlign = 'left';
+      ctx.fillText('ATTENDANCE RECORD', marginLeft, y);
+      y += 50;
+      const attData = [
+        { label: 'Total School Days', value: attendanceSummary ? attendanceSummary.totalDays.toString() : '' },
+        { label: 'Days Present',      value: attendanceSummary ? attendanceSummary.present.toString() : '' },
+        { label: 'Days Absent',       value: attendanceSummary ? attendanceSummary.absent.toString() : '' },
+        { label: '% Attendance',      value: attendanceSummary ? `${attendanceSummary.percentage}%` : '' },
+      ];
+      const attColW = contentWidth / attData.length;
+      attData.forEach(({ label, value }, i) => {
+        const ax = marginLeft + i * attColW;
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+        ctx.strokeRect(ax, y, attColW, 90);
+        ctx.font = 'bold 24px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#000';
+        ctx.fillText(label, ax + attColW / 2, y + 26);
+        if (value) {
+          ctx.font = 'bold 34px serif';
+          ctx.fillText(value, ax + attColW / 2, y + 68);
+        } else {
+          ctx.setLineDash([4, 4]);
+          ctx.beginPath(); ctx.moveTo(ax + 20, y + 68); ctx.lineTo(ax + attColW - 20, y + 68); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+      });
+      y += 110;
+      ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(marginLeft, y); ctx.lineTo(width - marginRight, y); ctx.stroke();
+      y += 50;
+
+      // --- Signature & Comment Boxes ---
+      const boxW = (contentWidth - 60) / 2;
+      const boxH = 220;
+      ["CLASS TEACHER'S SIGNATURE & COMMENT", "HEAD TEACHER'S SIGNATURE & COMMENT"].forEach((title, i) => {
+        const bx = marginLeft + i * (boxW + 60);
+        ctx.strokeStyle = '#000'; ctx.lineWidth = 1;
+        ctx.strokeRect(bx, y, boxW, boxH);
+        ctx.font = 'bold 24px serif'; ctx.textAlign = 'center'; ctx.fillStyle = '#000';
+        ctx.fillText(title, bx + boxW / 2, y + 30);
         ctx.setLineDash([6, 6]);
-        ctx.beginPath();
-        ctx.moveTo(lineStartX, y);
-        ctx.lineTo(lineEndX, y);
-        ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx + 30, y + boxH - 50); ctx.lineTo(bx + boxW - 30, y + boxH - 50); ctx.stroke();
         ctx.setLineDash([]);
-        y += 70;
-      }
+        ctx.font = '22px serif'; ctx.fillStyle = '#555';
+        ctx.fillText('Signature', bx + boxW / 2, y + boxH - 20);
+      });
+      y += boxH + 40;
 
       // --- Footer ---
       y += 30;
