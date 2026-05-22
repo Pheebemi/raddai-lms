@@ -13,6 +13,7 @@ import { Download, FileText, Filter, Search } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchClasses, fetchSubjects, fetchAcademicYears, resultsApi, rankingsApi } from '@/lib/api';
 import { drawResultCanvas } from '@/lib/result-canvas';
+import { generateResultComment } from '@/lib/result-comment';
 
 interface ResultExportData {
   id: string;
@@ -309,6 +310,34 @@ export function ResultsExportContent() {
           ? `${pos}${pos === 1 ? 'st' : pos === 2 ? 'nd' : pos === 3 ? 'rd' : 'th'}`
           : 'N/A';
 
+        // Calculate current average
+        const currentAvg = studentResults.length > 0
+          ? Math.round(studentResults.reduce((s, r) => s + r.percentage, 0) / studentResults.length)
+          : 0;
+
+        // Previous term average from all loaded results
+        const termOrder = ['first', 'second', 'third'];
+        const prevTermIdx = termOrder.indexOf(selectedTerm) - 1;
+        let previousAvg: number | null = null;
+        if (prevTermIdx >= 0) {
+          const prevTerm = termOrder[prevTermIdx];
+          const prevResults = results.filter(r =>
+            r.studentId === studentId && r.term === prevTerm
+          );
+          if (prevResults.length > 0) {
+            previousAvg = Math.round(
+              prevResults.reduce((s, r) => s + r.percentage, 0) / prevResults.length
+            );
+          }
+        }
+
+        const autoComment = generateResultComment({
+          avgPercentage: currentAvg,
+          position: pos ?? null,
+          totalStudents: rankings.length,
+          previousAvgPercentage: previousAvg,
+        });
+
         const blob = await drawResultCanvas({
           studentName,
           studentId: studentResults[0]?.studentId || studentId,
@@ -316,6 +345,7 @@ export function ResultsExportContent() {
           term: selectedTerm,
           academicYear: yearLabel,
           position: positionLabel,
+          autoComment,
           rows: studentResults.map((r, idx) => ({
             sn: idx + 1,
             subjectName: r.subjectName,
