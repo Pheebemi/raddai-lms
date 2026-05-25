@@ -176,7 +176,6 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
           { title: 'Students', href: '/management/students', icon: 'GraduationCap' },
           { title: 'Staff', href: '/management/staff', icon: 'Users' },
           { title: 'Finance', href: '/management/finance', icon: 'DollarSign' },
-          { title: 'Analytics', href: '/management/analytics', icon: 'BarChart3' },
         ],
       },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
@@ -223,11 +222,6 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         title: 'Finance',
         href: '/management/finance',
         icon: 'DollarSign',
-      },
-      {
-        title: 'Analytics',
-        href: '/management/analytics',
-        icon: 'BarChart3',
       },
       {
         title: 'Results Export',
