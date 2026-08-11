@@ -36,16 +36,17 @@ export default function LandingPage() {
               {[
                 { label: 'About', href: '#about' },
                 { label: 'Programs', href: '#programs' },
+                { label: 'Admissions', href: '/admissions' },
                 { label: 'Contact', href: '#contact' },
-              ].map(({ label, href }) => (
-                <a
-                  key={label}
-                  href={href}
-                  className="relative px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform hover:after:scale-x-100"
-                >
-                  {label}
-                </a>
-              ))}
+              ].map(({ label, href }) => {
+                const className = "relative px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-primary after:absolute after:bottom-0 after:left-4 after:right-4 after:h-0.5 after:scale-x-0 after:bg-primary after:transition-transform hover:after:scale-x-100";
+                // Anchors stay plain <a>; real routes go through Link.
+                return href.startsWith('/') ? (
+                  <Link key={label} href={href} className={className}>{label}</Link>
+                ) : (
+                  <a key={label} href={href} className={className}>{label}</a>
+                );
+              })}
             </nav>
 
             <div className="flex items-center gap-2">
@@ -104,8 +105,8 @@ export default function LandingPage() {
           <p className="text-sm text-white/60 mb-8">Samunaka Sabon Gari, Jalingo, Taraba State</p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Button asChild size="lg">
-              <Link href="/login">
-                Access Portal
+              <Link href="/admissions">
+                Apply for Admission
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
@@ -113,7 +114,7 @@ export default function LandingPage() {
               asChild size="lg" variant="outline"
               className="border-white/40 text-white bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-sm"
             >
-              <a href="#about">Learn More</a>
+              <Link href="/login">Access Portal</Link>
             </Button>
           </div>
         </div>
@@ -277,7 +278,7 @@ export default function LandingPage() {
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="border-accent-foreground/30 text-accent-foreground hover:bg-accent-foreground/10">
-              <a href="#contact">Contact Admissions</a>
+              <Link href="/admissions">Apply for Admission</Link>
             </Button>
           </div>
         </div>
@@ -324,14 +325,21 @@ export default function LandingPage() {
                 Log in to your portal or reach out to our admissions office to schedule a campus visit.
               </p>
               <Button asChild size="lg" className="w-full mb-3">
-                <Link href="/login">
-                  Login to Portal
+                <Link href="/admissions">
+                  Apply for Admission
                   <ArrowRight className="h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="tonal" className="w-full">
-                <Phone className="h-4 w-4" />
-                Call Admissions
+              <Button asChild size="lg" variant="tonal" className="w-full mb-3">
+                <Link href="/admissions/retrieve">
+                  Continue or reprint my form
+                </Link>
+              </Button>
+              <Button asChild size="lg" variant="outline" className="w-full">
+                <a href="tel:08066115707">
+                  <Phone className="h-4 w-4" />
+                  Call Admissions
+                </a>
               </Button>
               <div className="mt-6 pt-6 border-t border-border">
                 <p className="text-xs text-muted-foreground text-center leading-relaxed">
@@ -378,6 +386,8 @@ export default function LandingPage() {
               <p className="text-sm font-semibold mb-4">Quick Links</p>
               <ul className="space-y-2 text-sm opacity-60">
                 {[
+                  { label: 'Apply for Admission', href: '/admissions' },
+                  { label: 'Retrieve / Print Form', href: '/admissions/retrieve' },
                   { label: 'Student Portal', href: '/login' },
                   { label: 'Parent Portal', href: '/login' },
                   { label: 'Staff Portal', href: '/login' },

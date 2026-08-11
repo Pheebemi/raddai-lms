@@ -34,6 +34,7 @@ import {
   Heart,
   Download,
   Eye,
+  ClipboardList,
 } from 'lucide-react';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
@@ -173,6 +174,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         href: '/management',
         icon: 'Users',
         children: [
+          { title: 'Admissions', href: '/management/admissions', icon: 'ClipboardList' },
           { title: 'Students', href: '/management/students', icon: 'GraduationCap' },
           { title: 'Staff', href: '/management/staff', icon: 'Users' },
           { title: 'Finance', href: '/management/finance', icon: 'DollarSign' },
@@ -197,6 +199,11 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
         title: 'Subjects',
         href: '/management/subjects',
         icon: 'FileText',
+      },
+      {
+        title: 'Admissions',
+        href: '/management/admissions',
+        icon: 'ClipboardList',
       },
       {
         title: 'Students',
@@ -284,6 +291,7 @@ const iconMap = {
   Heart,
   Download,
   Eye,
+  ClipboardList,
 };
 
 interface AppLayoutProps {
