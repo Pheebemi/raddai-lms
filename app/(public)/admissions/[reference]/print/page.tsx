@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { admissionsApi, Application } from '@/lib/admissions-api';
+import { getFeeSchedule } from '@/lib/admission-fee-schedule';
 import { Loader2, Printer, AlertCircle, CreditCard, PencilLine } from 'lucide-react';
 
 const showDate = (value: string | null) =>
@@ -79,6 +80,8 @@ export default function PrintApplicationPage() {
       />
     );
   }
+
+  const schedule = getFeeSchedule(application.level);
 
   return (
     <div className="min-h-screen bg-muted/30 print:bg-white">
@@ -178,6 +181,70 @@ export default function PrintApplicationPage() {
           <Row label="Application fee" value={`NGN ${application.fee_amount}`} />
           <Row label="Date paid" value={showDate(application.paid_at)} />
         </Section>
+
+        <section className="mb-6 print:break-before-page">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+            School Fees — {schedule.schoolName}
+          </h3>
+          <table className="w-full text-sm border-collapse">
+            <tbody>
+              {schedule.items.map((row, i) => (
+                <tr
+                  key={i}
+                  className={row.bold ? 'font-bold border-t border-neutral-400' : ''}
+                >
+                  <td className="py-1 pr-2">{row.label}</td>
+                  <td className="py-1 pr-2 text-neutral-500">{row.period}</td>
+                  <td className="py-1 text-right">{row.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <h4 className="text-sm font-semibold mt-4 mb-2">{schedule.totalsTitle}</h4>
+          <table className="w-full text-sm border-collapse">
+            <tbody>
+              {schedule.totals.map((row, i) => (
+                <tr key={i}>
+                  <td className="py-1 pr-2">{row.label}</td>
+                  <td className="py-1 text-right font-medium">{row.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+
+          <p className="text-xs text-neutral-600 mt-3">
+            Account Number: <strong>{schedule.bankAccount}</strong> · {schedule.bankName} ·{' '}
+            {schedule.schoolName}
+          </p>
+        </section>
+
+        <section className="mb-6">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+            Notes &amp; requirements
+          </h3>
+          <ul className="text-sm space-y-1 list-disc pl-5">
+            {schedule.notes.map((note, i) => <li key={i}>{note}</li>)}
+          </ul>
+        </section>
+
+        <section className="mb-6">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+            {schedule.textbooksTitle}
+          </h3>
+          <ol className="text-sm space-y-1 list-decimal pl-5">
+            {schedule.textbooks.map((book, i) => <li key={i}>{book}</li>)}
+          </ol>
+        </section>
+
+        <section className="mb-6 print:break-before-page">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+            School rules and regulations
+          </h3>
+          <ol className="text-sm space-y-2 list-decimal pl-5">
+            {schedule.rules.map((rule, i) => <li key={i}>{rule}</li>)}
+          </ol>
+        </section>
 
         <section className="mb-6">
           <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
