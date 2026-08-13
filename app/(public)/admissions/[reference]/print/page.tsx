@@ -182,8 +182,8 @@ export default function PrintApplicationPage() {
           <Row label="Date paid" value={showDate(application.paid_at)} />
         </Section>
 
-        <section className="mb-6 print:break-before-page">
-          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+        <section className="mb-6">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3 print:break-after-avoid">
             School Fees — {schedule.schoolName}
           </h3>
           <table className="w-full text-sm border-collapse">
@@ -191,7 +191,7 @@ export default function PrintApplicationPage() {
               {schedule.items.map((row, i) => (
                 <tr
                   key={i}
-                  className={row.bold ? 'font-bold border-t border-neutral-400' : ''}
+                  className={`print:break-inside-avoid ${row.bold ? 'font-bold border-t border-neutral-400' : ''}`}
                 >
                   <td className="py-1 pr-2">{row.label}</td>
                   <td className="py-1 pr-2 text-neutral-500">{row.period}</td>
@@ -201,11 +201,11 @@ export default function PrintApplicationPage() {
             </tbody>
           </table>
 
-          <h4 className="text-sm font-semibold mt-4 mb-2">{schedule.totalsTitle}</h4>
+          <h4 className="text-sm font-semibold mt-4 mb-2 print:break-after-avoid">{schedule.totalsTitle}</h4>
           <table className="w-full text-sm border-collapse">
             <tbody>
               {schedule.totals.map((row, i) => (
-                <tr key={i}>
+                <tr key={i} className="print:break-inside-avoid">
                   <td className="py-1 pr-2">{row.label}</td>
                   <td className="py-1 text-right font-medium">{row.amount}</td>
                 </tr>
@@ -219,73 +219,75 @@ export default function PrintApplicationPage() {
           </p>
         </section>
 
-        <section className="mb-6">
-          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+        <section className="mb-6 print:break-inside-avoid">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3 print:break-after-avoid">
             Notes &amp; requirements
           </h3>
           <ul className="text-sm space-y-1 list-disc pl-5">
-            {schedule.notes.map((note, i) => <li key={i}>{note}</li>)}
+            {schedule.notes.map((note, i) => <li key={i} className="print:break-inside-avoid">{note}</li>)}
           </ul>
         </section>
 
-        <section className="mb-6">
-          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+        <section className="mb-6 print:break-inside-avoid">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3 print:break-after-avoid">
             {schedule.textbooksTitle}
           </h3>
           <ol className="text-sm space-y-1 list-decimal pl-5">
-            {schedule.textbooks.map((book, i) => <li key={i}>{book}</li>)}
+            {schedule.textbooks.map((book, i) => <li key={i} className="print:break-inside-avoid">{book}</li>)}
           </ol>
         </section>
 
-        <section className="mb-6 print:break-before-page">
-          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+        <section className="mb-6 print:break-inside-avoid">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3 print:break-after-avoid">
             School rules and regulations
           </h3>
           <ol className="text-sm space-y-2 list-decimal pl-5">
-            {schedule.rules.map((rule, i) => <li key={i}>{rule}</li>)}
+            {schedule.rules.map((rule, i) => <li key={i} className="print:break-inside-avoid">{rule}</li>)}
           </ol>
         </section>
 
-        <section className="mb-6">
-          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3">
+        <section className="mb-6 print:break-inside-avoid">
+          <h3 className="text-sm font-bold uppercase bg-neutral-100 print:bg-neutral-100 px-2 py-1 border border-neutral-300 mb-3 print:break-after-avoid">
             Undertaking
           </h3>
           <ul className="text-sm space-y-1.5 list-none">
-            <li>
+            <li className="print:break-inside-avoid">
               [{application.agrees_to_school_authority ? 'X' : ' '}] I agree to raise any
               concern with the school authority first, rather than confronting staff
               directly or involving outside parties such as the police.
             </li>
-            <li>
+            <li className="print:break-inside-avoid">
               [{application.confirms_rules_read ? 'X' : ' '}] I confirm that I have read
               and understood the school&apos;s rules, regulations and admission conditions.
             </li>
           </ul>
         </section>
 
-        <div className="mt-10 pt-6 border-t border-black grid grid-cols-2 gap-10 text-sm">
-          <div>
-            <div className="border-b border-black h-10" />
-            <p className="mt-1">Parent / Guardian signature &amp; date</p>
+        <div className="print:break-inside-avoid">
+          <div className="mt-6 pt-4 border-t border-black grid grid-cols-2 gap-10 text-sm">
+            <div>
+              <div className="border-b border-black h-8" />
+              <p className="mt-1">Parent / Guardian signature &amp; date</p>
+            </div>
+            <div>
+              <div className="border-b border-black h-8" />
+              <p className="mt-1">For office use — received by</p>
+            </div>
           </div>
-          <div>
-            <div className="border-b border-black h-10" />
-            <p className="mt-1">For office use — received by</p>
-          </div>
-        </div>
 
-        <div className="mt-8 pt-4 border-t border-neutral-300 text-[10px] text-center text-neutral-600 space-y-1">
-          <p>
-            This form was generated from an online application. Bring the printed copy,
-            together with the child&apos;s birth certificate or declaration of age, recent
-            passport photographs, and the relevant testimonial (First School Leaving
-            Certificate or BECE, where applicable), when visiting the school.
-          </p>
-          <p>
-            Admissions office: Samunaka Sabon Gari, Jalingo, Taraba State ·
-            08066115707, 09060405589, 08039305511 · Mon – Fri, 8:00 AM – 4:00 PM
-          </p>
-          <p>Reference {application.reference} · Printed {new Date().toLocaleDateString('en-NG')}</p>
+          <div className="mt-4 pt-3 border-t border-neutral-300 text-[10px] text-center text-neutral-600 space-y-1">
+            <p>
+              This form was generated from an online application. Bring the printed copy,
+              together with the child&apos;s birth certificate or declaration of age, recent
+              passport photographs, and the relevant testimonial (First School Leaving
+              Certificate or BECE, where applicable), when visiting the school.
+            </p>
+            <p>
+              Admissions office: Samunaka Sabon Gari, Jalingo, Taraba State ·
+              08066115707, 09060405589, 08039305511 · Mon – Fri, 8:00 AM – 4:00 PM
+            </p>
+            <p>Reference {application.reference} · Printed {new Date().toLocaleDateString('en-NG')}</p>
+          </div>
         </div>
       </div>
     </div>
