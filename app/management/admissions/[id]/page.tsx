@@ -147,9 +147,25 @@ export default function ApplicationDetailPage() {
               <Row label="Name" value={application.guardian_name} />
               <Row label="Relationship" value={application.guardian_relationship} />
               <Row label="Phone" value={application.guardian_phone} />
+              <Row label="Father's phone" value={application.father_phone} />
+              <Row label="Mother's phone" value={application.mother_phone} />
               <Row label="Email" value={application.guardian_email} />
               <Row label="Occupation" value={application.guardian_occupation} />
               <Row label="Address" value={application.guardian_address} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="text-base">Undertaking</CardTitle></CardHeader>
+            <CardContent className="space-y-2 text-sm">
+              <Row
+                label="Raise concerns via school"
+                value={application.agrees_to_school_authority ? 'Agreed' : 'Not agreed'}
+              />
+              <Row
+                label="Rules read & understood"
+                value={application.confirms_rules_read ? 'Confirmed' : 'Not confirmed'}
+              />
             </CardContent>
           </Card>
 

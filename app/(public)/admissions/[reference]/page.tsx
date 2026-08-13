@@ -9,13 +9,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { admissionsApi, Application } from '@/lib/admissions-api';
 import { toast } from 'sonner';
 import {
-  Loader2, Check, CloudOff, CreditCard, Printer, Upload, AlertCircle,
+  Loader2, Check, CloudOff, CreditCard, Printer, Upload, AlertCircle, FileText,
 } from 'lucide-react';
 
 const REQUIRED_LABELS: Record<string, string> = {
@@ -27,6 +28,8 @@ const REQUIRED_LABELS: Record<string, string> = {
   guardian_relationship: 'Relationship to applicant',
   guardian_phone: "Guardian's phone",
   guardian_address: "Guardian's address",
+  agrees_to_school_authority: 'Undertaking on raising concerns',
+  confirms_rules_read: 'Confirmation of reading the school rules',
 };
 
 type SaveState = 'idle' | 'saving' | 'saved' | 'offline';
@@ -51,8 +54,12 @@ export default function ApplicationFormPage() {
   const [uploading, setUploading] = useState(false);
 
   const [fields, setFields] = useState<Record<string, string>>({});
+  const [consent, setConsent] = useState({
+    agrees_to_school_authority: false,
+    confirms_rules_read: false,
+  });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const pending = useRef<Record<string, string>>({});
+  const pending = useRef<Record<string, string | boolean>>({});
 
   useEffect(() => {
     admissionsApi.get(reference)
@@ -79,6 +86,12 @@ export default function ApplicationFormPage() {
           guardian_email: data.guardian_email || '',
           guardian_occupation: data.guardian_occupation || '',
           guardian_address: data.guardian_address || '',
+          father_phone: data.father_phone || '',
+          mother_phone: data.mother_phone || '',
+        });
+        setConsent({
+          agrees_to_school_authority: !!data.agrees_to_school_authority,
+          confirms_rules_read: !!data.confirms_rules_read,
         });
       })
       .catch(err => setLoadError(err.message))
@@ -104,6 +117,14 @@ export default function ApplicationFormPage() {
 
   const update = (field: string, value: string) => {
     setFields(prev => ({ ...prev, [field]: value }));
+    pending.current[field] = value;
+
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(flush, 900);
+  };
+
+  const updateConsent = (field: keyof typeof consent, value: boolean) => {
+    setConsent(prev => ({ ...prev, [field]: value }));
     pending.current[field] = value;
 
     if (saveTimer.current) clearTimeout(saveTimer.current);
@@ -355,12 +376,55 @@ export default function ApplicationFormPage() {
                      onChange={v => update('guardian_email', v)} />
               <Field label="Occupation" value={fields.guardian_occupation}
                      onChange={v => update('guardian_occupation', v)} />
+              <Field label="Father's phone" value={fields.father_phone}
+                     onChange={v => update('father_phone', v)} />
+              <Field label="Mother's phone" value={fields.mother_phone}
+                     onChange={v => update('mother_phone', v)} />
             </div>
             <div className="space-y-1.5">
               <Label>Address <span className="text-destructive">*</span></Label>
               <Textarea rows={2} value={fields.guardian_address}
                         onChange={e => update('guardian_address', e.target.value)} />
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader><CardTitle className="text-base">Declaration</CardTitle></CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-xl bg-muted/40 border border-border px-4 py-3 flex gap-2.5">
+              <FileText className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+              <p className="text-xs text-muted-foreground">
+                On registration day, bring the child&apos;s birth certificate or declaration
+                of age, recent passport photographs, the relevant testimonial (First School
+                Leaving Certificate or BECE, where applicable), and this printed form.
+              </p>
+            </div>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <Checkbox
+                className="mt-0.5"
+                checked={consent.agrees_to_school_authority}
+                onCheckedChange={v => updateConsent('agrees_to_school_authority', v === true)}
+              />
+              <span className="text-sm">
+                I agree to raise any concern about my child with the school authority
+                first, rather than confronting staff directly or involving outside
+                parties such as the police.
+              </span>
+            </label>
+
+            <label className="flex items-start gap-2.5 cursor-pointer">
+              <Checkbox
+                className="mt-0.5"
+                checked={consent.confirms_rules_read}
+                onCheckedChange={v => updateConsent('confirms_rules_read', v === true)}
+              />
+              <span className="text-sm">
+                I confirm that I have read and understood the school&apos;s rules,
+                regulations and admission conditions.
+              </span>
+            </label>
           </CardContent>
         </Card>
 
