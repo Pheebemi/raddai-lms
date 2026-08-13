@@ -80,6 +80,10 @@ export interface Application {
   guardian_email: string;
   guardian_occupation: string;
   guardian_address: string;
+  father_phone: string;
+  mother_phone: string;
+  agrees_to_school_authority: boolean;
+  confirms_rules_read: boolean;
   passport_photo: string | null;
   missing_fields: string[];
   submitted_at: string | null;
@@ -162,7 +166,7 @@ export const admissionsApi = {
   get: (reference: string) =>
     publicRequest<Application>(`/admissions/${reference}/`),
 
-  save: (reference: string, fields: Record<string, string>) =>
+  save: (reference: string, fields: Record<string, string | boolean>) =>
     publicRequest<{ saved_at: string; missing_fields: string[] }>(
       `/admissions/${reference}/save/`,
       { method: 'PATCH', body: JSON.stringify(fields) },
