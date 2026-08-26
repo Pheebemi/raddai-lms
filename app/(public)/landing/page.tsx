@@ -257,6 +257,42 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* Campus Life */}
+      <section id="campus-life" className="py-20 bg-background">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="text-center mb-12">
+            <span className="inline-block border border-primary/30 text-primary text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+              Campus Life
+            </span>
+            <h2 className="text-4xl font-semibold text-foreground tracking-tight">
+              Learning by doing
+            </h2>
+            <p className="text-base text-muted-foreground mt-3 max-w-xl mx-auto leading-relaxed">
+              Our science labs give students hands-on practice, not just theory
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {[
+              { src: '/gallery-microscope-pair.jpg', alt: 'Students examining a specimen under the microscope' },
+              { src: '/gallery-microscope-lesson.jpg', alt: 'Students studying human anatomy in the biology lab' },
+              { src: '/gallery-microscope-solo.jpg', alt: 'Student focused on microscope work' },
+              { src: '/gallery-biology-lab.jpg', alt: 'Students reviewing specimen jars in the biology lab' },
+            ].map(({ src, alt }) => (
+              <div key={src} className="relative aspect-3/4 rounded-2xl overflow-hidden group">
+                <Image
+                  src={src}
+                  alt={alt}
+                  fill
+                  sizes="(min-width: 768px) 25vw, 50vw"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Portal CTA */}
       <section className="py-20 bg-accent">
         <div className="container mx-auto px-4 max-w-4xl text-center">
