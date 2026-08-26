@@ -278,6 +278,9 @@ export default function LandingPage() {
               { src: '/gallery-microscope-lesson.jpg', alt: 'Students studying human anatomy in the biology lab' },
               { src: '/gallery-microscope-solo.jpg', alt: 'Student focused on microscope work' },
               { src: '/gallery-biology-lab.jpg', alt: 'Students reviewing specimen jars in the biology lab' },
+              { src: '/gallery-titration-pair.jpg', alt: 'Students carrying out a titration experiment' },
+              { src: '/gallery-cylinder-pair.jpg', alt: 'Students reading a measuring cylinder in the chemistry lab' },
+              { src: '/gallery-cylinder-solo.jpg', alt: 'Student measuring liquid in a graduated cylinder' },
             ].map(({ src, alt }) => (
               <div key={src} className="relative aspect-3/4 rounded-2xl overflow-hidden group">
                 <Image
@@ -294,26 +297,32 @@ export default function LandingPage() {
       </section>
 
       {/* Portal CTA */}
-      <section className="py-20 bg-accent">
-        <div className="container mx-auto px-4 max-w-4xl text-center">
-          <span className="inline-block border border-accent-foreground/30 text-accent-foreground text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
+      <section className="relative py-24 overflow-hidden">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/community-group.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-foreground/80" />
+
+        <div className="relative container mx-auto px-4 max-w-4xl text-center">
+          <span className="inline-block border border-white/30 text-white text-xs font-medium px-3 py-1 rounded-full mb-4 uppercase tracking-wider">
             Student & Parent Portal
           </span>
-          <h2 className="text-4xl font-semibold text-accent-foreground tracking-tight mb-4">
+          <h2 className="text-4xl font-semibold text-white tracking-tight mb-4">
             Everything you need, in one place
           </h2>
-          <p className="text-base text-accent-foreground/80 leading-relaxed mb-8 max-w-2xl mx-auto">
+          <p className="text-base text-white/80 leading-relaxed mb-8 max-w-2xl mx-auto">
             Access results, fee payments, class rankings, and announcements.
             Students, parents, and staff each have a dedicated dashboard.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button asChild size="lg" className="bg-accent-foreground text-accent hover:bg-accent-foreground/90">
+            <Button asChild size="lg" className="bg-white text-foreground hover:bg-white/90">
               <Link href="/login">
                 Login to Portal
                 <ArrowRight className="h-5 w-5" />
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="border-accent-foreground/30 text-accent-foreground hover:bg-accent-foreground/10">
+            <Button asChild size="lg" variant="outline" className="border-white/40 text-white bg-white/10 hover:bg-white/20 hover:text-white backdrop-blur-sm">
               <Link href="/admissions">Apply for Admission</Link>
             </Button>
           </div>
