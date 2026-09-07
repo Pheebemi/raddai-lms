@@ -506,6 +506,8 @@ export const feeStructureApi = {
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
       feeType: item.fee_type,
+      gender: item.gender || '',
+      department: item.department || '',
       amount: parseFloat(item.amount),
       description: item.description,
     }));
@@ -528,6 +530,8 @@ export const feeStructureApi = {
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
       feeType: item.fee_type,
+      gender: item.gender || '',
+      department: item.department || '',
       amount: parseFloat(item.amount),
       description: item.description,
     }));
@@ -549,6 +553,8 @@ export const feeStructureApi = {
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
       feeType: item.fee_type,
+      gender: item.gender || '',
+      department: item.department || '',
       amount: parseFloat(item.amount),
       description: item.description,
     }));
@@ -560,6 +566,8 @@ export const feeStructureApi = {
     fee_type: string;
     amount: number;
     description: string;
+    gender?: 'male' | 'female' | '';
+    department?: 'science' | 'arts' | '';
   }) => {
     const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
       method: 'POST',
@@ -575,6 +583,8 @@ export const feeStructureApi = {
     fee_type?: string;
     amount?: number;
     description?: string;
+    gender?: 'male' | 'female' | '';
+    department?: 'science' | 'arts' | '';
   }) => {
     const response = await fetch(`${API_BASE_URL}/fee-structures/${id}/`, {
       method: 'PATCH',
@@ -1059,6 +1069,8 @@ export const usersApi = {
         section: section,
         rollNumber: 0, // Would need to be added to Django model
         admissionDate: item.admission_date,
+        gender: item.gender || '',
+        department: item.department || '',
       };
     });
   },
@@ -1072,6 +1084,8 @@ export const usersApi = {
     email?: string;
     studentId: string;
     classId: string;
+    gender?: 'male' | 'female' | '';
+    department?: 'science' | 'arts' | '';
   }): Promise<Student> => {
     try {
       // 1) Create the auth user with role=student
@@ -1097,6 +1111,8 @@ export const usersApi = {
         user: createdUser.id,
         student_id: data.studentId,
         current_class: data.classId,
+        gender: data.gender || '',
+        department: data.department || '',
       };
 
       const studentResponse = await fetch(`${API_BASE_URL}/students/`, {
@@ -1123,6 +1139,8 @@ export const usersApi = {
       section,
       rollNumber: 0,
       admissionDate: createdStudent.admission_date,
+      gender: createdStudent.gender || '',
+      department: createdStudent.department || '',
     };
     } catch (error) {
       console.error('Error in createStudent API:', error);
@@ -1140,6 +1158,8 @@ export const usersApi = {
       email?: string;
       studentId?: string;
       classId?: string;
+      gender?: 'male' | 'female' | '';
+      department?: 'science' | 'arts' | '';
     }
   ): Promise<Student> => {
     try {
@@ -1162,6 +1182,8 @@ export const usersApi = {
       const studentPayload: any = {};
       if (data.studentId !== undefined) studentPayload.student_id = data.studentId;
       if (data.classId !== undefined) studentPayload.current_class = data.classId;
+      if (data.gender !== undefined) studentPayload.gender = data.gender;
+      if (data.department !== undefined) studentPayload.department = data.department;
 
       const studentResponse = await fetch(`${API_BASE_URL}/students/${id}/`, {
         method: 'PATCH',
@@ -1187,6 +1209,8 @@ export const usersApi = {
         section,
         rollNumber: 0,
         admissionDate: updatedStudent.admission_date,
+        gender: updatedStudent.gender || '',
+        department: updatedStudent.department || '',
       };
     } catch (error) {
       console.error('Error in updateStudent API:', error);

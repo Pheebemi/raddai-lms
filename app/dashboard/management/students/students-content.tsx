@@ -64,6 +64,8 @@ export function StudentsManagementContent() {
     email: '',
     studentId: '',
     classId: '',
+    gender: '' as 'male' | 'female' | '',
+    department: '' as 'science' | 'arts' | '',
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -75,6 +77,8 @@ export function StudentsManagementContent() {
     email: '',
     studentId: '',
     classId: '',
+    gender: '' as 'male' | 'female' | '',
+    department: '' as 'science' | 'arts' | '',
   });
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -117,6 +121,8 @@ export function StudentsManagementContent() {
         email: newStudent.email || undefined,
         studentId: newStudent.studentId,
         classId: newStudent.classId,
+        gender: newStudent.gender,
+        department: newStudent.department,
       });
 
       setStudents(prev => [created, ...prev]);
@@ -129,6 +135,8 @@ export function StudentsManagementContent() {
         email: '',
         studentId: '',
         classId: '',
+        gender: '',
+        department: '',
       });
       toast.success('Student created successfully.');
     } catch (error: any) {
@@ -195,6 +203,8 @@ export function StudentsManagementContent() {
       email: student.user.email,
       studentId: student.studentId,
       classId: cls ? cls.id : '',
+      gender: student.gender || '',
+      department: student.department || '',
     });
     setIsEditOpen(true);
   };
@@ -216,6 +226,8 @@ export function StudentsManagementContent() {
         email: editStudentForm.email || undefined,
         studentId: editStudentForm.studentId,
         classId: editStudentForm.classId,
+        gender: editStudentForm.gender,
+        department: editStudentForm.department,
       });
 
       setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -353,6 +365,37 @@ export function StudentsManagementContent() {
                             {cls.name} • {cls.academicYear}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Gender</label>
+                    <Select
+                      value={newStudent.gender || 'none'}
+                      onValueChange={(value) => setNewStudent(s => ({ ...s, gender: value === 'none' ? '' : value as 'male' | 'female' }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not set</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Department (SS only)</label>
+                    <Select
+                      value={newStudent.department || 'none'}
+                      onValueChange={(value) => setNewStudent(s => ({ ...s, department: value === 'none' ? '' : value as 'science' | 'arts' }))}
+                    >
+                      <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="none">Not set</SelectItem>
+                        <SelectItem value="science">Science</SelectItem>
+                        <SelectItem value="arts">Arts</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -549,6 +592,37 @@ export function StudentsManagementContent() {
                         {cls.name} • {cls.academicYear}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Gender</label>
+                <Select
+                  value={editStudentForm.gender || 'none'}
+                  onValueChange={(value) => setEditStudentForm(s => ({ ...s, gender: value === 'none' ? '' : value as 'male' | 'female' }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    <SelectItem value="male">Male</SelectItem>
+                    <SelectItem value="female">Female</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Department (SS only)</label>
+                <Select
+                  value={editStudentForm.department || 'none'}
+                  onValueChange={(value) => setEditStudentForm(s => ({ ...s, department: value === 'none' ? '' : value as 'science' | 'arts' }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Not set</SelectItem>
+                    <SelectItem value="science">Science</SelectItem>
+                    <SelectItem value="arts">Arts</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

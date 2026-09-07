@@ -36,6 +36,8 @@ export interface Student {
   rollNumber: number;
   parentId?: string;
   admissionDate: string;
+  gender?: 'male' | 'female' | '';
+  department?: 'science' | 'arts' | '';
   bloodGroup?: string;
   emergencyContact?: {
     name: string;
@@ -141,6 +143,8 @@ export interface FeeStructure {
   academicYearId?: string;
   grade: number;
   feeType: 'tuition' | 'examination' | 'transport' | 'hostel' | 'other';
+  gender?: 'male' | 'female' | '';
+  department?: 'science' | 'arts' | '';
   amount: number;
   description: string;
 }

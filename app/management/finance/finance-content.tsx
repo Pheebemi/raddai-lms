@@ -312,9 +312,13 @@ export function FinanceManagementContent() {
     academicYearId: '',
     grade: '',
     feeType: 'tuition' as FeeStructure['feeType'],
+    gender: 'all',
+    department: 'all',
     amount: '',
     description: '',
   });
+
+  const isSeniorSecondary = Number(structureForm.grade) >= 10;
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -354,6 +358,8 @@ export function FinanceManagementContent() {
       academicYearId: '',
       grade: '',
       feeType: 'tuition',
+      gender: 'all',
+      department: 'all',
       amount: '',
       description: '',
     });
@@ -366,6 +372,8 @@ export function FinanceManagementContent() {
       academicYearId: structure.academicYearId || '',
       grade: String(structure.grade || ''),
       feeType: structure.feeType,
+      gender: structure.gender || 'all',
+      department: structure.department || 'all',
       amount: String(structure.amount),
       description: structure.description || '',
     });
@@ -384,6 +392,8 @@ export function FinanceManagementContent() {
         academic_year: structureForm.academicYearId,
         grade: parseInt(structureForm.grade, 10),
         fee_type: structureForm.feeType,
+        gender: (structureForm.gender === 'all' ? '' : structureForm.gender) as FeeStructure['gender'],
+        department: (isSeniorSecondary && structureForm.department !== 'all' ? structureForm.department : '') as FeeStructure['department'],
         amount: parseFloat(structureForm.amount),
         description: structureForm.description,
       };
@@ -398,6 +408,8 @@ export function FinanceManagementContent() {
         academicYearId: data.academic_year.toString(),
         grade: data.grade,
         feeType: data.fee_type,
+        gender: data.gender || '',
+        department: data.department || '',
         amount: parseFloat(data.amount),
         description: data.description,
       };
@@ -697,6 +709,8 @@ export function FinanceManagementContent() {
                     <TableRow>
                       <TableHead>Academic Year</TableHead>
                       <TableHead>Grade</TableHead>
+                      <TableHead>Gender</TableHead>
+                      <TableHead>Department</TableHead>
                       <TableHead>Fee Type</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Description</TableHead>
@@ -708,6 +722,8 @@ export function FinanceManagementContent() {
                       <TableRow key={fs.id}>
                         <TableCell>{fs.academicYear}</TableCell>
                         <TableCell>{gradeLabel(fs.grade)}</TableCell>
+                        <TableCell className="capitalize">{fs.gender || 'All'}</TableCell>
+                        <TableCell className="capitalize">{fs.department || 'All'}</TableCell>
                         <TableCell>
                           <Badge variant="outline">{fs.feeType}</Badge>
                         </TableCell>
@@ -733,7 +749,7 @@ export function FinanceManagementContent() {
                     ))}
                     {feeStructures.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={6} className="text-center text-sm text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center text-sm text-muted-foreground">
                           No fee structures defined yet.
                         </TableCell>
                       </TableRow>
@@ -821,6 +837,47 @@ export function FinanceManagementContent() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Gender</Label>
+                    <Select
+                      value={structureForm.gender}
+                      onValueChange={(value) =>
+                        setStructureForm((s) => ({ ...s, gender: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All genders</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {isSeniorSecondary ? (
+                    <div className="space-y-2">
+                      <Label>Department</Label>
+                      <Select
+                        value={structureForm.department}
+                        onValueChange={(value) =>
+                          setStructureForm((s) => ({ ...s, department: value }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All departments</SelectItem>
+                          <SelectItem value="science">Science</SelectItem>
+                          <SelectItem value="arts">Arts</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
                 </div>
 
                 <div className="space-y-2">
