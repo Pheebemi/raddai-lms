@@ -41,11 +41,48 @@ const getAuthHeaders = () => {
   };
 };
 
+// Helper function to convert backend validation errors into readable frontend messages
+const formatApiError = (errorData: any, status: number): string => {
+  if (!errorData || typeof errorData !== 'object') {
+    return `HTTP ${status}`;
+  }
+
+  if (typeof errorData.message === 'string' && errorData.message) {
+    return errorData.message;
+  }
+
+  if (typeof errorData.detail === 'string' && errorData.detail) {
+    return errorData.detail;
+  }
+
+  if (Array.isArray(errorData.non_field_errors) && errorData.non_field_errors.length > 0) {
+    return errorData.non_field_errors.join(' ');
+  }
+
+  const flattened: string[] = [];
+
+  for (const [key, value] of Object.entries(errorData)) {
+    if (Array.isArray(value)) {
+      flattened.push(`${key}: ${value.join(' ')}`);
+    } else if (typeof value === 'string' && value) {
+      flattened.push(`${key}: ${value}`);
+    } else if (value && typeof value === 'object') {
+      flattened.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
+
+  if (flattened.length > 0) {
+    return flattened.join(' | ');
+  }
+
+  return `HTTP ${status}`;
+};
+
 // Helper function to handle API responses
 const handleApiResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
     const errorData = await response.json().catch(() => ({ message: 'Network error' }));
-    throw new Error(errorData.message || `HTTP ${response.status}`);
+    throw new Error(formatApiError(errorData, response.status));
   }
   return response.json();
 };
