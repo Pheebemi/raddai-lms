@@ -1240,7 +1240,6 @@ export const usersApi = {
     email?: string;
     staffId: string;
     designation: string;
-    joiningDate?: string;
     classId?: string;
   }): Promise<Staff> => {
     try {
@@ -1262,12 +1261,12 @@ export const usersApi = {
 
       const createdUser = await handleApiResponse<any>(userResponse);
 
-      // 2) Create the staff profile linked to that user
+      // 2) Create the staff profile linked to that user.
+      // Leave the join date unset so the backend default is used.
       const staffPayload = {
         user: createdUser.id,
         staff_id: data.staffId,
         designation: data.designation,
-        joining_date: data.joiningDate || new Date().toISOString().split('T')[0], // Today's date if not provided
       };
 
       const staffResponse = await fetch(`${API_BASE_URL}/staff/`, {

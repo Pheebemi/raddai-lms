@@ -57,7 +57,6 @@ export function StaffManagementContent() {
     email: '',
     staffId: '',
     designation: 'teacher',
-    joiningDate: new Date().toISOString().split('T')[0], // Today's date
     classId: '' as string,
   });
 
@@ -115,7 +114,6 @@ export function StaffManagementContent() {
         email: newStaff.email || undefined,
         staffId: newStaff.staffId,
         designation: newStaff.designation,
-        joiningDate: newStaff.joiningDate,
         classId: newStaff.classId || undefined,
       });
 
@@ -129,7 +127,6 @@ export function StaffManagementContent() {
         email: '',
         staffId: '',
         designation: 'teacher',
-        joiningDate: new Date().toISOString().split('T')[0],
         classId: '',
       });
       toast.success('Staff member created successfully.');
@@ -372,21 +369,12 @@ export function StaffManagementContent() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Joining Date</label>
-                    <Input
-                      type="date"
-                      value={newStaff.joiningDate}
-                      onChange={(e) => setNewStaff(s => ({ ...s, joiningDate: e.target.value }))}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium">Assign as Class Teacher (optional)</label>
-                    <Select
-                      value={newStaff.classId}
-                      onValueChange={(value) => setNewStaff((s) => ({ ...s, classId: value }))}
-                    >
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Assign as Class Teacher (optional)</label>
+                  <Select
+                    value={newStaff.classId}
+                    onValueChange={(value) => setNewStaff((s) => ({ ...s, classId: value }))}
+                  >
                       <SelectTrigger>
                         <SelectValue placeholder="Select class" />
                       </SelectTrigger>
