@@ -375,21 +375,20 @@ export function StaffManagementContent() {
                     value={newStaff.classId}
                     onValueChange={(value) => setNewStaff((s) => ({ ...s, classId: value }))}
                   >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select class" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {classes.map((cls) => (
-                          <SelectItem key={cls.id} value={cls.id}>
-                            {cls.name} • {cls.academicYear}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      This will set the staff as class teacher for the selected class.
-                    </p>
-                  </div>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select class" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {classes.map((cls) => (
+                        <SelectItem key={cls.id} value={cls.id}>
+                          {cls.name} • {cls.academicYear}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    This will set the staff as class teacher for the selected class.
+                  </p>
                 </div>
               </div>
 
