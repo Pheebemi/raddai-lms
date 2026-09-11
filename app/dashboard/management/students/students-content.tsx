@@ -74,6 +74,7 @@ export function StudentsManagementContent() {
   const [editStudentForm, setEditStudentForm] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     studentId: '',
     classId: '',
@@ -200,6 +201,7 @@ export function StudentsManagementContent() {
     setEditStudentForm({
       firstName: student.user.firstName,
       lastName: student.user.lastName,
+      username: student.user.username || '',
       email: student.user.email,
       studentId: student.studentId,
       classId: cls ? cls.id : '',
@@ -212,7 +214,7 @@ export function StudentsManagementContent() {
   const handleUpdateStudent = async () => {
     if (!editingStudent) return;
 
-    if (!editStudentForm.firstName || !editStudentForm.lastName || !editStudentForm.studentId || !editStudentForm.classId) {
+    if (!editStudentForm.firstName || !editStudentForm.lastName || !editStudentForm.username || !editStudentForm.studentId || !editStudentForm.classId) {
       toast.error('Please fill in all required fields.');
       return;
     }
@@ -221,6 +223,7 @@ export function StudentsManagementContent() {
       setIsUpdating(true);
       const updated = await usersApi.updateStudent(editingStudent.id, {
         userId: editingStudent.user.id,
+        username: editStudentForm.username,
         firstName: editStudentForm.firstName,
         lastName: editStudentForm.lastName,
         email: editStudentForm.email || undefined,
@@ -558,6 +561,14 @@ export function StudentsManagementContent() {
                   onChange={(e) => setEditStudentForm((s) => ({ ...s, lastName: e.target.value }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Username *</label>
+              <Input
+                value={editStudentForm.username}
+                onChange={(e) => setEditStudentForm((s) => ({ ...s, username: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">

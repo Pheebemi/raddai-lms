@@ -66,6 +66,7 @@ export function StaffManagementContent() {
   const [editStaffForm, setEditStaffForm] = useState({
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     staffId: '',
     designation: 'teacher',
@@ -173,6 +174,7 @@ export function StaffManagementContent() {
     setEditStaffForm({
       firstName: staffMember.user.firstName,
       lastName: staffMember.user.lastName,
+      username: staffMember.user.username || '',
       email: staffMember.user.email,
       staffId: staffMember.staffId,
       designation: staffMember.designation || 'teacher',
@@ -187,7 +189,7 @@ export function StaffManagementContent() {
   const handleUpdateStaff = async () => {
     if (!editingStaff) return;
 
-    if (!editStaffForm.firstName || !editStaffForm.lastName || !editStaffForm.staffId) {
+    if (!editStaffForm.firstName || !editStaffForm.lastName || !editStaffForm.username || !editStaffForm.staffId) {
       toast.error('Please fill in all required fields.');
       return;
     }
@@ -196,6 +198,7 @@ export function StaffManagementContent() {
       setIsUpdating(true);
       const updated = await usersApi.updateStaff(editingStaff.id, {
         userId: editingStaff.user.id,
+        username: editStaffForm.username,
         firstName: editStaffForm.firstName,
         lastName: editStaffForm.lastName,
         email: editStaffForm.email || undefined,
@@ -547,6 +550,14 @@ export function StaffManagementContent() {
                   onChange={(e) => setEditStaffForm((s) => ({ ...s, lastName: e.target.value }))}
                 />
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Username *</label>
+              <Input
+                value={editStaffForm.username}
+                onChange={(e) => setEditStaffForm((s) => ({ ...s, username: e.target.value }))}
+              />
             </div>
 
             <div className="space-y-2">

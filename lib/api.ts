@@ -91,6 +91,7 @@ const handleApiResponse = async <T>(response: Response): Promise<T> => {
 const convertDjangoUser = (djangoUser: DjangoUser): User => {
   return {
     id: djangoUser.id.toString(),
+    username: djangoUser.username,
     email: djangoUser.email,
     firstName: djangoUser.first_name,
     lastName: djangoUser.last_name,
@@ -1190,6 +1191,7 @@ export const usersApi = {
     id: string,
     data: {
       userId: string;
+      username?: string;
       firstName?: string;
       lastName?: string;
       email?: string;
@@ -1202,6 +1204,7 @@ export const usersApi = {
     try {
       // 1) Optionally update the linked auth user
       const userPayload: any = {};
+      if (data.username !== undefined) userPayload.username = data.username;
       if (data.firstName !== undefined) userPayload.first_name = data.firstName;
       if (data.lastName !== undefined) userPayload.last_name = data.lastName;
       if (data.email !== undefined) userPayload.email = data.email;
@@ -1353,6 +1356,7 @@ export const usersApi = {
     id: string,
     data: {
       userId: string;
+      username?: string;
       firstName?: string;
       lastName?: string;
       email?: string;
@@ -1365,6 +1369,7 @@ export const usersApi = {
     try {
       // 1) Optionally update the linked auth user
       const userPayload: any = {};
+      if (data.username !== undefined) userPayload.username = data.username;
       if (data.firstName !== undefined) userPayload.first_name = data.firstName;
       if (data.lastName !== undefined) userPayload.last_name = data.lastName;
       if (data.email !== undefined) userPayload.email = data.email;
