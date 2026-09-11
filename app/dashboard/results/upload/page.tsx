@@ -86,7 +86,7 @@ export default function UploadResultsPage() {
         const currentStaff = staffData.find((s: any) => s.user.id === user?.id);
 
         // Format classes data (include academic year, grade and class teacher for filtering)
-        const formattedClasses = (classesData.results || classesData).map((cls: any) => ({
+        const formattedClasses = classesData.map((cls: any) => ({
           id: cls.id.toString(),
           name: cls.name,
           grade: cls.grade,
@@ -110,7 +110,7 @@ export default function UploadResultsPage() {
         }
 
         // Format academic years data
-        const formattedYears = (yearsData.results || yearsData).map((year: any) => ({
+        const formattedYears = yearsData.map((year: any) => ({
           id: year.id.toString(),
           name: year.name,
         }));

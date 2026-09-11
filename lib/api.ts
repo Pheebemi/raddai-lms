@@ -87,6 +87,28 @@ const handleApiResponse = async <T>(response: Response): Promise<T> => {
   return response.json();
 };
 
+// Fetch every page of a paginated (or plain array) DRF list endpoint,
+// following `next` until exhausted, so list views don't silently cap at PAGE_SIZE.
+const fetchAllResults = async (url: string): Promise<any[]> => {
+  let results: any[] = [];
+  let nextUrl: string | null = url;
+
+  while (nextUrl) {
+    const response: Response = await fetch(nextUrl, { headers: getAuthHeaders() });
+    const data: any = await handleApiResponse<any>(response);
+
+    if (Array.isArray(data)) {
+      results = results.concat(data);
+      nextUrl = null;
+    } else {
+      results = results.concat(data.results || []);
+      nextUrl = data.next || null;
+    }
+  }
+
+  return results;
+};
+
 // Convert Django user format to frontend User format
 const convertDjangoUser = (djangoUser: DjangoUser): User => {
   return {
@@ -194,25 +216,7 @@ export const dashboardApi = {
 // Announcements API
 export const announcementsApi = {
   getList: async (): Promise<Announcement[]> => {
-    const response = await fetch(`${API_BASE_URL}/announcements/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle paginated response
-    let items: any[] = [];
-    if (Array.isArray(data)) {
-      items = data;
-    } else if (data && typeof data === 'object' && data.results) {
-      // Paginated response
-      items = data.results;
-    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
-      // Empty object response
-      items = [];
-    } else {
-      console.error('Unexpected response format from announcements API, got:', data);
-      throw new Error('Invalid response format from server');
-    }
+    const items = await fetchAllResults(`${API_BASE_URL}/announcements/`);
 
     // Convert Django format to frontend format
     return items.map(item => ({
@@ -517,25 +521,7 @@ export const resultsApi = {
 // Fee Structure API
 export const feeStructureApi = {
   getAll: async (): Promise<any[]> => {
-    const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle different response formats
-    let items: any[] = [];
-    if (Array.isArray(data)) {
-      items = data;
-    } else if (data && typeof data === 'object' && data.results) {
-      // Paginated response
-      items = data.results;
-    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
-      // Empty object response
-      items = [];
-    } else {
-      console.error('Unexpected response format from fee-structures API:', data);
-      throw new Error('Invalid response format from server');
-    }
+    const items = await fetchAllResults(`${API_BASE_URL}/fee-structures/`);
 
     // Convert Django format to frontend format
     return items.map(item => ({
@@ -664,25 +650,7 @@ export const rankingsApi = {
 // Fee API
 export const feesApi = {
   getPayments: async (): Promise<FeeTransaction[]> => {
-    const response = await fetch(`${API_BASE_URL}/fee-payments/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle different response formats (array, paginated, or empty object)
-    let items: any[] = [];
-    if (Array.isArray(data)) {
-      items = data;
-    } else if (data && typeof data === 'object' && data.results) {
-      // Paginated response
-      items = data.results;
-    } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
-      // Empty object response
-      items = [];
-    } else {
-      console.error('Unexpected response format from fee-payments API:', data);
-      throw new Error('Invalid response format from server');
-    }
+    const items = await fetchAllResults(`${API_BASE_URL}/fee-payments/`);
 
     // Convert Django format to frontend format
     return items.map(item => ({
@@ -842,11 +810,7 @@ export const staffSalaryApi = {
       ? `${API_BASE_URL}/staff-salaries/?${params.toString()}`
       : `${API_BASE_URL}/staff-salaries/`;
 
-    const response = await fetch(url, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-    const results = Array.isArray(data) ? data : data.results || [];
+    const results = await fetchAllResults(url);
 
     return results.map((item: any): StaffSalary => ({
       id: item.id.toString(),
@@ -915,21 +879,7 @@ export const staffSalaryApi = {
 
 // Generic API functions
 export const fetchClasses = async () => {
-  const response = await fetch(`${API_BASE_URL}/classes/`, {
-    headers: getAuthHeaders(),
-  });
-  const data = await handleApiResponse<any>(response);
-
-  // Ensure we return an array
-  if (Array.isArray(data)) {
-    return data;
-  } else if (data && typeof data === 'object' && data.results) {
-    // Paginated response
-    return data.results;
-  } else {
-    console.warn('fetchClasses returned unexpected format:', data);
-    return [];
-  }
+  return fetchAllResults(`${API_BASE_URL}/classes/`);
 };
 
 export const fetchSubjects = async () => {
@@ -944,9 +894,7 @@ export const subjectsApi = {
     const url = grade
       ? `${API_BASE_URL}/subjects/?grade=${grade}`
       : `${API_BASE_URL}/subjects/`;
-    const response = await fetch(url, { headers: getAuthHeaders() });
-    const data = await handleApiResponse<any>(response);
-    const items = Array.isArray(data) ? data : data.results || [];
+    const items = await fetchAllResults(url);
     return items.map((s: any) => ({
       id: s.id.toString(),
       name: s.name,
@@ -985,13 +933,7 @@ export const subjectsApi = {
 
 export const academicYearsApi = {
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/academic-years/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-    if (Array.isArray(data)) return data;
-    if (data?.results) return data.results;
-    return [];
+    return fetchAllResults(`${API_BASE_URL}/academic-years/`);
   },
 
   create: async (payload: { name: string; start_date: string; end_date: string; is_active?: boolean }) => {
@@ -1053,42 +995,13 @@ export const toggleResultsVisibility = async (
 };
 
 export const fetchAcademicYears = async () => {
-  const response = await fetch(`${API_BASE_URL}/academic-years/`, {
-    headers: getAuthHeaders(),
-  });
-  const data = await handleApiResponse<any>(response);
-
-  // Handle different response formats
-  if (Array.isArray(data)) {
-    return data;
-  } else if (data && typeof data === 'object' && data.results) {
-    // Paginated response
-    return data.results;
-  } else if (data && typeof data === 'object' && Object.keys(data).length === 0) {
-    // Empty object response
-    return [];
-  } else {
-    console.warn('fetchAcademicYears returned unexpected format:', data);
-    return [];
-  }
+  return fetchAllResults(`${API_BASE_URL}/academic-years/`);
 };
 
 // Users API
 export const usersApi = {
   getStudents: async (): Promise<Student[]> => {
-    const response = await fetch(`${API_BASE_URL}/students/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle paginated response
-    const results = data.results || data;
-
-    // Ensure results is an array
-    if (!Array.isArray(results)) {
-      console.error('getStudents: Expected array but got:', results);
-      return [];
-    }
+    const results = await fetchAllResults(`${API_BASE_URL}/students/`);
 
     // Convert Django format to frontend format
     return results.map((item: any) => {
@@ -1447,13 +1360,7 @@ export const usersApi = {
   },
 
   getStaff: async (): Promise<Staff[]> => {
-    const response = await fetch(`${API_BASE_URL}/staff/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle paginated response
-    const results = data.results || data;
+    const results = await fetchAllResults(`${API_BASE_URL}/staff/`);
 
     // Convert Django format to frontend format
     return results.map((item: any) => ({
@@ -1472,13 +1379,7 @@ export const usersApi = {
   },
 
   getParents: async (): Promise<Parent[]> => {
-    const response = await fetch(`${API_BASE_URL}/parents/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-
-    // Handle paginated response
-    const results = data.results || data;
+    const results = await fetchAllResults(`${API_BASE_URL}/parents/`);
 
     // Convert Django format to frontend format
     return results.map((item: any) => ({
@@ -1546,11 +1447,7 @@ export const usersApi = {
 // Classes API
 export const attendanceApi = {
   getByDate: async (date: string) => {
-    const response = await fetch(`${API_BASE_URL}/attendance/?date=${date}`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-    const items = Array.isArray(data) ? data : data.results || [];
+    const items = await fetchAllResults(`${API_BASE_URL}/attendance/?date=${date}`);
     return items.map((a: any) => ({
       id: a.id.toString(),
       studentId: a.student.toString(),
@@ -1587,11 +1484,7 @@ export const attendanceApi = {
   },
 
   getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/attendance/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-    const items = Array.isArray(data) ? data : data.results || [];
+    const items = await fetchAllResults(`${API_BASE_URL}/attendance/`);
     return items.map((a: any) => ({
       id: a.id.toString(),
       studentId: a.student.toString(),
@@ -1606,11 +1499,7 @@ export const attendanceApi = {
 
 export const classesApi = {
   getAll: async (): Promise<Class[]> => {
-    const response = await fetch(`${API_BASE_URL}/classes/`, {
-      headers: getAuthHeaders(),
-    });
-    const data = await handleApiResponse<any>(response);
-    const results = data.results || data;
+    const results = await fetchAllResults(`${API_BASE_URL}/classes/`);
     return results.map((item: any) => ({
       id: item.id.toString(),
       name: item.name,
