@@ -15,6 +15,7 @@ import { GraduationCap, Plus, Trash2, Users, X, Pencil } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 const CLASS_PRESETS = [
+  { label: 'Pre-Nursery', grade: -3 },
   { label: 'Nursery 1', grade: -2 },
   { label: 'Nursery 2', grade: -1 },
   { label: 'Primary 1', grade: 1 },
