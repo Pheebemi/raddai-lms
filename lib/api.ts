@@ -529,6 +529,7 @@ export const feeStructureApi = {
       academicYear: item.academic_year_name,
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
+      section: item.section || '',
       feeType: item.fee_type,
       gender: item.gender || '',
       department: item.department || '',
@@ -554,6 +555,7 @@ export const feeStructureApi = {
       academicYear: item.academic_year_name,
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
+      section: item.section || '',
       feeType: item.fee_type,
       gender: item.gender || '',
       department: item.department || '',
@@ -578,6 +580,7 @@ export const feeStructureApi = {
       academicYear: item.academic_year_name,
       academicYearId: item.academic_year.toString(),
       grade: item.grade,
+      section: item.section || '',
       feeType: item.fee_type,
       gender: item.gender || '',
       department: item.department || '',
@@ -596,6 +599,7 @@ export const feeStructureApi = {
     gender?: 'male' | 'female' | '';
     department?: 'science' | 'arts' | '';
     student_type?: 'new' | 'returning';
+    section?: string;
   }) => {
     const response = await fetch(`${API_BASE_URL}/fee-structures/`, {
       method: 'POST',
@@ -614,6 +618,7 @@ export const feeStructureApi = {
     gender?: 'male' | 'female' | '';
     department?: 'science' | 'arts' | '';
     student_type?: 'new' | 'returning';
+    section?: string;
   }) => {
     const response = await fetch(`${API_BASE_URL}/fee-structures/${id}/`, {
       method: 'PATCH',

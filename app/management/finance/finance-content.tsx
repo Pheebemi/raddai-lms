@@ -315,11 +315,21 @@ export function FinanceManagementContent() {
     gender: 'all',
     department: 'all',
     studentType: 'new' as FeeStructure['studentType'],
+    section: 'all',
     amount: '',
     description: '',
   });
 
   const isSeniorSecondary = Number(structureForm.grade) >= 10;
+
+  // Only Returning fees can be split by section (e.g. JSS1 A vs JSS1 B);
+  // New-intake fees stay grade-wide, matching how the school actually admits.
+  const isReturning = structureForm.studentType === 'returning';
+  const sectionsForGrade = Array.from(new Set(
+    classes
+      .filter((c) => Number(c.grade) === Number(structureForm.grade) && c.section)
+      .map((c) => c.section as string)
+  )).sort();
 
   useEffect(() => {
     const fetchFinanceData = async () => {
@@ -362,6 +372,7 @@ export function FinanceManagementContent() {
       gender: 'all',
       department: 'all',
       studentType: 'new',
+      section: 'all',
       amount: '',
       description: '',
     });
@@ -377,6 +388,7 @@ export function FinanceManagementContent() {
       gender: structure.gender || 'all',
       department: structure.department || 'all',
       studentType: structure.studentType || 'new',
+      section: structure.section || 'all',
       amount: String(structure.amount),
       description: structure.description || '',
     });
@@ -398,6 +410,8 @@ export function FinanceManagementContent() {
         gender: (structureForm.gender === 'all' ? '' : structureForm.gender) as FeeStructure['gender'],
         department: (isSeniorSecondary && structureForm.department !== 'all' ? structureForm.department : '') as FeeStructure['department'],
         student_type: structureForm.studentType,
+        // Only a Returning rate can override a single section; New-intake fees always apply grade-wide.
+        section: isReturning && structureForm.section !== 'all' ? structureForm.section : '',
         amount: parseFloat(structureForm.amount),
         description: structureForm.description,
       };
@@ -411,6 +425,7 @@ export function FinanceManagementContent() {
         academicYear: data.academic_year_name,
         academicYearId: data.academic_year.toString(),
         grade: data.grade,
+        section: data.section || '',
         feeType: data.fee_type,
         gender: data.gender || '',
         department: data.department || '',
@@ -727,7 +742,10 @@ export function FinanceManagementContent() {
                     {feeStructures.map((fs) => (
                       <TableRow key={fs.id}>
                         <TableCell>{fs.academicYear}</TableCell>
-                        <TableCell>{gradeLabel(fs.grade)}</TableCell>
+                        <TableCell>
+                          {gradeLabel(fs.grade)}
+                          {fs.section && <span className="text-muted-foreground"> · Section {fs.section}</span>}
+                        </TableCell>
                         <TableCell className="capitalize">{fs.gender || 'All'}</TableCell>
                         <TableCell className="capitalize">{fs.department || 'All'}</TableCell>
                         <TableCell>
@@ -911,6 +929,31 @@ export function FinanceManagementContent() {
                     Returning students without a rate here are billed the New rate for this class.
                   </p>
                 </div>
+
+                {isReturning && (
+                  <div className="space-y-2">
+                    <Label>Section</Label>
+                    <Select
+                      value={structureForm.section}
+                      onValueChange={(value) => setStructureForm((s) => ({ ...s, section: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select section" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All sections</SelectItem>
+                        {sectionsForGrade.map((sec) => (
+                          <SelectItem key={sec} value={sec}>Section {sec}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Set a section to charge Returning students in just that section a
+                      different rate, e.g. JSS1 A vs JSS1 B. Leave as &quot;All sections&quot;
+                      to charge every section of this grade the same Returning rate.
+                    </p>
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <Label>Amount (₦) *</Label>
