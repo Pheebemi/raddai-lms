@@ -66,6 +66,7 @@ export function StudentsManagementContent() {
     classId: '',
     gender: '' as 'male' | 'female' | '',
     department: '' as 'science' | 'arts' | '',
+    studentType: 'new' as 'new' | 'returning',
   });
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -80,6 +81,7 @@ export function StudentsManagementContent() {
     classId: '',
     gender: '' as 'male' | 'female' | '',
     department: '' as 'science' | 'arts' | '',
+    studentType: 'new' as 'new' | 'returning',
   });
 
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
@@ -124,6 +126,7 @@ export function StudentsManagementContent() {
         classId: newStudent.classId,
         gender: newStudent.gender,
         department: newStudent.department,
+        studentType: newStudent.studentType,
       });
 
       setStudents(prev => [created, ...prev]);
@@ -138,6 +141,7 @@ export function StudentsManagementContent() {
         classId: '',
         gender: '',
         department: '',
+        studentType: 'new',
       });
       toast.success('Student created successfully.');
     } catch (error: any) {
@@ -207,6 +211,7 @@ export function StudentsManagementContent() {
       classId: cls ? cls.id : '',
       gender: student.gender || '',
       department: student.department || '',
+      studentType: student.studentType || 'new',
     });
     setIsEditOpen(true);
   };
@@ -231,6 +236,7 @@ export function StudentsManagementContent() {
         classId: editStudentForm.classId,
         gender: editStudentForm.gender,
         department: editStudentForm.department,
+        studentType: editStudentForm.studentType,
       });
 
       setStudents((prev) => prev.map((s) => (s.id === updated.id ? updated : s)));
@@ -402,6 +408,20 @@ export function StudentsManagementContent() {
                       </SelectContent>
                     </Select>
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Student Type</label>
+                  <Select
+                    value={newStudent.studentType}
+                    onValueChange={(value) => setNewStudent(s => ({ ...s, studentType: value as 'new' | 'returning' }))}
+                  >
+                    <SelectTrigger><SelectValue placeholder="Select student type" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="returning">Returning</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
 
@@ -637,6 +657,20 @@ export function StudentsManagementContent() {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Student Type</label>
+              <Select
+                value={editStudentForm.studentType}
+                onValueChange={(value) => setEditStudentForm(s => ({ ...s, studentType: value as 'new' | 'returning' }))}
+              >
+                <SelectTrigger><SelectValue placeholder="Select student type" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="returning">Returning</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
