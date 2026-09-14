@@ -39,6 +39,7 @@ export interface Student {
   admissionDate: string;
   gender?: 'male' | 'female' | '';
   department?: 'science' | 'arts' | '';
+  studentType?: 'new' | 'returning';
   bloodGroup?: string;
   emergencyContact?: {
     name: string;
@@ -146,6 +147,7 @@ export interface FeeStructure {
   feeType: 'tuition' | 'examination' | 'transport' | 'hostel' | 'other';
   gender?: 'male' | 'female' | '';
   department?: 'science' | 'arts' | '';
+  studentType: 'new' | 'returning';
   amount: number;
   description: string;
 }

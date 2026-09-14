@@ -314,6 +314,7 @@ export function FinanceManagementContent() {
     feeType: 'tuition' as FeeStructure['feeType'],
     gender: 'all',
     department: 'all',
+    studentType: 'new' as FeeStructure['studentType'],
     amount: '',
     description: '',
   });
@@ -360,6 +361,7 @@ export function FinanceManagementContent() {
       feeType: 'tuition',
       gender: 'all',
       department: 'all',
+      studentType: 'new',
       amount: '',
       description: '',
     });
@@ -374,6 +376,7 @@ export function FinanceManagementContent() {
       feeType: structure.feeType,
       gender: structure.gender || 'all',
       department: structure.department || 'all',
+      studentType: structure.studentType || 'new',
       amount: String(structure.amount),
       description: structure.description || '',
     });
@@ -394,6 +397,7 @@ export function FinanceManagementContent() {
         fee_type: structureForm.feeType,
         gender: (structureForm.gender === 'all' ? '' : structureForm.gender) as FeeStructure['gender'],
         department: (isSeniorSecondary && structureForm.department !== 'all' ? structureForm.department : '') as FeeStructure['department'],
+        student_type: structureForm.studentType,
         amount: parseFloat(structureForm.amount),
         description: structureForm.description,
       };
@@ -410,6 +414,7 @@ export function FinanceManagementContent() {
         feeType: data.fee_type,
         gender: data.gender || '',
         department: data.department || '',
+        studentType: data.student_type || 'new',
         amount: parseFloat(data.amount),
         description: data.description,
       };
@@ -711,6 +716,7 @@ export function FinanceManagementContent() {
                       <TableHead>Grade</TableHead>
                       <TableHead>Gender</TableHead>
                       <TableHead>Department</TableHead>
+                      <TableHead>Student Type</TableHead>
                       <TableHead>Fee Type</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Description</TableHead>
@@ -724,6 +730,11 @@ export function FinanceManagementContent() {
                         <TableCell>{gradeLabel(fs.grade)}</TableCell>
                         <TableCell className="capitalize">{fs.gender || 'All'}</TableCell>
                         <TableCell className="capitalize">{fs.department || 'All'}</TableCell>
+                        <TableCell>
+                          <Badge variant={fs.studentType === 'returning' ? 'secondary' : 'outline'} className="capitalize">
+                            {fs.studentType || 'new'}
+                          </Badge>
+                        </TableCell>
                         <TableCell>
                           <Badge variant="outline">{fs.feeType}</Badge>
                         </TableCell>
@@ -878,6 +889,27 @@ export function FinanceManagementContent() {
                       </Select>
                     </div>
                   ) : null}
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Student Type *</Label>
+                  <Select
+                    value={structureForm.studentType}
+                    onValueChange={(value) =>
+                      setStructureForm((s) => ({ ...s, studentType: value as FeeStructure['studentType'] }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select student type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="returning">Returning</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Returning students without a rate here are billed the New rate for this class.
+                  </p>
                 </div>
 
                 <div className="space-y-2">
