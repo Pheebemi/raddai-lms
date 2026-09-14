@@ -144,6 +144,8 @@ export interface FeeStructure {
   academicYear: string;
   academicYearId?: string;
   grade: number;
+  /** Blank applies to every section of the grade; set to override just one (e.g. "A"). */
+  section?: string;
   feeType: 'tuition' | 'examination' | 'transport' | 'hostel' | 'other';
   gender?: 'male' | 'female' | '';
   department?: 'science' | 'arts' | '';
