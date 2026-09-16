@@ -834,6 +834,9 @@ export const staffSalaryApi = {
       amount: parseFloat(item.amount),
       paidDate: item.paid_date,
       voucherNumber: item.voucher_number || undefined,
+      accountName: item.account_name || undefined,
+      accountNumber: item.account_number || undefined,
+      bankName: item.bank_name || undefined,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     }));
@@ -846,6 +849,9 @@ export const staffSalaryApi = {
     month: number;
     amount: number;
     voucher_number?: string;
+    account_name?: string;
+    account_number?: string;
+    bank_name?: string;
     paid_date?: string;
   }): Promise<StaffSalary> => {
     const body = {
@@ -854,6 +860,9 @@ export const staffSalaryApi = {
       month: payload.month,
       amount: payload.amount,
       voucher_number: payload.voucher_number || '',
+      account_name: payload.account_name || '',
+      account_number: payload.account_number || '',
+      bank_name: payload.bank_name || '',
       paid_date: payload.paid_date,
     };
 
@@ -881,6 +890,9 @@ export const staffSalaryApi = {
       amount: parseFloat(item.amount),
       paidDate: item.paid_date,
       voucherNumber: item.voucher_number || undefined,
+      accountName: item.account_name || undefined,
+      accountNumber: item.account_number || undefined,
+      bankName: item.bank_name || undefined,
       createdAt: item.created_at,
       updatedAt: item.updated_at,
     };

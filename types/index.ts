@@ -193,6 +193,9 @@ export interface StaffSalary {
   amount: number;
   paidDate: string;
   voucherNumber?: string;
+  accountName?: string;
+  accountNumber?: string;
+  bankName?: string;
   createdAt: string;
   updatedAt: string;
 }

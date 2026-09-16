@@ -68,6 +68,9 @@ export function SalaryManagementContent() {
     month: '',
     amount: '',
     voucher_number: '',
+    account_name: '',
+    account_number: '',
+    bank_name: '',
     paid_date: '',
   });
 
@@ -121,6 +124,9 @@ export function SalaryManagementContent() {
       month: selectedMonth,
       amount: '',
       voucher_number: '',
+      account_name: '',
+      account_number: '',
+      bank_name: '',
       paid_date: new Date().toISOString().split('T')[0],
     });
     setIsDialogOpen(true);
@@ -134,6 +140,9 @@ export function SalaryManagementContent() {
       month: salary.month.toString(),
       amount: salary.amount.toString(),
       voucher_number: salary.voucherNumber || '',
+      account_name: salary.accountName || '',
+      account_number: salary.accountNumber || '',
+      bank_name: salary.bankName || '',
       paid_date: salary.paidDate,
     });
     setIsDialogOpen(true);
@@ -155,6 +164,9 @@ export function SalaryManagementContent() {
         month: parseInt(formData.month),
         amount: parseFloat(formData.amount),
         voucher_number: formData.voucher_number || undefined,
+        account_name: formData.account_name || undefined,
+        account_number: formData.account_number || undefined,
+        bank_name: formData.bank_name || undefined,
         paid_date: formData.paid_date || undefined,
       };
 
@@ -418,6 +430,29 @@ export function SalaryManagementContent() {
       if (salary.voucherNumber) {
         ctx.fillText(`Voucher Number: ${salary.voucherNumber}`, 70, yPosition);
         yPosition += 30;
+      }
+
+      // Payment Details
+      if (salary.bankName || salary.accountNumber || salary.accountName) {
+        yPosition += 20;
+        ctx.font = 'bold 20px Arial';
+        ctx.fillStyle = '#000000';
+        ctx.fillText('PAYMENT DETAILS:', 50, yPosition);
+        yPosition += 40;
+
+        ctx.font = '16px Arial';
+        if (salary.bankName) {
+          ctx.fillText(`Bank Name: ${salary.bankName}`, 70, yPosition);
+          yPosition += 30;
+        }
+        if (salary.accountNumber) {
+          ctx.fillText(`Account Number: ${salary.accountNumber}`, 70, yPosition);
+          yPosition += 30;
+        }
+        if (salary.accountName) {
+          ctx.fillText(`Account Name: ${salary.accountName}`, 70, yPosition);
+          yPosition += 30;
+        }
       }
 
       // Footer
@@ -714,6 +749,40 @@ export function SalaryManagementContent() {
                     setFormData(prev => ({ ...prev, voucher_number: e.target.value }))
                   }
                   placeholder="Optional voucher number"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Bank Name</Label>
+                  <Input
+                    value={formData.bank_name}
+                    onChange={(e) =>
+                      setFormData(prev => ({ ...prev, bank_name: e.target.value }))
+                    }
+                    placeholder="e.g. Zenith Bank"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Account Number</Label>
+                  <Input
+                    value={formData.account_number}
+                    onChange={(e) =>
+                      setFormData(prev => ({ ...prev, account_number: e.target.value }))
+                    }
+                    placeholder="10-digit account number"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Account Name</Label>
+                <Input
+                  value={formData.account_name}
+                  onChange={(e) =>
+                    setFormData(prev => ({ ...prev, account_name: e.target.value }))
+                  }
+                  placeholder="Name on the bank account"
                 />
               </div>
 
