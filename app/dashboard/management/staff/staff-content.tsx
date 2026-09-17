@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { usersApi, classesApi } from '@/lib/api';
 import { Staff, Class } from '@/types';
+import { STAFF_DESIGNATIONS, designationLabel } from '@/lib/staff-designations';
 import { toast } from 'sonner';
 
 export function StaffManagementContent() {
@@ -361,12 +362,9 @@ export function StaffManagementContent() {
                         <SelectValue placeholder="Select designation" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="teacher">Teacher</SelectItem>
-                        <SelectItem value="principal">Principal</SelectItem>
-                        <SelectItem value="vice_principal">Vice Principal</SelectItem>
-                        <SelectItem value="administrator">Administrator</SelectItem>
-                        <SelectItem value="librarian">Librarian</SelectItem>
-                        <SelectItem value="counselor">Counselor</SelectItem>
+                        {STAFF_DESIGNATIONS.map(({ value, label }) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                   </div>
@@ -509,7 +507,7 @@ export function StaffManagementContent() {
                   <SelectItem value="all">All Designations</SelectItem>
                   {designations.map(designation => (
                     <SelectItem key={designation} value={designation}>
-                      {designation}
+                      {designationLabel(designation)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -587,12 +585,9 @@ export function StaffManagementContent() {
                     <SelectValue placeholder="Select designation" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="principal">Principal</SelectItem>
-                    <SelectItem value="vice_principal">Vice Principal</SelectItem>
-                    <SelectItem value="administrator">Administrator</SelectItem>
-                    <SelectItem value="librarian">Librarian</SelectItem>
-                    <SelectItem value="counselor">Counselor</SelectItem>
+                    {STAFF_DESIGNATIONS.map(({ value, label }) => (
+                      <SelectItem key={value} value={value}>{label}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -740,7 +735,7 @@ export function StaffManagementContent() {
                   </TableCell>
                   <TableCell className="font-mono">{staffMember.staffId}</TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{staffMember.designation}</Badge>
+                    <Badge variant="secondary">{designationLabel(staffMember.designation)}</Badge>
                   </TableCell>
                   <TableCell>
                     {staffMember.assignedClasses && staffMember.assignedClasses.length > 0 ? (

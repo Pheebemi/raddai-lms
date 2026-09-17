@@ -30,6 +30,7 @@ import {
 } from 'lucide-react';
 import { staffSalaryApi } from '@/lib/api';
 import { StaffSalary, Staff } from '@/types';
+import { designationLabel } from '@/lib/staff-designations';
 import { toast } from 'sonner';
 import { fetchAcademicYears, usersApi } from '@/lib/api';
 
@@ -305,7 +306,7 @@ export function SalaryManagementContent() {
         ctx.fillText(salary.staffName, 70, yPosition + 5);
         ctx.textAlign = 'center';
         ctx.fillText(salary.staffCode, 350, yPosition + 5);
-        ctx.fillText(selectedStaff?.designation || 'N/A', 500, yPosition + 5);
+        ctx.fillText(selectedStaff ? designationLabel(selectedStaff.designation) : 'N/A', 500, yPosition + 5);
         ctx.fillText(salary.amount.toLocaleString(), 850, yPosition + 5);
         ctx.fillText(new Date(salary.paidDate).toLocaleDateString(), 1000, yPosition + 5);
 
@@ -410,7 +411,7 @@ export function SalaryManagementContent() {
       yPosition += 30;
       ctx.fillText(`Staff ID: ${salary.staffCode}`, 70, yPosition);
       yPosition += 30;
-      ctx.fillText(`Designation: ${selectedStaff?.designation || 'N/A'}`, 70, yPosition);
+      ctx.fillText(`Designation: ${selectedStaff ? designationLabel(selectedStaff.designation) : 'N/A'}`, 70, yPosition);
       yPosition += 50;
 
       // Salary Details
