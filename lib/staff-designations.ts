@@ -22,6 +22,7 @@ export const STAFF_DESIGNATIONS: StaffDesignation[] = [
   { value: 'head_teacher', label: 'Head Teacher' },
   { value: 'senior_master', label: 'Senior Master' },
   { value: 'health_mistress', label: 'Health Mistress' },
+  { value: 'nanny', label: 'Nanny' },
   { value: 'exams_master', label: 'Exams Master' },
   { value: 'ict_hod', label: 'ICT HOD' },
   { value: 'hod_science', label: 'HOD Science' },
