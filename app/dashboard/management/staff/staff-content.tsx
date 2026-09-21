@@ -56,8 +56,11 @@ export function StaffManagementContent() {
     username: '',
     password: '',
     email: '',
+    phone: '',
+    address: '',
     staffId: '',
     designation: 'teacher',
+    qualification: '',
     classId: '' as string,
   });
 
@@ -116,8 +119,11 @@ export function StaffManagementContent() {
         firstName: newStaff.firstName,
         lastName: newStaff.lastName,
         email: newStaff.email || undefined,
+        phone: newStaff.phone || undefined,
+        address: newStaff.address || undefined,
         staffId: newStaff.staffId,
         designation: newStaff.designation,
+        qualification: newStaff.qualification || undefined,
         classId: newStaff.classId || undefined,
       });
 
@@ -129,8 +135,11 @@ export function StaffManagementContent() {
         username: '',
         password: '',
         email: '',
+        phone: '',
+        address: '',
         staffId: '',
         designation: 'teacher',
+        qualification: '',
         classId: '',
       });
       toast.success('Staff member created successfully.');
@@ -347,6 +356,34 @@ export function StaffManagementContent() {
                     type="email"
                     value={newStaff.email}
                     onChange={(e) => setNewStaff(s => ({ ...s, email: e.target.value }))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Phone Number</label>
+                    <Input
+                      type="tel"
+                      value={newStaff.phone}
+                      onChange={(e) => setNewStaff(s => ({ ...s, phone: e.target.value }))}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Qualification</label>
+                    <Input
+                      value={newStaff.qualification}
+                      onChange={(e) => setNewStaff(s => ({ ...s, qualification: e.target.value }))}
+                      placeholder="e.g. B.Ed, NCE"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Address</label>
+                  <Input
+                    value={newStaff.address}
+                    onChange={(e) => setNewStaff(s => ({ ...s, address: e.target.value }))}
+                    placeholder="Residential address"
                   />
                 </div>
 

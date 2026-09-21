@@ -1237,8 +1237,11 @@ export const usersApi = {
     firstName: string;
     lastName: string;
     email?: string;
+    phone?: string;
+    address?: string;
     staffId: string;
     designation: string;
+    qualification?: string;
     classId?: string;
   }): Promise<Staff> => {
     try {
@@ -1249,6 +1252,8 @@ export const usersApi = {
         first_name: data.firstName,
         last_name: data.lastName,
         email: data.email || '',  // Send empty string instead of undefined
+        phone_number: data.phone || '',
+        address: data.address || '',
         role: 'staff',
       };
 
@@ -1266,6 +1271,7 @@ export const usersApi = {
         user: createdUser.id,
         staff_id: data.staffId,
         designation: data.designation,
+        qualification: data.qualification || '',
       };
 
       const staffResponse = await fetch(`${API_BASE_URL}/staff/`, {
