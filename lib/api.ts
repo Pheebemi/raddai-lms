@@ -1036,8 +1036,11 @@ export const fetchAcademicYears = async () => {
 
 // Users API
 export const usersApi = {
-  getStudents: async (): Promise<Student[]> => {
-    const results = await fetchAllResults(`${API_BASE_URL}/students/`);
+  getStudents: async (classId?: string): Promise<Student[]> => {
+    const url = classId
+      ? `${API_BASE_URL}/students/?class_id=${encodeURIComponent(classId)}`
+      : `${API_BASE_URL}/students/`;
+    const results = await fetchAllResults(url);
 
     // Convert Django format to frontend format
     return results.map((item: any) => {

@@ -51,8 +51,10 @@ export function StudentsManagementContent() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedClass, setSelectedClass] = useState<string>('all');
+  const [selectedClass, setSelectedClass] = useState<string>('');
   const [classesData, setClassesData] = useState<Class[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 25;
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -89,12 +91,9 @@ export function StudentsManagementContent() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
 
   useEffect(() => {
-    const fetchStudents = async () => {
+    const fetchClasses = async () => {
       try {
         setLoading(true);
-        const studentsData = await usersApi.getStudents();
-        setStudents(studentsData);
-
         const classes = await classesApi.getAll();
         setClassesData(classes);
       } catch (error) {
@@ -105,8 +104,31 @@ export function StudentsManagementContent() {
       }
     };
 
-    fetchStudents();
+    fetchClasses();
   }, []);
+
+  useEffect(() => {
+    if (!selectedClass) {
+      setStudents([]);
+      setLoading(false);
+      return;
+    }
+
+    const fetchStudents = async () => {
+      try {
+        setLoading(true);
+        setStudents(await usersApi.getStudents(selectedClass === 'all' ? undefined : selectedClass));
+        setCurrentPage(1);
+      } catch (error) {
+        toast.error('Failed to load students data');
+        console.error('Error fetching students:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStudents();
+  }, [selectedClass]);
 
   const handleCreateStudent = async () => {
     if (!newStudent.firstName || !newStudent.lastName || !newStudent.username || !newStudent.password || !newStudent.studentId || !newStudent.classId) {
@@ -252,20 +274,23 @@ export function StudentsManagementContent() {
     }
   };
 
-  // Filter students based on search and class
-  // Only show students when a specific class is selected (not "all")
-  const filteredStudents = selectedClass !== 'all' ? students.filter(student => {
+  // The backend filters by class; search and pagination stay local.
+  const filteredStudents = selectedClass ? students.filter(student => {
     const matchesSearch = student.user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.user.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          student.studentId.toLowerCase().includes(searchTerm.toLowerCase());
 
-    const matchesClass = student.class === selectedClass;
-
-    return matchesSearch && matchesClass;
+    return matchesSearch;
   }) : [];
+  const totalPages = Math.max(1, Math.ceil(filteredStudents.length / pageSize));
+  const paginatedStudents = filteredStudents.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const selectedClassName = selectedClass === 'all'
+    ? 'All Classes'
+    : classesData.find(cls => cls.id === selectedClass)?.name || 'Selected Class';
 
-  // Get unique classes for filter
-  const classes = Array.from(new Set(students.map(s => s.class)));
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   if (loading) {
     return (
@@ -468,7 +493,7 @@ export function StudentsManagementContent() {
             <BookOpen className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{classes.length}</div>
+            <div className="text-2xl font-bold">{classesData.length}</div>
             <p className="text-xs text-muted-foreground">
               Class sections
             </p>
@@ -482,7 +507,7 @@ export function StudentsManagementContent() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {classes.length > 0 ? Math.round(students.length / classes.length) : 0}
+              {classesData.length > 0 ? Math.round(students.length / classesData.length) : 0}
             </div>
             <p className="text-xs text-muted-foreground">
               Students per class
@@ -531,13 +556,13 @@ export function StudentsManagementContent() {
               <label className="text-sm font-medium">Class</label>
               <Select value={selectedClass} onValueChange={setSelectedClass}>
                 <SelectTrigger className="w-48">
-                  <SelectValue placeholder="All Classes" />
+                  <SelectValue placeholder="Select class" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Classes</SelectItem>
-                  {classes.map(className => (
-                    <SelectItem key={className} value={className}>
-                      {className}
+                  {classesData.map(cls => (
+                    <SelectItem key={cls.id} value={cls.id}>
+                      {cls.name} • {cls.academicYear}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -739,7 +764,7 @@ export function StudentsManagementContent() {
       </Dialog>
 
       {/* Students Table */}
-      {selectedClass === 'all' ? (
+      {!selectedClass ? (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-12">
@@ -755,7 +780,7 @@ export function StudentsManagementContent() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Students in {selectedClass}</CardTitle>
+            <CardTitle>Students in {selectedClassName}</CardTitle>
             <CardDescription>
               {filteredStudents.length} student{filteredStudents.length !== 1 ? 's' : ''} enrolled
             </CardDescription>
@@ -773,7 +798,7 @@ export function StudentsManagementContent() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredStudents.map((student) => (
+                {paginatedStudents.map((student) => (
                   <TableRow key={student.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -848,11 +873,36 @@ export function StudentsManagementContent() {
                 ))}
               </TableBody>
             </Table>
+            {filteredStudents.length > 0 && (
+              <div className="flex items-center justify-between border-t pt-4 mt-4">
+                <p className="text-sm text-muted-foreground">
+                  Page {currentPage} of {totalPages}
+                </p>
+                <div className="flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === 1}
+                    onClick={() => setCurrentPage(page => Math.max(1, page - 1))}
+                  >
+                    Previous
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage === totalPages}
+                    onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}
+                  >
+                    Next
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
 
-      {selectedClass !== 'all' && filteredStudents.length === 0 && (
+      {selectedClass && filteredStudents.length === 0 && (
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
@@ -861,7 +911,7 @@ export function StudentsManagementContent() {
               <p className="text-muted-foreground">
                 {searchTerm
                   ? 'No students match your search criteria in this class.'
-                  : `No students are currently enrolled in ${selectedClass}.`}
+                  : `No students are currently enrolled in ${selectedClassName}.`}
               </p>
             </div>
           </CardContent>
