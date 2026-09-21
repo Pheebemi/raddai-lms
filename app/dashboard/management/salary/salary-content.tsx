@@ -356,6 +356,61 @@ export function SalaryManagementContent() {
     }
   };
 
+  const carrySalaryToNextMonth = async () => {
+    if (!selectedAcademicYear || !selectedMonth) {
+      toast.error('Please select both academic year and month first');
+      return;
+    }
+
+    const sourceMonth = Number(selectedMonth);
+    const nextMonth = sourceMonth === 12 ? 1 : sourceMonth + 1;
+    const sourceLabel = MONTHS.find(month => month.value === sourceMonth)?.label;
+    const nextLabel = MONTHS.find(month => month.value === nextMonth)?.label;
+    if (!window.confirm(`Copy ${sourceLabel} salary details to ${nextLabel}? Existing records will be kept.`)) {
+      return;
+    }
+
+    try {
+      const result = await staffSalaryApi.carryForward({
+        academic_year: selectedAcademicYear,
+        month: sourceMonth,
+        target_academic_year: selectedAcademicYear,
+      });
+      await fetchData();
+      toast.success(`${result.created} salary record${result.created === 1 ? '' : 's'} copied to ${nextLabel}. ${result.skipped} existing record${result.skipped === 1 ? '' : 's'} skipped.`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to carry salaries forward');
+    }
+  };
+
+  const downloadBankCsv = () => {
+    const rows = filteredSalaries.map((salary) => {
+      const member = staff.find(item => item.id === salary.staffId);
+      return [member?.accountNumber || '', salary.staffName, member?.bankName || ''];
+    });
+
+    if (rows.length === 0) {
+      toast.error('No salary records found for the selected filters');
+      return;
+    }
+
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
+    const csv = [
+      ['Account Number', 'Name', 'Bank Name'],
+      ...rows,
+    ].map(row => row.map(escapeCsv).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Salary_Bank_Details_${selectedMonth || 'all'}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success('Bank details CSV downloaded successfully');
+  };
+
   const downloadVoucher = async (salary: StaffSalary) => {
     try {
       // Generate PNG voucher similar to how results are generated
@@ -510,6 +565,14 @@ export function SalaryManagementContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={carrySalaryToNextMonth}>
+            <Calendar className="mr-2 h-4 w-4" />
+            Carry to Next Month
+          </Button>
+          <Button variant="outline" onClick={downloadBankCsv}>
+            <Download className="mr-2 h-4 w-4" />
+            Bank CSV
+          </Button>
           <Button variant="outline" onClick={downloadMonthlyReport}>
             <Download className="mr-2 h-4 w-4" />
             Monthly Report

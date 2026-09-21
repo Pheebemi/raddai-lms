@@ -64,6 +64,8 @@ export interface Staff {
   joiningDate: string;
   salary?: number;
   qualification?: string;
+  bankName?: string;
+  accountNumber?: string;
 }
 
 // Parent-specific types

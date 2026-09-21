@@ -72,6 +72,8 @@ export function StaffManagementContent() {
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0],
+    bankName: '',
+    accountNumber: '',
     classId: '' as string,
   });
 
@@ -182,6 +184,8 @@ export function StaffManagementContent() {
       joiningDate: staffMember.joiningDate
         ? staffMember.joiningDate.split('T')[0]
         : new Date().toISOString().split('T')[0],
+      bankName: staffMember.bankName || '',
+      accountNumber: staffMember.accountNumber || '',
       classId: assignedClassId || '',
     });
     setIsEditOpen(true);
@@ -206,6 +210,8 @@ export function StaffManagementContent() {
         staffId: editStaffForm.staffId,
         designation: editStaffForm.designation,
         joiningDate: editStaffForm.joiningDate,
+        bankName: editStaffForm.bankName,
+        accountNumber: editStaffForm.accountNumber,
         classId: editStaffForm.classId || null,
       });
 
@@ -546,6 +552,25 @@ export function StaffManagementContent() {
                 <Input
                   value={editStaffForm.lastName}
                   onChange={(e) => setEditStaffForm((s) => ({ ...s, lastName: e.target.value }))}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Bank Name</label>
+                <Input
+                  value={editStaffForm.bankName}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, bankName: e.target.value }))}
+                  placeholder="e.g. Access Bank"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Account Number</label>
+                <Input
+                  value={editStaffForm.accountNumber}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, accountNumber: e.target.value }))}
+                  placeholder="Account number"
                 />
               </div>
             </div>

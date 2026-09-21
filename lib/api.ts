@@ -897,6 +897,20 @@ export const staffSalaryApi = {
       updatedAt: item.updated_at,
     };
   },
+
+  carryForward: async (payload: {
+    academic_year: string;
+    month: number;
+    target_academic_year?: string;
+  }): Promise<{ created: number; skipped: number; month: number; academic_year: string }> => {
+    const response = await fetch(`${API_BASE_URL}/staff-salaries/carry-forward/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return handleApiResponse(response);
+  },
 };
 
 // Generic API functions
@@ -1286,6 +1300,8 @@ export const usersApi = {
         assignedSubjects: createdStaff.subjects?.map((s: any) => s.name) || [],
         joiningDate: createdStaff.joining_date,
         qualification: createdStaff.qualification || '',
+        bankName: createdStaff.bank_name || '',
+        accountNumber: createdStaff.account_number || '',
       };
     } catch (error) {
       console.error('Error in createStaff API:', error);
@@ -1305,6 +1321,8 @@ export const usersApi = {
       staffId?: string;
       designation?: string;
       joiningDate?: string;
+      bankName?: string;
+      accountNumber?: string;
       classId?: string | null;
     }
   ): Promise<Staff> => {
@@ -1330,6 +1348,8 @@ export const usersApi = {
       if (data.staffId !== undefined) staffPayload.staff_id = data.staffId;
       if (data.designation !== undefined) staffPayload.designation = data.designation;
       if (data.joiningDate !== undefined) staffPayload.joining_date = data.joiningDate;
+      if (data.bankName !== undefined) staffPayload.bank_name = data.bankName;
+      if (data.accountNumber !== undefined) staffPayload.account_number = data.accountNumber;
       // Class assignment is handled via a dedicated endpoint, not via staff payload
 
       const staffResponse = await fetch(`${API_BASE_URL}/staff/${id}/`, {
@@ -1368,6 +1388,8 @@ export const usersApi = {
         assignedSubjects: updatedStaff.subjects?.map((s: any) => s.name) || [],
         joiningDate: updatedStaff.joining_date,
         qualification: updatedStaff.qualification || '',
+        bankName: updatedStaff.bank_name || '',
+        accountNumber: updatedStaff.account_number || '',
       };
     } catch (error) {
       console.error('Error in updateStaff API:', error);
@@ -1404,6 +1426,8 @@ export const usersApi = {
       assignedSubjects: item.subjects?.map((s: any) => s.name) || [],
       joiningDate: item.joining_date,
       qualification: item.qualification,
+      bankName: item.bank_name || '',
+      accountNumber: item.account_number || '',
     }));
   },
 
@@ -1470,6 +1494,20 @@ export const usersApi = {
       }),
     });
     return handleApiResponse<any>(parentResponse);
+  },
+
+  carryForward: async (payload: {
+    academic_year: string;
+    month: number;
+    target_academic_year?: string;
+  }): Promise<{ created: number; skipped: number; month: number; academic_year: string }> => {
+    const response = await fetch(`${API_BASE_URL}/staff-salaries/carry-forward/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+
+    return handleApiResponse(response);
   },
 };
 
