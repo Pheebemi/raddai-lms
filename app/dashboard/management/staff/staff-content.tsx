@@ -72,9 +72,12 @@ export function StaffManagementContent() {
     lastName: '',
     username: '',
     email: '',
+    phone: '',
+    address: '',
     staffId: '',
     designation: 'teacher',
     joiningDate: new Date().toISOString().split('T')[0],
+    qualification: '',
     bankName: '',
     accountNumber: '',
     classId: '' as string,
@@ -188,11 +191,14 @@ export function StaffManagementContent() {
       lastName: staffMember.user.lastName,
       username: staffMember.user.username || '',
       email: staffMember.user.email,
+      phone: staffMember.user.phone || '',
+      address: staffMember.user.address || '',
       staffId: staffMember.staffId,
       designation: staffMember.designation || 'teacher',
       joiningDate: staffMember.joiningDate
         ? staffMember.joiningDate.split('T')[0]
         : new Date().toISOString().split('T')[0],
+      qualification: staffMember.qualification || '',
       bankName: staffMember.bankName || '',
       accountNumber: staffMember.accountNumber || '',
       classId: assignedClassId || '',
@@ -216,9 +222,12 @@ export function StaffManagementContent() {
         firstName: editStaffForm.firstName,
         lastName: editStaffForm.lastName,
         email: editStaffForm.email || undefined,
+        phone: editStaffForm.phone || undefined,
+        address: editStaffForm.address || undefined,
         staffId: editStaffForm.staffId,
         designation: editStaffForm.designation,
         joiningDate: editStaffForm.joiningDate,
+        qualification: editStaffForm.qualification,
         bankName: editStaffForm.bankName,
         accountNumber: editStaffForm.accountNumber,
         classId: editStaffForm.classId || null,
@@ -626,6 +635,34 @@ export function StaffManagementContent() {
                 type="email"
                 value={editStaffForm.email}
                 onChange={(e) => setEditStaffForm((s) => ({ ...s, email: e.target.value }))}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone Number</label>
+                <Input
+                  type="tel"
+                  value={editStaffForm.phone}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, phone: e.target.value }))}
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Qualification</label>
+                <Input
+                  value={editStaffForm.qualification}
+                  onChange={(e) => setEditStaffForm((s) => ({ ...s, qualification: e.target.value }))}
+                  placeholder="e.g. B.Ed, NCE"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Address</label>
+              <Input
+                value={editStaffForm.address}
+                onChange={(e) => setEditStaffForm((s) => ({ ...s, address: e.target.value }))}
+                placeholder="Residential address"
               />
             </div>
 

@@ -1327,9 +1327,12 @@ export const usersApi = {
       firstName?: string;
       lastName?: string;
       email?: string;
+      phone?: string;
+      address?: string;
       staffId?: string;
       designation?: string;
       joiningDate?: string;
+      qualification?: string;
       bankName?: string;
       accountNumber?: string;
       classId?: string | null;
@@ -1342,6 +1345,8 @@ export const usersApi = {
       if (data.firstName !== undefined) userPayload.first_name = data.firstName;
       if (data.lastName !== undefined) userPayload.last_name = data.lastName;
       if (data.email !== undefined) userPayload.email = data.email;
+      if (data.phone !== undefined) userPayload.phone_number = data.phone;
+      if (data.address !== undefined) userPayload.address = data.address;
 
       if (Object.keys(userPayload).length > 0) {
         const userResponse = await fetch(`${API_BASE_URL}/users/${data.userId}/`, {
@@ -1357,6 +1362,7 @@ export const usersApi = {
       if (data.staffId !== undefined) staffPayload.staff_id = data.staffId;
       if (data.designation !== undefined) staffPayload.designation = data.designation;
       if (data.joiningDate !== undefined) staffPayload.joining_date = data.joiningDate;
+      if (data.qualification !== undefined) staffPayload.qualification = data.qualification;
       if (data.bankName !== undefined) staffPayload.bank_name = data.bankName;
       if (data.accountNumber !== undefined) staffPayload.account_number = data.accountNumber;
       // Class assignment is handled via a dedicated endpoint, not via staff payload
