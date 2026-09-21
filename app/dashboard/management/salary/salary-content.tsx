@@ -383,10 +383,15 @@ export function SalaryManagementContent() {
     }
   };
 
-  const downloadBankCsv = () => {
+  const downloadAccountCsv = () => {
     const rows = filteredSalaries.map((salary) => {
       const member = staff.find(item => item.id === salary.staffId);
-      return [member?.accountNumber || '', salary.staffName, member?.bankName || ''];
+      return [
+        salary.accountNumber || member?.accountNumber || '',
+        salary.accountName || salary.staffName,
+        salary.bankName || member?.bankName || '',
+        salary.amount.toFixed(2),
+      ];
     });
 
     if (rows.length === 0) {
@@ -396,19 +401,19 @@ export function SalaryManagementContent() {
 
     const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`;
     const csv = [
-      ['Account Number', 'Name', 'Bank Name'],
+      ['Account Number', 'Name', 'Bank Name', 'Amount'],
       ...rows,
     ].map(row => row.map(escapeCsv).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Salary_Bank_Details_${selectedMonth || 'all'}.csv`;
+    link.download = `Salary_Account_Details_${selectedMonth || 'all'}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    toast.success('Bank details CSV downloaded successfully');
+    toast.success('Account CSV downloaded successfully');
   };
 
   const downloadVoucher = async (salary: StaffSalary) => {
@@ -569,9 +574,9 @@ export function SalaryManagementContent() {
             <Calendar className="mr-2 h-4 w-4" />
             Carry to Next Month
           </Button>
-          <Button variant="outline" onClick={downloadBankCsv}>
+          <Button variant="outline" onClick={downloadAccountCsv}>
             <Download className="mr-2 h-4 w-4" />
-            Bank CSV
+            Account CSV
           </Button>
           <Button variant="outline" onClick={downloadMonthlyReport}>
             <Download className="mr-2 h-4 w-4" />
