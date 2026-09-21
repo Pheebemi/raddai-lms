@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { AuthState, User, UserRole } from '@/types';
-import { authApi, handleApiError } from '@/lib/api';
+import { AUTH_EXPIRED_EVENT, authApi, handleApiError } from '@/lib/api';
 
 interface AuthContextType extends AuthState {
   login: (username: string, password: string) => Promise<{ success: boolean; message: string }>;
@@ -31,6 +31,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
   });
 
+  const logout = () => {
+    localStorage.removeItem('edumanage_user');
+    localStorage.removeItem('edumanage_token');
+    localStorage.removeItem('edumanage_refresh_token');
+    setAuthState({
+      user: null,
+      isAuthenticated: false,
+      isLoading: false,
+    });
+  };
+
   // Refresh token function
   const refreshAccessToken = async () => {
     const refreshToken = localStorage.getItem('edumanage_refresh_token');
@@ -48,6 +59,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       throw error;
     }
   };
+
+  // Check for existing session on mount
+  useEffect(() => {
+    const handleAuthExpired = () => {
+      logout();
+      window.location.replace('/login');
+    };
+
+    window.addEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+    return () => window.removeEventListener(AUTH_EXPIRED_EVENT, handleAuthExpired);
+  }, []);
 
   // Check for existing session on mount
   useEffect(() => {
@@ -132,17 +154,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const errorMessage = handleApiError(error);
       return { success: false, message: errorMessage };
     }
-  };
-
-  const logout = () => {
-    localStorage.removeItem('edumanage_user');
-    localStorage.removeItem('edumanage_token');
-    localStorage.removeItem('edumanage_refresh_token');
-    setAuthState({
-      user: null,
-      isAuthenticated: false,
-      isLoading: false,
-    });
   };
 
   const updateUser = (user: User) => {

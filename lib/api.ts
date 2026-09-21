@@ -2,6 +2,7 @@ import { User, UserRole, DashboardStats, Announcement, Result, FeeTransaction, S
 
 // API Base URL
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+export const AUTH_EXPIRED_EVENT = 'edumanage-auth-expired';
 
 // API Response types
 interface ApiResponse<T> {
@@ -81,6 +82,9 @@ const formatApiError = (errorData: any, status: number): string => {
 // Helper function to handle API responses
 const handleApiResponse = async <T>(response: Response): Promise<T> => {
   if (!response.ok) {
+    if (response.status === 401 && typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(AUTH_EXPIRED_EVENT));
+    }
     const errorData = await response.json().catch(() => ({ message: 'Network error' }));
     throw new Error(formatApiError(errorData, response.status));
   }
