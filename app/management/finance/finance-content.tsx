@@ -34,8 +34,8 @@ import {
   BarChart3,
   Receipt
 } from 'lucide-react';
-import { dashboardApi, feesApi, feeStructureApi, classesApi, fetchAcademicYears, handleApiError } from '@/lib/api';
-import { DashboardStats, FeeTransaction, FeeStructure } from '@/types';
+import { dashboardApi, feesApi, feeStructureApi, classesApi, usersApi, fetchAcademicYears, handleApiError } from '@/lib/api';
+import { DashboardStats, FeeTransaction, FeeStructure, Student } from '@/types';
 import { toast } from 'sonner';
 
 
@@ -291,6 +291,7 @@ export function FinanceManagementContent() {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
 
   // Build grade → label map dynamically from actual classes in DB
   const gradeLabelMap = classes.reduce((acc, cls) => {
@@ -335,12 +336,13 @@ export function FinanceManagementContent() {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData] = await Promise.all([
+        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData, studentsData] = await Promise.all([
           dashboardApi.getStats(selectedYear === 'all' ? 'all' : selectedYear === 'active' ? undefined : selectedYear),
           feesApi.getPayments(),
           feeStructureApi.getAll(),
           fetchAcademicYears(),
           classesApi.getAll(),
+          usersApi.getStudents(),
         ]);
 
         setStats(dashboardStats);
@@ -352,6 +354,7 @@ export function FinanceManagementContent() {
           if (active) setSelectedYear(active.id.toString());
         }
         setClasses(classesData);
+        setStudents(studentsData);
       } catch (error: any) {
         const message = handleApiError(error);
         toast.error(message || 'Failed to load financial data');
@@ -362,6 +365,63 @@ export function FinanceManagementContent() {
 
     fetchFinanceData();
   }, [selectedYear]);
+
+  const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    studentId: '',
+    academicYearId: '',
+    term: '',
+    amount: '',
+    paymentMethod: 'Cash',
+    reference: '',
+    remarks: '',
+  });
+
+  const openRecordPaymentDialog = () => {
+    const active = academicYears.find((y: any) => y.is_active);
+    setPaymentForm({
+      studentId: '',
+      academicYearId: active ? active.id.toString() : '',
+      term: '',
+      amount: '',
+      paymentMethod: 'Cash',
+      reference: '',
+      remarks: '',
+    });
+    setIsRecordPaymentOpen(true);
+  };
+
+  const handleRecordPayment = async () => {
+    if (!paymentForm.studentId || !paymentForm.amount) {
+      toast.error('Please select a student and enter an amount.');
+      return;
+    }
+
+    try {
+      setIsRecordingPayment(true);
+      await feesApi.recordManualPayment({
+        student_id: paymentForm.studentId,
+        academic_year: paymentForm.academicYearId || undefined,
+        term: paymentForm.term || undefined,
+        amount: parseFloat(paymentForm.amount),
+        payment_method: paymentForm.paymentMethod,
+        reference: paymentForm.reference || undefined,
+        remarks: paymentForm.remarks || undefined,
+      });
+
+      toast.success('Payment recorded — it now shows on the student and parent portals.');
+      setIsRecordPaymentOpen(false);
+
+      const feeTransactions = await feesApi.getPayments();
+      setTransactions(feeTransactions);
+    } catch (error: any) {
+      const message = handleApiError(error);
+      toast.error(message || 'Failed to record payment');
+    } finally {
+      setIsRecordingPayment(false);
+    }
+  };
 
   const openCreateStructureDialog = () => {
     setEditingStructure(null);
@@ -706,6 +766,12 @@ export function FinanceManagementContent() {
 
         {/* Transactions Tab */}
         <TabsContent value="transactions" className="space-y-4">
+          <div className="flex justify-end">
+            <Button onClick={openRecordPaymentDialog}>
+              <Receipt className="mr-2 h-4 w-4" />
+              Record Payment
+            </Button>
+          </div>
           <TransactionsListCard transactions={transactions} title="All Transactions" description="Complete transaction history" />
         </TabsContent>
 
@@ -1059,6 +1125,133 @@ export function FinanceManagementContent() {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* Record Manual (offline) Payment Dialog */}
+      <Dialog open={isRecordPaymentOpen} onOpenChange={setIsRecordPaymentOpen}>
+        <DialogContent className="sm:max-w-[480px]">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              Record a fee payment made offline (cash, bank transfer, POS, etc.). It's saved the
+              same way as an online payment and will immediately show on the student's and
+              parent's fee history.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Student *</Label>
+              <Select
+                value={paymentForm.studentId}
+                onValueChange={(v) => setPaymentForm({ ...paymentForm, studentId: v })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select student" />
+                </SelectTrigger>
+                <SelectContent>
+                  {students.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {s.user.firstName} {s.user.lastName} — {s.studentId} ({s.class || 'No class'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Academic Year</Label>
+                <Select
+                  value={paymentForm.academicYearId}
+                  onValueChange={(v) => setPaymentForm({ ...paymentForm, academicYearId: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Active year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {academicYears.map((y: any) => (
+                      <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Term</Label>
+                <Select
+                  value={paymentForm.term}
+                  onValueChange={(v) => setPaymentForm({ ...paymentForm, term: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Next unpaid term" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="first">First Term</SelectItem>
+                    <SelectItem value="second">Second Term</SelectItem>
+                    <SelectItem value="third">Third Term</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Amount (₦) *</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={paymentForm.amount}
+                  onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })}
+                  placeholder="e.g. 50000"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Payment Method *</Label>
+                <Select
+                  value={paymentForm.paymentMethod}
+                  onValueChange={(v) => setPaymentForm({ ...paymentForm, paymentMethod: v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Cash">Cash</SelectItem>
+                    <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                    <SelectItem value="POS">POS</SelectItem>
+                    <SelectItem value="Cheque">Cheque</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Reference / Receipt No. (optional)</Label>
+              <Input
+                value={paymentForm.reference}
+                onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })}
+                placeholder="Leave blank to auto-generate one"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Remarks (optional)</Label>
+              <Input
+                value={paymentForm.remarks}
+                onChange={(e) => setPaymentForm({ ...paymentForm, remarks: e.target.value })}
+                placeholder="e.g. Paid at the bursary office"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRecordPaymentOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleRecordPayment} disabled={isRecordingPayment}>
+              {isRecordingPayment ? 'Recording...' : 'Record Payment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
