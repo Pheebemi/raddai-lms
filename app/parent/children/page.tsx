@@ -7,7 +7,8 @@ import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/auth-context';
 import { usersApi, feesApi, resultsApi } from '@/lib/api';
 import { toast } from 'sonner';
-import { GraduationCap, DollarSign, FileText, Users, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { GraduationCap, FileText, Users, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 
 export default function ParentChildrenPage() {
   const { user } = useAuth();
@@ -132,7 +133,7 @@ export default function ParentChildrenPage() {
                   {/* Fee Status */}
                   <div className="bg-muted rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-2 text-sm font-medium">
-                      <DollarSign className="h-4 w-4 text-primary" />
+                      <NairaSign className="h-4 w-4 text-primary" />
                       Fee Payment Status
                     </div>
                     <div className="grid grid-cols-3 gap-2">

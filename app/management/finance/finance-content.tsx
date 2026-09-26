@@ -20,7 +20,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  DollarSign,
   TrendingUp,
   TrendingDown,
   CreditCard,
@@ -34,6 +33,7 @@ import {
   BarChart3,
   Receipt
 } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import { dashboardApi, feesApi, feeStructureApi, classesApi, usersApi, fetchAcademicYears, handleApiError } from '@/lib/api';
 import { DashboardStats, FeeTransaction, FeeStructure, Student } from '@/types';
 import { toast } from 'sonner';
@@ -623,7 +623,7 @@ export function FinanceManagementContent() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <NairaSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₦{(typeof totalRevenue === 'number' ? totalRevenue : 0).toLocaleString()}</div>
@@ -784,7 +784,7 @@ export function FinanceManagementContent() {
                 <CardDescription>Configure tuition and other fees by grade and academic year.</CardDescription>
               </div>
               <Button onClick={openCreateStructureDialog}>
-                <DollarSign className="mr-2 h-4 w-4" />
+                <NairaSign className="mr-2 h-4 w-4" />
                 Add Fee Structure
               </Button>
             </CardHeader>

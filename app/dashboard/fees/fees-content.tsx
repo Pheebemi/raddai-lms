@@ -20,7 +20,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { DollarSign, CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
+import { CreditCard, Calendar, AlertCircle, CheckCircle, Clock, Filter, Download } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import { useFlutterwave, closePaymentModal } from 'flutterwave-react-v3';
 import { feesApi, feeStructureApi, classesApi, dashboardApi, usersApi, getStudentTermFee, fetchAcademicYears, handleApiError, authApi } from '@/lib/api';
 import { FeeTransaction, FeeStructure } from '@/types';
@@ -1181,7 +1182,7 @@ export function FeesContent() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center py-8">
-                <DollarSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <NairaSign className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
                 <h3 className="text-lg font-medium mb-2">No Payments Found</h3>
                 <p className="text-muted-foreground">
                   {selectedTerm !== 'all' || selectedYear !== 'all'

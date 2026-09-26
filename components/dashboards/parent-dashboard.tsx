@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
 import {
-  Users, DollarSign, FileText, MessageSquare,
+  Users, FileText, MessageSquare,
   GraduationCap, CheckCircle, Clock, AlertCircle, ArrowRight, Bell,
 } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import { usersApi, feesApi, resultsApi, announcementsApi } from '@/lib/api';
 import { toast } from 'sonner';
 
@@ -111,7 +112,7 @@ export function ParentDashboard() {
         <Card className="border border-border rounded-2xl">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">Fees Paid</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <NairaSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-primary">₦{totalPaidFees.toLocaleString()}</div>
@@ -220,7 +221,7 @@ export function ParentDashboard() {
           <CardContent className="space-y-2">
             {[
               { label: 'View Results', href: '/dashboard/results', icon: FileText },
-              { label: 'Pay Fees', href: '/dashboard/fees', icon: DollarSign },
+              { label: 'Pay Fees', href: '/dashboard/fees', icon: NairaSign },
               { label: 'My Children', href: '/parent/children', icon: Users },
               { label: 'Announcements', href: '/announcements', icon: MessageSquare },
             ].map(({ label, href, icon: Icon }) => (
