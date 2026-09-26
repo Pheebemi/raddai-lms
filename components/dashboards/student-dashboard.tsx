@@ -17,13 +17,13 @@ import {
 } from '@/components/ui/table';
 import {
   GraduationCap,
-  DollarSign,
   Calendar,
   FileText,
   Clock,
   AlertCircle,
   Lock,
 } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import { useDashboardData } from '@/hooks/use-dashboard-data';
 
 export function StudentDashboard() {
@@ -122,7 +122,7 @@ export function StudentDashboard() {
           </Button>
           <Button variant="outline" asChild>
             <Link href="/dashboard/fees">
-              <DollarSign className="mr-2 h-4 w-4" />
+              <NairaSign className="mr-2 h-4 w-4" />
               Pay Fees
             </Link>
           </Button>
@@ -160,7 +160,7 @@ export function StudentDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Pending Fees</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <NairaSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₦{backendPendingFees.toLocaleString()}</div>
@@ -303,7 +303,7 @@ export function StudentDashboard() {
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2" asChild>
               <Link href="/dashboard/fees">
-                <DollarSign className="h-6 w-6" />
+                <NairaSign className="h-6 w-6" />
                 Pay School Fees
               </Link>
             </Button>

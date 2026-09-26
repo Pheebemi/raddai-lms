@@ -11,7 +11,6 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Users,
-  DollarSign,
   TrendingUp,
   Calendar,
   BookOpen,
@@ -23,6 +22,7 @@ import {
   Eye,
   EyeOff,
 } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import { dashboardApi, feesApi, promotionApi, fetchAcademicYears, toggleResultsVisibility } from '@/lib/api';
 import { DashboardStats } from '@/types';
 import { toast } from 'sonner';
@@ -272,7 +272,7 @@ export function ManagementDashboard() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
-            <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <NairaSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">₦{totalRevenue.toLocaleString()}</div>
@@ -581,7 +581,7 @@ export function ManagementDashboard() {
               <a href="/management/staff"><BookOpen className="h-6 w-6" />Manage Staff</a>
             </Button>
             <Button asChild variant="outline" className="h-20 flex-col gap-2">
-              <a href="/management/finance"><DollarSign className="h-6 w-6" />Finance</a>
+              <a href="/management/finance"><NairaSign className="h-6 w-6" />Finance</a>
             </Button>
             <Button variant="outline" className="h-20 flex-col gap-2" onClick={openPromoteDialog}>
               <GraduationCap className="h-6 w-6" />

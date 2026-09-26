@@ -15,7 +15,6 @@ import {
   Home,
   Users,
   GraduationCap,
-  DollarSign,
   FileText,
   Settings,
   LogOut,
@@ -36,6 +35,7 @@ import {
   Eye,
   ClipboardList,
 } from 'lucide-react';
+import { NairaSign } from '@/components/icons/naira-sign';
 import Image from 'next/image';
 import { useTheme } from 'next-themes';
 import { UserRole, NavItem } from '@/types';
@@ -177,7 +177,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
           { title: 'Admissions', href: '/management/admissions', icon: 'ClipboardList' },
           { title: 'Students', href: '/management/students', icon: 'GraduationCap' },
           { title: 'Staff', href: '/management/staff', icon: 'Users' },
-          { title: 'Finance', href: '/management/finance', icon: 'DollarSign' },
+          { title: 'Finance', href: '/management/finance', icon: 'NairaSign' },
         ],
       },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
@@ -218,7 +218,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       {
         title: 'Staff Salaries',
         href: '/dashboard/management/salary',
-        icon: 'DollarSign',
+        icon: 'NairaSign',
       },
       {
         title: 'Parents',
@@ -228,7 +228,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       {
         title: 'Finance',
         href: '/management/finance',
-        icon: 'DollarSign',
+        icon: 'NairaSign',
       },
       {
         title: 'Results Export',
@@ -254,7 +254,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
     student: [
       ...baseItems,
       { title: 'My Results', href: '/dashboard/results', icon: 'FileText' },
-      { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
+      { title: 'Fees', href: '/dashboard/fees', icon: 'NairaSign' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
@@ -262,7 +262,7 @@ const getNavigationItems = (role: UserRole): NavItem[] => {
       ...baseItems,
       { title: 'My Children', href: '/parent/children', icon: 'Users' },
       { title: 'Results', href: '/dashboard/results', icon: 'FileText' },
-      { title: 'Fees', href: '/dashboard/fees', icon: 'DollarSign' },
+      { title: 'Fees', href: '/dashboard/fees', icon: 'NairaSign' },
       { title: 'Announcements', href: '/announcements', icon: 'MessageSquare' },
       { title: 'Settings', href: '/settings', icon: 'Settings' },
     ],
@@ -276,7 +276,7 @@ const iconMap = {
   Home,
   Users,
   GraduationCap,
-  DollarSign,
+  NairaSign,
   FileText,
   Settings,
   BookOpen,
