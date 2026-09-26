@@ -779,6 +779,40 @@ export const feesApi = {
     };
   },
 
+  recordManualPayment: async (payload: {
+    student_id: string;
+    academic_year?: string;
+    term?: string;
+    amount: number;
+    payment_method: string;
+    reference?: string;
+    remarks?: string;
+  }): Promise<FeeTransaction> => {
+    const response = await fetch(`${API_BASE_URL}/payments/record-manual/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(payload),
+    });
+    const data = await handleApiResponse<any>(response);
+
+    return {
+      id: data.id.toString(),
+      studentId: data.student.toString(),
+      feeStructureId: data.fee_structure?.toString(),
+      amount: parseFloat(data.amount_paid),
+      totalAmount: parseFloat(data.total_amount ?? data.amount_paid),
+      status: data.status as 'paid' | 'pending' | 'overdue' | 'partial',
+      paymentDate: data.payment_date,
+      dueDate: data.due_date,
+      paymentMethod: data.payment_method,
+      transactionId: data.transaction_id,
+      remarks: data.remarks,
+      term: data.term as 'first' | 'second' | 'third',
+      academicYear: data.academic_year_name,
+      academicYearId: data.academic_year?.toString(),
+    };
+  },
+
   verifyPayment: async (payload: {
     transaction_id: string;
     student_id: string | number;
