@@ -56,6 +56,10 @@ const formatApiError = (errorData: any, status: number): string => {
     return errorData.detail;
   }
 
+  if (typeof errorData.error === 'string' && errorData.error) {
+    return errorData.error;
+  }
+
   if (Array.isArray(errorData.non_field_errors) && errorData.non_field_errors.length > 0) {
     return errorData.non_field_errors.join(' ');
   }
@@ -1072,6 +1076,28 @@ export const fetchAcademicYears = async () => {
   return fetchAllResults(`${API_BASE_URL}/academic-years/`);
 };
 
+const mapStudentFromApi = (item: any): Student => {
+  const className = item.current_class_name || '';
+  const classParts = className.split(' ');
+  const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
+  const classId = item.current_class != null ? item.current_class.toString() : undefined;
+
+  return {
+    id: item.id.toString(),
+    user: convertDjangoUser(item.user_details),
+    studentId: item.student_id,
+    class: className, // Keep full class name
+    classId, // Current class FK id (for filtering by class + academic year)
+    classAcademicYearId: item.current_class?.academic_year?.toString(),
+    section: section,
+    rollNumber: 0, // Would need to be added to Django model
+    admissionDate: item.admission_date,
+    gender: item.gender || '',
+    department: item.department || '',
+    studentType: item.student_type || 'new',
+  };
+};
+
 // Users API
 export const usersApi = {
   getStudents: async (classId?: string): Promise<Student[]> => {
@@ -1079,29 +1105,20 @@ export const usersApi = {
       ? `${API_BASE_URL}/students/?class_id=${encodeURIComponent(classId)}`
       : `${API_BASE_URL}/students/`;
     const results = await fetchAllResults(url);
+    return results.map(mapStudentFromApi);
+  },
 
-    // Convert Django format to frontend format
-    return results.map((item: any) => {
-      const className = item.current_class_name || '';
-      const classParts = className.split(' ');
-      const section = classParts.length > 1 ? classParts[classParts.length - 1] : '';
-      const classId = item.current_class != null ? item.current_class.toString() : undefined;
-
-      return {
-        id: item.id.toString(),
-        user: convertDjangoUser(item.user_details),
-        studentId: item.student_id,
-        class: className, // Keep full class name
-        classId, // Current class FK id (for filtering by class + academic year)
-        classAcademicYearId: item.current_class?.academic_year?.toString(),
-        section: section,
-        rollNumber: 0, // Would need to be added to Django model
-        admissionDate: item.admission_date,
-        gender: item.gender || '',
-        department: item.department || '',
-        studentType: item.student_type || 'new',
-      };
+  // Single-page, unpaginated search — used for typeahead pickers so a
+  // school with hundreds of students doesn't have to load the whole roster
+  // just to find one. Backend already caps this to PAGE_SIZE per request.
+  searchStudents: async (query: string): Promise<Student[]> => {
+    if (!query.trim()) return [];
+    const response = await fetch(`${API_BASE_URL}/students/?search=${encodeURIComponent(query)}`, {
+      headers: getAuthHeaders(),
     });
+    const data = await handleApiResponse<any>(response);
+    const results = Array.isArray(data) ? data : (data.results || []);
+    return results.map(mapStudentFromApi);
   },
 
   // Create a new student user + profile and assign to a class

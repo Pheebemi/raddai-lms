@@ -291,7 +291,6 @@ export function FinanceManagementContent() {
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
   const [classes, setClasses] = useState<any[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
 
   // Build grade → label map dynamically from actual classes in DB
   const gradeLabelMap = classes.reduce((acc, cls) => {
@@ -366,7 +365,6 @@ export function FinanceManagementContent() {
 
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
-  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     studentId: '',
     academicYearId: '',
@@ -376,6 +374,36 @@ export function FinanceManagementContent() {
     reference: '',
     remarks: '',
   });
+
+  // Student picker for Record Payment — searches on the fly instead of
+  // loading the whole roster (some schools have 600+ students).
+  const [studentQuery, setStudentQuery] = useState('');
+  const [studentResults, setStudentResults] = useState<Student[]>([]);
+  const [isSearchingStudents, setIsSearchingStudents] = useState(false);
+  const [showStudentResults, setShowStudentResults] = useState(false);
+  const [selectedStudentLabel, setSelectedStudentLabel] = useState('');
+
+  useEffect(() => {
+    if (!studentQuery.trim() || selectedStudentLabel) {
+      setStudentResults([]);
+      return;
+    }
+    setIsSearchingStudents(true);
+    const timeout = setTimeout(() => {
+      usersApi.searchStudents(studentQuery)
+        .then(setStudentResults)
+        .catch(() => toast.error('Failed to search students'))
+        .finally(() => setIsSearchingStudents(false));
+    }, 300);
+    return () => clearTimeout(timeout);
+  }, [studentQuery, selectedStudentLabel]);
+
+  const selectStudent = (s: Student) => {
+    setPaymentForm({ ...paymentForm, studentId: s.id });
+    setSelectedStudentLabel(`${s.user.firstName} ${s.user.lastName} — ${s.studentId} (${s.class || 'No class'})`);
+    setStudentQuery('');
+    setShowStudentResults(false);
+  };
 
   const openRecordPaymentDialog = () => {
     const active = academicYears.find((y: any) => y.is_active);
@@ -388,18 +416,10 @@ export function FinanceManagementContent() {
       reference: '',
       remarks: '',
     });
+    setStudentQuery('');
+    setStudentResults([]);
+    setSelectedStudentLabel('');
     setIsRecordPaymentOpen(true);
-
-    // Load the student roster lazily — only when it's actually needed for
-    // this dialog, not on every Finance page load (that was the cause of
-    // the Finance page taking forever to load for schools with many students).
-    if (students.length === 0) {
-      setIsLoadingStudents(true);
-      usersApi.getStudents()
-        .then(setStudents)
-        .catch(() => toast.error('Failed to load students'))
-        .finally(() => setIsLoadingStudents(false));
-    }
   };
 
   const handleRecordPayment = async () => {
@@ -1148,24 +1168,44 @@ export function FinanceManagementContent() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <div className="space-y-2">
+            <div className="space-y-2 relative">
               <Label>Student *</Label>
-              <Select
-                value={paymentForm.studentId}
-                onValueChange={(v) => setPaymentForm({ ...paymentForm, studentId: v })}
-                disabled={isLoadingStudents}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={isLoadingStudents ? 'Loading students...' : 'Select student'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {students.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.user.firstName} {s.user.lastName} — {s.studentId} ({s.class || 'No class'})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={selectedStudentLabel || studentQuery}
+                onChange={(e) => {
+                  setSelectedStudentLabel('');
+                  setPaymentForm({ ...paymentForm, studentId: '' });
+                  setStudentQuery(e.target.value);
+                  setShowStudentResults(true);
+                }}
+                onFocus={() => setShowStudentResults(true)}
+                onBlur={() => setShowStudentResults(false)}
+                placeholder="Type a student's name or ID to search..."
+                autoComplete="off"
+              />
+              {showStudentResults && studentQuery.trim() && !selectedStudentLabel && (
+                <div className="absolute z-10 mt-1 w-full max-h-60 overflow-auto rounded-md border bg-popover shadow-md">
+                  {isSearchingStudents ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">Searching...</div>
+                  ) : studentResults.length > 0 ? (
+                    studentResults.map((s) => (
+                      <button
+                        key={s.id}
+                        type="button"
+                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent"
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectStudent(s);
+                        }}
+                      >
+                        {s.user.firstName} {s.user.lastName} — {s.studentId} ({s.class || 'No class'})
+                      </button>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No students found</div>
+                  )}
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
