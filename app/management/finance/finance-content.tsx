@@ -409,6 +409,7 @@ export function FinanceManagementContent() {
       .then((payments) => {
         const byTerm: Record<string, FeeTransaction> = {};
         payments
+          .filter((p) => p.studentId === studentId)
           .filter((p) => !academicYearId || p.academicYearId === academicYearId)
           .forEach((p) => { if (p.term) byTerm[p.term] = p; });
         setStudentTermStatus(byTerm);
