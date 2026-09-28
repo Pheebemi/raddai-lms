@@ -336,13 +336,12 @@ export function FinanceManagementContent() {
     const fetchFinanceData = async () => {
       try {
         setLoading(true);
-        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData, studentsData] = await Promise.all([
+        const [dashboardStats, feeTransactions, feeStructuresData, academicYearsData, classesData] = await Promise.all([
           dashboardApi.getStats(selectedYear === 'all' ? 'all' : selectedYear === 'active' ? undefined : selectedYear),
           feesApi.getPayments(),
           feeStructureApi.getAll(),
           fetchAcademicYears(),
           classesApi.getAll(),
-          usersApi.getStudents(),
         ]);
 
         setStats(dashboardStats);
@@ -354,7 +353,6 @@ export function FinanceManagementContent() {
           if (active) setSelectedYear(active.id.toString());
         }
         setClasses(classesData);
-        setStudents(studentsData);
       } catch (error: any) {
         const message = handleApiError(error);
         toast.error(message || 'Failed to load financial data');
@@ -368,6 +366,7 @@ export function FinanceManagementContent() {
 
   const [isRecordPaymentOpen, setIsRecordPaymentOpen] = useState(false);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+  const [isLoadingStudents, setIsLoadingStudents] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
     studentId: '',
     academicYearId: '',
@@ -390,6 +389,17 @@ export function FinanceManagementContent() {
       remarks: '',
     });
     setIsRecordPaymentOpen(true);
+
+    // Load the student roster lazily — only when it's actually needed for
+    // this dialog, not on every Finance page load (that was the cause of
+    // the Finance page taking forever to load for schools with many students).
+    if (students.length === 0) {
+      setIsLoadingStudents(true);
+      usersApi.getStudents()
+        .then(setStudents)
+        .catch(() => toast.error('Failed to load students'))
+        .finally(() => setIsLoadingStudents(false));
+    }
   };
 
   const handleRecordPayment = async () => {
@@ -1143,9 +1153,10 @@ export function FinanceManagementContent() {
               <Select
                 value={paymentForm.studentId}
                 onValueChange={(v) => setPaymentForm({ ...paymentForm, studentId: v })}
+                disabled={isLoadingStudents}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select student" />
+                  <SelectValue placeholder={isLoadingStudents ? 'Loading students...' : 'Select student'} />
                 </SelectTrigger>
                 <SelectContent>
                   {students.map((s) => (
