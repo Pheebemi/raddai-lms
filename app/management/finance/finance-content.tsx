@@ -398,11 +398,31 @@ export function FinanceManagementContent() {
     return () => clearTimeout(timeout);
   }, [studentQuery, selectedStudentLabel]);
 
+  // Which terms the selected student has already paid, so we can warn
+  // before they try to record a payment for a term that's already settled.
+  const [studentTermStatus, setStudentTermStatus] = useState<Record<string, FeeTransaction>>({});
+  const [isLoadingTermStatus, setIsLoadingTermStatus] = useState(false);
+
+  const loadStudentTermStatus = (studentId: string, academicYearId: string) => {
+    setIsLoadingTermStatus(true);
+    feesApi.getStudentPayments(studentId)
+      .then((payments) => {
+        const byTerm: Record<string, FeeTransaction> = {};
+        payments
+          .filter((p) => !academicYearId || p.academicYearId === academicYearId)
+          .forEach((p) => { if (p.term) byTerm[p.term] = p; });
+        setStudentTermStatus(byTerm);
+      })
+      .catch(() => toast.error('Failed to load this student\'s payment status'))
+      .finally(() => setIsLoadingTermStatus(false));
+  };
+
   const selectStudent = (s: Student) => {
-    setPaymentForm({ ...paymentForm, studentId: s.id });
+    setPaymentForm({ ...paymentForm, studentId: s.id, term: '' });
     setSelectedStudentLabel(`${s.user.firstName} ${s.user.lastName} — ${s.studentId} (${s.class || 'No class'})`);
     setStudentQuery('');
     setShowStudentResults(false);
+    loadStudentTermStatus(s.id, paymentForm.academicYearId);
   };
 
   const openRecordPaymentDialog = () => {
@@ -419,6 +439,7 @@ export function FinanceManagementContent() {
     setStudentQuery('');
     setStudentResults([]);
     setSelectedStudentLabel('');
+    setStudentTermStatus({});
     setIsRecordPaymentOpen(true);
   };
 
@@ -1206,6 +1227,21 @@ export function FinanceManagementContent() {
                   )}
                 </div>
               )}
+              {paymentForm.studentId && (
+                <p className="text-xs text-muted-foreground">
+                  {isLoadingTermStatus ? 'Checking payment status...' : (
+                    ['first', 'second', 'third'].map((t) => {
+                      const p = studentTermStatus[t];
+                      const label = t.charAt(0).toUpperCase() + t.slice(1);
+                      return p?.status === 'paid'
+                        ? `${label}: Paid`
+                        : p?.status === 'partial'
+                        ? `${label}: Partial (₦${p.amount.toLocaleString()} of ₦${(p.totalAmount ?? p.amount).toLocaleString()})`
+                        : `${label}: Unpaid`;
+                    }).join(' · ')
+                  )}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1213,7 +1249,10 @@ export function FinanceManagementContent() {
                 <Label>Academic Year</Label>
                 <Select
                   value={paymentForm.academicYearId}
-                  onValueChange={(v) => setPaymentForm({ ...paymentForm, academicYearId: v })}
+                  onValueChange={(v) => {
+                    setPaymentForm({ ...paymentForm, academicYearId: v, term: '' });
+                    if (paymentForm.studentId) loadStudentTermStatus(paymentForm.studentId, v);
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Active year" />
@@ -1235,9 +1274,14 @@ export function FinanceManagementContent() {
                     <SelectValue placeholder="Next unpaid term" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="first">First Term</SelectItem>
-                    <SelectItem value="second">Second Term</SelectItem>
-                    <SelectItem value="third">Third Term</SelectItem>
+                    {(['first', 'second', 'third'] as const).map((t) => {
+                      const isPaid = studentTermStatus[t]?.status === 'paid';
+                      return (
+                        <SelectItem key={t} value={t} disabled={isPaid}>
+                          {t.charAt(0).toUpperCase() + t.slice(1)} Term{isPaid ? ' — already paid' : ''}
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
               </div>
