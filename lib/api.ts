@@ -725,7 +725,8 @@ export const feesApi = {
     const response = await fetch(`${API_BASE_URL}/fee-payments/?student=${studentId}`, {
       headers: getAuthHeaders(),
     });
-    const data = await handleApiResponse<any[]>(response);
+    const raw = await handleApiResponse<any>(response);
+    const data: any[] = Array.isArray(raw) ? raw : (raw.results || []);
 
     // Convert Django format to frontend format
     return data.map(item => ({
