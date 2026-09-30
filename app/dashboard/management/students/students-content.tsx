@@ -41,7 +41,8 @@ import {
   BookOpen,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { usersApi, classesApi } from '@/lib/api';
 import { Class, Student } from '@/types';
@@ -129,6 +130,10 @@ export function StudentsManagementContent() {
 
     fetchStudents();
   }, [selectedClass]);
+
+  // Only a single class can be downloaded — not "All Classes" — and only once its students have loaded.
+  const canDownloadClassList =
+    classesData.some(cls => cls.id === selectedClass) && !loading && students.length > 0;
 
   const handleCreateStudent = async () => {
     if (!newStudent.firstName || !newStudent.lastName || !newStudent.username || !newStudent.password || !newStudent.studentId || !newStudent.classId) {
@@ -567,6 +572,18 @@ export function StudentsManagementContent() {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-end">
+              <Button
+                variant="outline"
+                onClick={() => window.open(`/management/students/${selectedClass}/print`, '_blank')}
+                disabled={!canDownloadClassList}
+                title={canDownloadClassList ? 'Open this class list to print or save as PDF' : 'Select a class first'}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download Class List
+              </Button>
             </div>
           </div>
         </CardContent>
