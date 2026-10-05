@@ -641,7 +641,11 @@ export const feeStructureApi = {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
-    if (!response.ok) throw new Error('Failed to delete fee structure');
+    if (!response.ok) {
+      // e.g. "Can't delete this fee: 3 payments are recorded under it."
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(formatApiError(errorData, response.status));
+    }
   },
 };
 

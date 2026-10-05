@@ -569,8 +569,8 @@ export function FinanceManagementContent() {
       await feeStructureApi.delete(structure.id);
       setFeeStructures((prev) => prev.filter((fs) => fs.id !== structure.id));
       toast.success('Fee structure deleted.');
-    } catch {
-      toast.error('Failed to delete fee structure.');
+    } catch (error: unknown) {
+      toast.error(handleApiError(error));
     }
   };
 
