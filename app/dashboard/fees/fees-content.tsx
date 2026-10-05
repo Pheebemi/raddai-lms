@@ -205,15 +205,24 @@ export function FeesContent() {
       return;
     }
 
+    // Read Flutterwave's transaction id before cleaning the URL — after
+    // router.replace() it may already be gone from window.location.
+    const urlTransactionId = searchParams.get('transaction_id');
+
     // Clean the URL immediately so the effect doesn't re-trigger
     router.replace('/dashboard/fees');
 
     const storedData = sessionStorage.getItem('flutterwave_payment_intent');
     if (!storedData) return;
+    if (!urlTransactionId) {
+      // The server also records it from Flutterwave's webhook within a few minutes.
+      toast.info('Payment received — it will show here within a few minutes.');
+      sessionStorage.removeItem('flutterwave_payment_intent');
+      return;
+    }
 
     const paymentIntent = JSON.parse(storedData);
-    const urlTransactionId = new URLSearchParams(window.location.search).get('transaction_id');
-    const transactionId = urlTransactionId || paymentIntent.txRef;
+    const transactionId = urlTransactionId;
     const numericStudentId = parseInt(paymentIntent.studentId.toString());
 
     if (isNaN(numericStudentId)) {
@@ -236,7 +245,11 @@ export function FeesContent() {
         // Refresh payments list
         feesApi.getPayments().then(setPayments).catch(() => {});
       } catch (error: unknown) {
-        toast.error('Payment received but failed to record: ' + handleApiError(error));
+        sessionStorage.removeItem('flutterwave_payment_intent');
+        toast.error(
+          'Payment received but not recorded yet: ' + handleApiError(error) +
+          '. It is usually added automatically within a few minutes — contact the school if it is not.'
+        );
       }
     };
 
@@ -496,6 +509,13 @@ export function FeesContent() {
         : 0,
     currency: 'NGN',
     payment_options: 'card,mobilemoney,ussd',
+    // Lets the server's Flutterwave webhook record the payment against the
+    // right student, term and session even if this tab never comes back.
+    meta: {
+      student_id: user?.role === 'parent' ? selectedChild?.id : user?.profile?.id,
+      term: paymentData.term,
+      academic_year: paymentData.academicYear,
+    },
     customer: {
       email: user?.email || '',
       phone_number: user?.phone || '',
