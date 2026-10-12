@@ -34,7 +34,8 @@ import {
   Settings,
   MoreHorizontal,
   Edit,
-  Trash2
+  Trash2,
+  Download
 } from 'lucide-react';
 import { usersApi, classesApi } from '@/lib/api';
 import { Staff, Class } from '@/types';
@@ -308,6 +309,22 @@ export function StaffManagementContent() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => {
+              // Opens a printable list (Print / Save as PDF) matching the current filter.
+              const params = new URLSearchParams();
+              if (selectedDesignation !== 'all') params.set('designation', selectedDesignation);
+              if (searchTerm.trim()) params.set('q', searchTerm.trim());
+              const qs = params.toString();
+              window.open(`/management/staff/print${qs ? `?${qs}` : ''}`, '_blank');
+            }}
+            disabled={staff.length === 0}
+            title="Open the staff list to print or save as PDF"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Download Staff List
+          </Button>
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>
               <Button>
