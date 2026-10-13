@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Table,
   TableBody,
@@ -129,6 +130,23 @@ export function StaffDashboard() {
     }
     return students.filter(student => student.classId === staffProfile.assignedClassId);
   }, [students, staffProfile]);
+
+  // The list opens A–Z by name; the toggle switches it to student ID order.
+  const [studentOrder, setStudentOrder] = useState<'name' | 'id'>('name');
+  const sortedStudents = useMemo(() => {
+    const byName = (a: Student, b: Student) =>
+      `${a.user.firstName} ${a.user.lastName}`.trim().localeCompare(
+        `${b.user.firstName} ${b.user.lastName}`.trim(),
+        undefined,
+        { sensitivity: 'base' }
+      );
+    // numeric: true so LAZ-SS-0009 comes before LAZ-SS-0010 whatever the padding.
+    const byId = (a: Student, b: Student) =>
+      (a.studentId || '').localeCompare(b.studentId || '', undefined, { numeric: true, sensitivity: 'base' });
+    return [...assignedStudents].sort((a, b) =>
+      studentOrder === 'id' ? byId(a, b) || byName(a, b) : byName(a, b) || byId(a, b)
+    );
+  }, [assignedStudents, studentOrder]);
 
   // Results for this staff's assigned class academic year only (no other years)
   const resultsInMyClassYear = useMemo(() => {
@@ -286,15 +304,27 @@ export function StaffDashboard() {
         {/* Assigned Students */}
         <Card className="col-span-4">
           <CardHeader>
-            <CardTitle>My Students</CardTitle>
-            <CardDescription>
-              Students in your assigned classes
-              {staffProfile?.assignedClasses && staffProfile.assignedClasses.length > 0 && (
-                <span className="ml-2">
-                  ({staffProfile.assignedClasses.length} class{staffProfile.assignedClasses.length !== 1 ? 'es' : ''})
-                </span>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>My Students</CardTitle>
+                <CardDescription>
+                  Students in your assigned classes
+                  {staffProfile?.assignedClasses && staffProfile.assignedClasses.length > 0 && (
+                    <span className="ml-2">
+                      ({staffProfile.assignedClasses.length} class{staffProfile.assignedClasses.length !== 1 ? 'es' : ''})
+                    </span>
+                  )}
+                </CardDescription>
+              </div>
+              {assignedStudents.length > 1 && (
+                <Tabs value={studentOrder} onValueChange={(value) => setStudentOrder(value as 'name' | 'id')}>
+                  <TabsList aria-label="Sort students">
+                    <TabsTrigger value="name">A–Z by name</TabsTrigger>
+                    <TabsTrigger value="id">By ID</TabsTrigger>
+                  </TabsList>
+                </Tabs>
               )}
-            </CardDescription>
+            </div>
           </CardHeader>
           <CardContent>
             {assignedStudents.length > 0 ? (
@@ -309,7 +339,7 @@ export function StaffDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {assignedStudents.map((student) => {
+                  {sortedStudents.map((student) => {
                     // Average performance for this student (only in this class's academic year)
                     const studentResults = resultsInMyClassYear.filter(r => r.studentId === student.id);
                     const avgPerformance = studentResults.length > 0

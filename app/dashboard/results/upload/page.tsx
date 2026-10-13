@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import ProtectedRoute from '@/components/protected-route';
 import AppLayout from '@/components/app-layout';
 import { useAuth } from '@/contexts/auth-context';
@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Save, X, Plus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchClasses, fetchAcademicYears, usersApi, resultsApi, subjectsApi } from '@/lib/api';
@@ -42,6 +43,20 @@ export default function UploadResultsPage() {
   const [classes, setClasses] = useState<any[]>([]); // Filtered classes for display
   const [subjects, setSubjects] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
+
+  // Rows open A–Z by name; the toggle switches them to student ID order.
+  // Only the display is sorted — saving still uses the `students` list as loaded.
+  const [studentOrder, setStudentOrder] = useState<'name' | 'id'>('name');
+  const sortedStudents = useMemo(() => {
+    const byName = (a: StudentResult, b: StudentResult) =>
+      (a.studentName || '').trim().localeCompare((b.studentName || '').trim(), undefined, { sensitivity: 'base' });
+    // numeric: true so LAZ-SS-0009 comes before LAZ-SS-0010 whatever the padding.
+    const byId = (a: StudentResult, b: StudentResult) =>
+      (a.studentId || '').localeCompare(b.studentId || '', undefined, { numeric: true, sensitivity: 'base' });
+    return [...students].sort((a, b) =>
+      studentOrder === 'id' ? byId(a, b) || byName(a, b) : byName(a, b) || byId(a, b)
+    );
+  }, [students, studentOrder]);
 
   // Calculate statistics for upload page
   const existingResultsCount = students.filter(s => s.existingResultId).length;
@@ -484,15 +499,27 @@ export default function UploadResultsPage() {
       {students.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>
-              {isEditingExisting ? 'Edit Student Results' : 'Enter Student Results'}
-            </CardTitle>
-            <CardDescription>
-              {isEditingExisting
-                ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student.`
-                : 'Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student'
-              }
-            </CardDescription>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle>
+                  {isEditingExisting ? 'Edit Student Results' : 'Enter Student Results'}
+                </CardTitle>
+                <CardDescription>
+                  {isEditingExisting
+                    ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student.`
+                    : 'Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student'
+                  }
+                </CardDescription>
+              </div>
+              {students.length > 1 && (
+                <Tabs value={studentOrder} onValueChange={(value) => setStudentOrder(value as 'name' | 'id')}>
+                  <TabsList aria-label="Sort students">
+                    <TabsTrigger value="name">A–Z by name</TabsTrigger>
+                    <TabsTrigger value="id">By ID</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
@@ -508,7 +535,7 @@ export default function UploadResultsPage() {
               </div>
 
               {/* Student Rows */}
-              {students.map((student, index) => {
+              {sortedStudents.map((student) => {
                 const total = calculateTotal(student);
                 const grade = calculateGrade(total);
 
