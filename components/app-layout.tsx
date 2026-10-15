@@ -391,7 +391,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">
+                  {/* There is no separate profile page; a person's details live in Settings. */}
+                  <Link href="/settings">
                     <User className="mr-2 h-4 w-4" />
                     Profile
                   </Link>
