@@ -4,9 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import ProtectedRoute from '@/components/protected-route';
 import { Button } from '@/components/ui/button';
-import { usersApi } from '@/lib/api';
+import { usersApi, staffSalaryApi } from '@/lib/api';
 import { Staff } from '@/types';
 import { designationLabel } from '@/lib/staff-designations';
+import { bankDetailsFor, StaffBankDetails } from '@/lib/staff-bank-details';
 import { Loader2, Printer, AlertCircle } from 'lucide-react';
 
 const fullName = (member: Staff) => `${member.user.firstName} ${member.user.lastName}`.trim();
@@ -19,6 +20,7 @@ const fullName = (member: Staff) => `${member.user.firstName} ${member.user.last
  */
 function StaffListPrint() {
   const [staff, setStaff] = useState<Staff[]>([]);
+  const [bank, setBank] = useState<Record<string, StaffBankDetails>>({});
   const [designation, setDesignation] = useState('all');
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -31,9 +33,12 @@ function StaffListPrint() {
     setDesignation(wantedDesignation);
     setQuery(wantedQuery);
 
-    usersApi
-      .getStaff()
-      .then(all => {
+    // Bank details come from the salary records first, then the staff profile
+    // (the same rule as the Staff Salary page). If salaries can't be loaded the
+    // list still prints, with the profile's bank details.
+    Promise.all([usersApi.getStaff(), staffSalaryApi.list().catch(() => [])])
+      .then(([all, salaries]) => {
+        setBank(Object.fromEntries(all.map(member => [member.id, bankDetailsFor(member, salaries)])));
         const needle = wantedQuery.toLowerCase();
         const shown = all.filter(member => {
           const matchesSearch =
@@ -142,6 +147,8 @@ function StaffListPrint() {
               <th className="border border-neutral-400 px-2 py-1.5 text-left">Staff ID</th>
               <th className="border border-neutral-400 px-2 py-1.5 text-left">Designation</th>
               <th className="border border-neutral-400 px-2 py-1.5 text-left">Phone</th>
+              <th className="border border-neutral-400 px-2 py-1.5 text-left">Bank Name</th>
+              <th className="border border-neutral-400 px-2 py-1.5 text-left">Account Number</th>
             </tr>
           </thead>
           <tbody>
@@ -152,11 +159,13 @@ function StaffListPrint() {
                 <td className="border border-neutral-400 px-2 py-1.5 font-mono">{member.staffId}</td>
                 <td className="border border-neutral-400 px-2 py-1.5">{designationLabel(member.designation) || '—'}</td>
                 <td className="border border-neutral-400 px-2 py-1.5">{member.user.phone || '—'}</td>
+                <td className="border border-neutral-400 px-2 py-1.5">{bank[member.id]?.bankName || '—'}</td>
+                <td className="border border-neutral-400 px-2 py-1.5 font-mono">{bank[member.id]?.accountNumber || '—'}</td>
               </tr>
             ))}
             {staff.length === 0 && (
               <tr>
-                <td colSpan={5} className="border border-neutral-400 px-2 py-6 text-center text-neutral-500">
+                <td colSpan={7} className="border border-neutral-400 px-2 py-6 text-center text-neutral-500">
                   No staff to list.
                 </td>
               </tr>
