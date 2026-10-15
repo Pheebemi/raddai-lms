@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/table';
 import { FileText, TrendingUp, Calendar, Download, Filter, Trophy, Lock, Users } from 'lucide-react';
 import { resultsApi, announcementsApi, usersApi, rankingsApi, classesApi, fetchAcademicYears, attendanceApi, handleApiError } from '@/lib/api';
+import { isEarlyYearsGrade } from '@/lib/score-scheme';
 import { drawResultCanvas } from '@/lib/result-canvas';
 import { generateResultComment } from '@/lib/result-comment';
 import { Result, Student, ClassRanking, StudentRanking } from '@/types';
@@ -466,8 +467,11 @@ export function ResultsContent() {
       y += 60;
 
       // === RESULTS TABLE (bordered cells like the PDF) ===
-      const colWidths = [80, 560, 120, 120, 120, 220, 240, 160];
-      const headers = ['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'EXAM', 'TOTAL', 'GRADE'];
+      // Pre-Nursery to Nursery 2 have no 3rd CA, so the column is left out of their report card.
+      const hideCa3 = termResults.length > 0 && termResults.every(r => isEarlyYearsGrade(r.classGrade));
+      const withoutCa3 = <T,>(cells: T[]): T[] => (hideCa3 ? cells.filter((_, i) => i !== 4) : cells);
+      const colWidths = withoutCa3([80, 560, 120, 120, 120, 220, 240, 160]);
+      const headers = withoutCa3(['SN', 'SUBJECT', 'CA1', 'CA2', 'CA3', 'EXAM', 'TOTAL', 'GRADE']);
       const rowHeight = 60;
       const tableX = marginLeft;
       const tableWidth = contentWidth;
@@ -502,7 +506,7 @@ export function ResultsContent() {
 
       // Draw data rows
       termResults.forEach((result, index) => {
-        const rowData = [
+        const rowData = withoutCa3([
           (index + 1).toString(),
           (result.subject_name || result.subjectId).toUpperCase(),
           result.ca1_score.toString(),
@@ -511,7 +515,7 @@ export function ResultsContent() {
           result.exam_score.toString(),
           result.marks_obtained.toString(),
           result.grade,
-        ];
+        ]);
         drawTableRow(y, rowData, false);
         y += rowHeight;
       });
@@ -906,7 +910,9 @@ export function ResultsContent() {
                         <TableHead>Subject</TableHead>
                         <TableHead className="text-center">CA1</TableHead>
                         <TableHead className="text-center">CA2</TableHead>
-                        <TableHead className="text-center">CA3</TableHead>
+                        {!termResults.every(r => isEarlyYearsGrade(r.classGrade)) && (
+                          <TableHead className="text-center">CA3</TableHead>
+                        )}
                         <TableHead className="text-center">Exam</TableHead>
                         <TableHead className="text-center">Grade</TableHead>
                       </TableRow>
@@ -919,7 +925,9 @@ export function ResultsContent() {
                           </TableCell>
                           <TableCell className="text-center">{result.ca1_score}</TableCell>
                           <TableCell className="text-center">{result.ca2_score}</TableCell>
-                          <TableCell className="text-center">{result.ca3_score}</TableCell>
+                          {!isEarlyYearsGrade(result.classGrade) && (
+                            <TableCell className="text-center">{result.ca3_score}</TableCell>
+                          )}
                           <TableCell className="text-center">{result.exam_score}</TableCell>
                           <TableCell className="text-center">
                             <Badge variant={

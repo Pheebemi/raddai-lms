@@ -111,14 +111,16 @@ export interface Result {
   classId?: string;
   class?: string;
   recordedClassId?: string;
+  /** Class level (e.g. -1 Nursery 2, 10 SS 1): decides the score scheme. See lib/score-scheme.ts */
+  classGrade?: number | null;
   payment_status: boolean;
-  // CA Scores (10 marks each)
+  // CA Scores (10 marks each; Pre-Nursery to Nursery 2: CA1 and CA2 out of 20, no CA3)
   ca1_score: number;
   ca2_score: number;
   ca3_score: number;
   ca4_score: number;
   ca_total: number;
-  // Final Exam (60 marks)
+  // Final Exam (70 marks; Pre-Nursery to Nursery 2: 60)
   exam_score: number;
   // Calculated totals
   marks_obtained: number;

@@ -327,6 +327,7 @@ export const resultsApi = {
         classId: item.class_id,
         class: item.class_name,
         recordedClassId: item.recorded_class,
+        classGrade: item.class_grade ?? undefined,
         payment_status: item.payment_status || false,
         // CA Scores
         ca1_score: parseFloat(item.ca1_score) || 0,
