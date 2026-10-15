@@ -90,6 +90,10 @@ export function StudentsManagementContent() {
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
+  // What the student being deleted would take with it, and the ID typed to confirm.
+  const [deleteImpact, setDeleteImpact] = useState<{ results: number; feePayments: number; attendance: number } | null>(null);
+  const [deleteImpactFailed, setDeleteImpactFailed] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   useEffect(() => {
     const fetchClasses = async () => {
@@ -202,15 +206,27 @@ export function StudentsManagementContent() {
 
   const openDeleteDialog = (student: Student) => {
     setStudentToDelete(student);
+    setDeleteImpact(null);
+    setDeleteImpactFailed(false);
+    setDeleteConfirmText('');
     setIsDeleteOpen(true);
+    usersApi
+      .getStudentDeleteImpact(student.id)
+      .then(setDeleteImpact)
+      .catch(() => setDeleteImpactFailed(true));
   };
+
+  const deleteHasRecords = !!deleteImpact && (deleteImpact.results + deleteImpact.feePayments + deleteImpact.attendance) > 0;
+  // A student with records needs their ID typed; if the counts could not be loaded, play safe and ask too.
+  const deleteNeedsConfirmation = deleteHasRecords || deleteImpactFailed;
+  const deleteConfirmed = !deleteNeedsConfirmation || deleteConfirmText.trim() === (studentToDelete?.studentId ?? '');
 
   const handleDeleteStudent = async () => {
     if (!studentToDelete) return;
 
     try {
       setIsDeleting(true);
-      await usersApi.deleteStudent(studentToDelete.id);
+      await usersApi.deleteStudent(studentToDelete.id, deleteNeedsConfirmation ? deleteConfirmText.trim() : undefined);
       setStudents((prev) => prev.filter((s) => s.id !== studentToDelete.id));
       toast.success('Student deleted successfully.');
       setIsDeleteOpen(false);
@@ -754,9 +770,48 @@ export function StudentsManagementContent() {
             </DialogDescription>
           </DialogHeader>
 
-          <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
-            Are you sure you want to delete this student account?
-          </div>
+          {deleteImpact === null && !deleteImpactFailed ? (
+            <div className="mt-2 rounded-md border px-3 py-2 text-sm text-muted-foreground">
+              Checking what this student has recorded…
+            </div>
+          ) : deleteNeedsConfirmation ? (
+            <div className="mt-2 space-y-3">
+              <div className="rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+                {deleteHasRecords && deleteImpact ? (
+                  <>
+                    <p className="font-semibold">This also permanently deletes:</p>
+                    <ul className="mt-1 list-disc pl-5">
+                      <li>{deleteImpact.results} result{deleteImpact.results !== 1 ? 's' : ''}</li>
+                      <li>{deleteImpact.feePayments} fee payment{deleteImpact.feePayments !== 1 ? 's' : ''}</li>
+                      <li>{deleteImpact.attendance} attendance record{deleteImpact.attendance !== 1 ? 's' : ''}</li>
+                    </ul>
+                  </>
+                ) : (
+                  <p>
+                    We could not check what this student has recorded. Deleting also deletes any results, fee payments
+                    and attendance.
+                  </p>
+                )}
+              </div>
+              <div className="space-y-1.5">
+                <label htmlFor="confirm-student-id" className="text-sm font-medium">
+                  Type <span className="font-mono font-semibold">{studentToDelete?.studentId}</span> to confirm
+                </label>
+                <Input
+                  id="confirm-student-id"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  placeholder={studentToDelete?.studentId}
+                  autoComplete="off"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="mt-2 rounded-md bg-destructive/10 border border-destructive/30 px-3 py-2 text-sm text-destructive">
+              This student has no results, fee payments or attendance recorded. Are you sure you want to delete this
+              student account?
+            </div>
+          )}
 
           <DialogFooter>
             <Button
@@ -772,7 +827,7 @@ export function StudentsManagementContent() {
             <Button
               variant="destructive"
               onClick={handleDeleteStudent}
-              disabled={isDeleting || !studentToDelete}
+              disabled={isDeleting || !studentToDelete || (deleteImpact === null && !deleteImpactFailed) || !deleteConfirmed}
             >
               {isDeleting ? 'Deleting...' : 'Delete Student'}
             </Button>
