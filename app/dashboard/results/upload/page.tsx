@@ -16,6 +16,7 @@ import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Save, X, Plus, Download } from 'lucide-react';
 import { toast } from 'sonner';
 import { fetchClasses, fetchAcademicYears, usersApi, resultsApi, subjectsApi } from '@/lib/api';
+import { scoreLimitsForGrade } from '@/lib/score-scheme';
 
 interface StudentResult {
   id: string;
@@ -43,6 +44,15 @@ export default function UploadResultsPage() {
   const [classes, setClasses] = useState<any[]>([]); // Filtered classes for display
   const [subjects, setSubjects] = useState<any[]>([]);
   const [academicYears, setAcademicYears] = useState<any[]>([]);
+
+  // Marks are split differently by class level: Pre-Nursery to Nursery 2 use
+  // 20 / 20 / no CA3 / 60, every other class 10 / 10 / 10 / 70 (both total 100).
+  const selectedClassLevel = allClasses.find(cls => String(cls.id) === String(selectedClass))?.grade;
+  const limits = scoreLimitsForGrade(selectedClassLevel);
+  const hasCa3 = limits.ca3 > 0;
+  const scoresHint = hasCa3
+    ? `the CA test scores (max ${limits.ca1} each) and final exam score (max ${limits.exam})`
+    : `the 1st CA (max ${limits.ca1}), 2nd CA (max ${limits.ca2}) and final exam score (max ${limits.exam})`;
 
   // Rows open A–Z by name; the toggle switches them to student ID order.
   // Only the display is sorted — saving still uses the `students` list as loaded.
@@ -506,8 +516,8 @@ export default function UploadResultsPage() {
                 </CardTitle>
                 <CardDescription>
                   {isEditingExisting
-                    ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student.`
-                    : 'Fill in the CA test scores (max 10 each) and final exam score (max 70) for each student'
+                    ? `Editing existing results for ${existingResultsCount} student${existingResultsCount !== 1 ? 's' : ''}. Fill in ${scoresHint} for each student.`
+                    : `Fill in ${scoresHint} for each student`
                   }
                 </CardDescription>
               </div>
@@ -524,12 +534,12 @@ export default function UploadResultsPage() {
           <CardContent>
             <div className="space-y-6">
               {/* Header */}
-              <div className="grid grid-cols-11 gap-4 font-medium text-sm text-muted-foreground border-b pb-2">
+              <div className={`grid ${hasCa3 ? 'grid-cols-11' : 'grid-cols-12'} gap-4 font-medium text-sm text-muted-foreground border-b pb-2`}>
                 <div className="col-span-3">Student</div>
-                <div className="col-span-1 text-center">CA1</div>
-                <div className="col-span-1 text-center">CA2</div>
-                <div className="col-span-1 text-center">CA3</div>
-                <div className="col-span-2 text-center">Exam (70)</div>
+                <div className={`${hasCa3 ? 'col-span-1' : 'col-span-2'} text-center`}>CA1{hasCa3 ? '' : ` (${limits.ca1})`}</div>
+                <div className={`${hasCa3 ? 'col-span-1' : 'col-span-2'} text-center`}>CA2{hasCa3 ? '' : ` (${limits.ca2})`}</div>
+                {hasCa3 && <div className="col-span-1 text-center">CA3</div>}
+                <div className="col-span-2 text-center">Exam ({limits.exam})</div>
                 <div className="col-span-2 text-center">Total</div>
                 <div className="col-span-1 text-center">Grade</div>
               </div>
@@ -553,68 +563,70 @@ export default function UploadResultsPage() {
                       <div className="text-sm text-muted-foreground">{student.studentId}</div>
                     </div>
 
-                    <div className="col-span-1">
+                    <div className={hasCa3 ? 'col-span-1' : 'col-span-2'}>
                       <Input
                         type="number"
                         min="0"
-                        max="10"
+                        max={limits.ca1}
                         value={student.ca1_score}
                         onChange={(e) =>
                           updateStudentResult(
                             student.id,
                             'ca1_score',
-                            normalizeScore(e.target.value, 10)
+                            normalizeScore(e.target.value, limits.ca1)
                           )
                         }
                         className="text-center"
                       />
                     </div>
 
-                    <div className="col-span-1">
+                    <div className={hasCa3 ? 'col-span-1' : 'col-span-2'}>
                       <Input
                         type="number"
                         min="0"
-                        max="10"
+                        max={limits.ca2}
                         value={student.ca2_score}
                         onChange={(e) =>
                           updateStudentResult(
                             student.id,
                             'ca2_score',
-                            normalizeScore(e.target.value, 10)
+                            normalizeScore(e.target.value, limits.ca2)
                           )
                         }
                         className="text-center"
                       />
                     </div>
 
-                    <div className="col-span-1">
-                      <Input
-                        type="number"
-                        min="0"
-                        max="10"
-                        value={student.ca3_score}
-                        onChange={(e) =>
-                          updateStudentResult(
-                            student.id,
-                            'ca3_score',
-                            normalizeScore(e.target.value, 10)
-                          )
-                        }
-                        className="text-center"
-                      />
-                    </div>
+                    {hasCa3 && (
+                      <div className="col-span-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          max={limits.ca3}
+                          value={student.ca3_score}
+                          onChange={(e) =>
+                            updateStudentResult(
+                              student.id,
+                              'ca3_score',
+                              normalizeScore(e.target.value, limits.ca3)
+                            )
+                          }
+                          className="text-center"
+                        />
+                      </div>
+                    )}
 
                     <div className="col-span-2">
                       <Input
                         type="number"
                         min="0"
-                        max="70"
+                        max={limits.exam}
                         value={student.exam_score}
                         onChange={(e) =>
                           updateStudentResult(
                             student.id,
                             'exam_score',
-                            normalizeScore(e.target.value, 70)
+                            normalizeScore(e.target.value, limits.exam)
                           )
                         }
                         className="text-center"
@@ -624,7 +636,7 @@ export default function UploadResultsPage() {
                     <div className="col-span-2 text-center">
                       <div className="font-medium">{total}/100</div>
                       <div className="text-sm text-muted-foreground">
-                        CA: {(student.ca1_score + student.ca2_score + student.ca3_score)}/30
+                        CA: {(student.ca1_score + student.ca2_score + student.ca3_score)}/{limits.ca1 + limits.ca2 + limits.ca3}
                       </div>
                     </div>
 
