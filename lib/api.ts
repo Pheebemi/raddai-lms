@@ -1278,15 +1278,32 @@ export const usersApi = {
   },
 
   // Delete a student (management only)
-  deleteStudent: async (id: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/students/${id}/`, {
+  // What deleting a student would also delete (results, fee payments, attendance).
+  getStudentDeleteImpact: async (
+    id: string
+  ): Promise<{ results: number; feePayments: number; attendance: number }> => {
+    const response = await fetch(`${API_BASE_URL}/students/${id}/delete-impact/`, {
+      headers: getAuthHeaders(),
+    });
+    const data = await handleApiResponse<any>(response);
+    return {
+      results: data.counts?.results ?? 0,
+      feePayments: data.counts?.fee_payments ?? 0,
+      attendance: data.counts?.attendance ?? 0,
+    };
+  },
+
+  // `confirmStudentId` is required by the server when the student has any records.
+  deleteStudent: async (id: string, confirmStudentId?: string): Promise<void> => {
+    const query = confirmStudentId ? `?confirm=${encodeURIComponent(confirmStudentId)}` : '';
+    const response = await fetch(`${API_BASE_URL}/students/${id}/${query}`, {
       method: 'DELETE',
       headers: getAuthHeaders(),
     });
 
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({ message: 'Failed to delete student' }));
-      throw new Error(errorData.message || `HTTP ${response.status}`);
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(formatApiError(errorData, response.status));
     }
   },
 
