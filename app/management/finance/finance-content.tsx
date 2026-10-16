@@ -37,6 +37,7 @@ import { NairaSign } from '@/components/icons/naira-sign';
 import { dashboardApi, feesApi, feeStructureApi, classesApi, usersApi, fetchAcademicYears, handleApiError } from '@/lib/api';
 import { DashboardStats, FeeTransaction, FeeStructure, Student } from '@/types';
 import { toast } from 'sonner';
+import { ClassPaymentStatus } from './class-payment-status';
 
 
 const PAGE_SIZE = 15;
@@ -729,11 +730,12 @@ export function FinanceManagementContent() {
       </div>
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="fee_structures">Fee Structures</TabsTrigger>
           <TabsTrigger value="fee_payments">Fee Payments</TabsTrigger>
+          <TabsTrigger value="by_class">By Class</TabsTrigger>
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
 
@@ -1122,6 +1124,17 @@ export function FinanceManagementContent() {
         {/* Fee Payments Tab (management view of all payments) */}
         <TabsContent value="fee_payments" className="space-y-4">
           <PaymentsTab transactions={transactions} />
+        </TabsContent>
+
+        {/* By Class Tab: who has paid / not paid for a class and term */}
+        <TabsContent value="by_class" className="space-y-4">
+          <ClassPaymentStatus
+            classes={classes}
+            academicYears={academicYears}
+            transactions={transactions}
+            feeStructures={feeStructures}
+            yearId={selectedYear}
+          />
         </TabsContent>
 
         {/* Reports Tab */}
