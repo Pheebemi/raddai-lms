@@ -9,43 +9,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { usersApi, handleApiError } from '@/lib/api';
 import { Class, FeeStructure, FeeTransaction, Student } from '@/types';
+import {
+  PayState,
+  Term,
+  TERM_LABEL,
+  buildPaymentRows,
+  filterPaymentRows,
+  studentName,
+} from '@/lib/class-payment-status';
 import { toast } from 'sonner';
-
-type Term = 'first' | 'second' | 'third';
-type PayState = 'paid' | 'partial' | 'unpaid';
-
-const TERM_LABEL: Record<Term, string> = {
-  first: 'First Term',
-  second: 'Second Term',
-  third: 'Third Term',
-};
+import { Download } from 'lucide-react';
 
 const naira = (value: number) => `₦${value.toLocaleString()}`;
-
-// Mirrors the server's tuition lookup (most specific rate wins) so a student with
-// no payment yet still shows the fee they owe.
-const tuitionFor = (student: Student, grade: number, yearId: string, structures: FeeStructure[]): number | null => {
-  const pick = (studentType: string) =>
-    structures
-      .filter(s =>
-        s.feeType === 'tuition' &&
-        s.academicYearId === yearId &&
-        s.grade === grade &&
-        s.studentType === studentType &&
-        ((s.gender === (student.gender || '') && s.department === (student.department || '')) ||
-          (!s.gender && !s.department)) &&
-        (!s.section || s.section === student.section)
-      )
-      .sort((a, b) =>
-        Number(!!b.section) - Number(!!a.section) ||
-        Number(!!b.gender) - Number(!!a.gender) ||
-        Number(!!b.department) - Number(!!a.department)
-      )[0];
-
-  const type = student.studentType || 'new';
-  const found = pick(type) || (type === 'returning' ? pick('new') : undefined);
-  return found ? found.amount : null;
-};
 
 export function ClassPaymentStatus({
   classes,
@@ -110,24 +85,10 @@ export function ClassPaymentStatus({
 
   const selectedClass = yearClasses.find(c => c.id === classId);
 
-  const rows = useMemo(() => {
-    const grade = selectedClass?.grade ?? 0;
-    return [...students]
-      .sort((a, b) =>
-        `${a.user.firstName} ${a.user.lastName}`.localeCompare(`${b.user.firstName} ${b.user.lastName}`)
-      )
-      .map(student => {
-        const record = transactions.find(
-          t => t.studentId === student.id && t.term === term && t.academicYearId === effectiveYearId
-        );
-        const paid = record?.amount ?? 0;
-        const fee = record?.totalAmount || tuitionFor(student, grade, effectiveYearId, feeStructures);
-        let state: PayState = 'unpaid';
-        if (record && (record.status === 'paid' || (fee && paid >= fee))) state = 'paid';
-        else if (paid > 0) state = 'partial';
-        return { student, paid, fee, state, balance: fee != null ? Math.max(fee - paid, 0) : null };
-      });
-  }, [students, transactions, term, effectiveYearId, feeStructures, selectedClass]);
+  const rows = useMemo(
+    () => buildPaymentRows(students, selectedClass?.grade ?? 0, term, effectiveYearId, transactions, feeStructures),
+    [students, transactions, term, effectiveYearId, feeStructures, selectedClass]
+  );
 
   const counts = {
     paid: rows.filter(r => r.state === 'paid').length,
@@ -136,15 +97,15 @@ export function ClassPaymentStatus({
   };
   const collected = rows.reduce((sum, r) => sum + r.paid, 0);
 
-  const visible = rows.filter(r => {
-    if (filter !== 'all' && r.state !== filter) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      const name = `${r.student.user.firstName} ${r.student.user.lastName}`.toLowerCase();
-      if (!name.includes(q) && !r.student.studentId.toLowerCase().includes(q)) return false;
-    }
-    return true;
-  });
+  const visible = filterPaymentRows(rows, filter, search);
+
+  // Opens the printable list for what is on screen (class, term, year, status filter, search).
+  const openPrintable = () => {
+    const params = new URLSearchParams({ class: classId, term, year: effectiveYearId });
+    if (filter !== 'all') params.set('status', filter);
+    if (search.trim()) params.set('q', search.trim());
+    window.open(`/management/finance/class-status/print?${params}`, '_blank', 'noopener');
+  };
 
   const badge = (state: PayState) =>
     state === 'paid' ? (
@@ -195,6 +156,10 @@ export function ClassPaymentStatus({
             onChange={e => setSearch(e.target.value)}
             className="max-w-xs"
           />
+          <Button variant="outline" onClick={openPrintable} disabled={!classId || loading}>
+            <Download className="mr-2 h-4 w-4" />
+            Download List
+          </Button>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-4">
@@ -252,7 +217,7 @@ export function ClassPaymentStatus({
                   <TableCell>{i + 1}</TableCell>
                   <TableCell>
                     <p className="font-medium">
-                      {r.student.user.firstName} {r.student.user.lastName}
+                      {studentName(r.student)}
                     </p>
                     <p className="text-xs text-muted-foreground">{r.student.studentId}</p>
                   </TableCell>
