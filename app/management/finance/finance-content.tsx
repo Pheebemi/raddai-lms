@@ -38,6 +38,7 @@ import { dashboardApi, feesApi, feeStructureApi, classesApi, usersApi, fetchAcad
 import { DashboardStats, FeeTransaction, FeeStructure, Student } from '@/types';
 import { toast } from 'sonner';
 import { ClassPaymentStatus } from './class-payment-status';
+import { ReportsTab } from './reports-tab';
 
 
 const PAGE_SIZE = 15;
@@ -1166,55 +1167,7 @@ export function FinanceManagementContent() {
 
         {/* Reports Tab */}
         <TabsContent value="reports" className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <Receipt className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="font-semibold mb-2">Monthly Report</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Comprehensive monthly financial summary
-                  </p>
-                  <Button className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <TrendingUp className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="font-semibold mb-2">Revenue Report</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Detailed revenue analysis and projections
-                  </p>
-                  <Button className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="cursor-pointer hover:shadow-md transition-shadow">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <AlertTriangle className="h-12 w-12 mx-auto mb-4 text-primary" />
-                  <h3 className="font-semibold mb-2">Outstanding Report</h3>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    List of all outstanding fees and payments
-                  </p>
-                  <Button className="w-full">
-                    <Download className="mr-2 h-4 w-4" />
-                    Generate
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+          <ReportsTab classes={classes} academicYears={academicYears} yearId={selectedYear} />
         </TabsContent>
       </Tabs>
 
