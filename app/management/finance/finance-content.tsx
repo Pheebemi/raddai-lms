@@ -476,6 +476,33 @@ export function FinanceManagementContent() {
     }
   };
 
+  const handleExportReport = () => {
+    const rows = selectedYear === 'all' || selectedYear === 'active'
+      ? transactions
+      : transactions.filter(t => String(t.academicYearId) === selectedYear);
+    if (rows.length === 0) {
+      toast.error('No payments to export');
+      return;
+    }
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const header = ['Student ID', 'Student Name', 'Fee', 'Academic Year', 'Term', 'Amount Paid', 'Total Amount', 'Status', 'Payment Date', 'Due Date', 'Method', 'Reference', 'Remarks'];
+    const lines = rows.map(t => [
+      t.studentId, t.studentName, t.feeStructureName, t.academicYear, t.term,
+      t.amount, t.totalAmount ?? t.amount, t.status, t.paymentDate, t.dueDate,
+      t.paymentMethod, t.transactionId, t.remarks,
+    ].map(esc).join(','));
+    const csv = '\uFEFF' + [header.map(esc).join(','), ...lines].join('\n');
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `finance-report-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${rows.length} payments`);
+  };
+
   const openCreateStructureDialog = () => {
     setEditingStructure(null);
     setStructureForm({
@@ -633,7 +660,7 @@ export function FinanceManagementContent() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportReport}>
             <Download className="mr-2 h-4 w-4" />
             Export Report
           </Button>
