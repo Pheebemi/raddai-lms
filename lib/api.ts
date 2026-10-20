@@ -1653,6 +1653,16 @@ export const attendanceApi = {
     return handleApiResponse<any>(response);
   },
 
+  // Remove a whole day's attendance for one class (e.g. a weekend marked by mistake).
+  deleteDay: async (date: string, classId: string): Promise<{ deleted: number }> => {
+    const response = await fetch(`${API_BASE_URL}/attendance/delete-day/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify({ date, class_period: parseInt(classId) }),
+    });
+    return handleApiResponse<{ deleted: number }>(response);
+  },
+
   getAll: async () => {
     const items = await fetchAllResults(`${API_BASE_URL}/attendance/`);
     return items.map((a: any) => ({
