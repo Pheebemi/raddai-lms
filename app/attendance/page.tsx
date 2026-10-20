@@ -11,7 +11,8 @@ import { attendanceApi, usersApi } from '@/lib/api';
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
-import { Calendar, Save, Users } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Calendar, Save, Trash2, Users } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
@@ -25,6 +26,13 @@ const STATUS_OPTIONS: { value: AttendanceStatus; label: string; color: string }[
 
 const today = new Date().toISOString().split('T')[0];
 
+const isWeekend = (date: string) => {
+  const day = new Date(date + 'T00:00:00').getDay();
+  return day === 0 || day === 6;
+};
+const prettyDate = (date: string) =>
+  new Date(date + 'T00:00:00').toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
 export default function AttendancePage() {
   const { user } = useAuth();
   const [students, setStudents] = useState<any[]>([]);
@@ -37,6 +45,8 @@ export default function AttendancePage() {
   const [isLoadingAttendance, setIsLoadingAttendance] = useState(false);
   const [allRecords, setAllRecords] = useState<any[]>([]);
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [dayToDelete, setDayToDelete] = useState<{ date: string; count: number } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Load students and staff profile on mount
   useEffect(() => {
@@ -83,6 +93,48 @@ export default function AttendancePage() {
     };
     fetchAttendance();
   }, [selectedDate, staffProfile]);
+
+  // Every date this class has records for, so a day marked by mistake can be found and removed.
+  const loadRecordedDays = async () => {
+    try {
+      setAllRecords(await attendanceApi.getAll());
+    } catch {
+      /* the main page still works without the list */
+    }
+  };
+
+  useEffect(() => {
+    if (staffProfile?.assignedClassId) loadRecordedDays();
+  }, [staffProfile]);
+
+  const recordedDays = Object.entries(
+    allRecords.reduce((acc, r) => {
+      acc[r.date] = (acc[r.date] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>)
+  )
+    .map(([date, count]) => ({ date, count: count as number }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const weekendDays = recordedDays.filter(d => isWeekend(d.date));
+
+  const confirmDeleteDay = async () => {
+    if (!dayToDelete || !staffProfile?.assignedClassId) return;
+    setIsDeleting(true);
+    try {
+      const result = await attendanceApi.deleteDay(dayToDelete.date, staffProfile.assignedClassId);
+      toast.success(`Deleted attendance for ${prettyDate(dayToDelete.date)} (${result.deleted} record${result.deleted !== 1 ? 's' : ''})`);
+      if (dayToDelete.date === selectedDate) {
+        setAttendance({});
+        setExistingRecords({});
+      }
+      setDayToDelete(null);
+      await loadRecordedDays();
+    } catch {
+      toast.error('Could not delete that day. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const setStatus = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({ ...prev, [studentId]: status }));
@@ -229,6 +281,16 @@ export default function AttendancePage() {
               <Save className="h-4 w-4" />
               {isSaving ? 'Saving...' : 'Save Attendance'}
             </Button>
+            {Object.keys(existingRecords).length > 0 && (
+              <Button
+                variant="outline"
+                className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                onClick={() => setDayToDelete({ date: selectedDate, count: Object.keys(existingRecords).length })}
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete this day
+              </Button>
+            )}
           </div>
         </div>
 
@@ -243,6 +305,60 @@ export default function AttendancePage() {
             ))}
           </div>
         )}
+
+        {weekendDays.length > 0 && (
+          <Card className="border border-amber-300 rounded-2xl bg-amber-50 dark:bg-amber-900/10">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Saturday / Sunday entries</CardTitle>
+              <CardDescription>
+                Attendance was recorded on these weekend days. Delete them if they were added by mistake.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {weekendDays.map(day => (
+                <div key={day.date} className="flex items-center justify-between gap-3 rounded-xl bg-background p-3 border border-border">
+                  <div>
+                    <p className="text-sm font-medium">{prettyDate(day.date)}</p>
+                    <p className="text-xs text-muted-foreground">{day.count} record{day.count !== 1 ? 's' : ''}</p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-destructive border-destructive/40 hover:bg-destructive/10"
+                    onClick={() => setDayToDelete(day)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete
+                  </Button>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        <Dialog open={!!dayToDelete} onOpenChange={open => !open && !isDeleting && setDayToDelete(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete this day&apos;s attendance?</DialogTitle>
+              <DialogDescription>
+                {dayToDelete && (
+                  <>
+                    This removes all {dayToDelete.count} attendance record{dayToDelete.count !== 1 ? 's' : ''} for{' '}
+                    <strong>{prettyDate(dayToDelete.date)}</strong>. It cannot be undone, and the day will no longer count in the session summary.
+                  </>
+                )}
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDayToDelete(null)} disabled={isDeleting}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={confirmDeleteDay} disabled={isDeleting}>
+                {isDeleting ? 'Deleting...' : 'Delete attendance'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Tabs defaultValue="mark">
           <TabsList>
