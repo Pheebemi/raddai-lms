@@ -1162,6 +1162,7 @@ export function FinanceManagementContent() {
             transactions={transactions}
             feeStructures={feeStructures}
             yearId={selectedYear}
+            onRecalculated={async () => setTransactions(await feesApi.getPayments())}
           />
         </TabsContent>
 

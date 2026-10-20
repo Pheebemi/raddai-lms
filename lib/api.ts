@@ -751,6 +751,16 @@ export const feesApi = {
     }));
   },
 
+  // Re-measure every recorded payment against today's fees (management only).
+  recalculateBalances: async (academicYearId?: string): Promise<{ checked: number; updated: number }> => {
+    const response = await fetch(`${API_BASE_URL}/fee-payments/recalculate/`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(academicYearId ? { academic_year: academicYearId } : {}),
+    });
+    return handleApiResponse<{ checked: number; updated: number }>(response);
+  },
+
   createPayment: async (paymentData: {
     student: string;
     fee_structure: string;

@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { usersApi, handleApiError } from '@/lib/api';
+import { feesApi, usersApi, handleApiError } from '@/lib/api';
 import { Class, FeeStructure, FeeTransaction, Student } from '@/types';
 import {
   PayState,
@@ -18,7 +18,7 @@ import {
   studentName,
 } from '@/lib/class-payment-status';
 import { toast } from 'sonner';
-import { Download } from 'lucide-react';
+import { Download, RefreshCw } from 'lucide-react';
 
 const naira = (value: number) => `₦${value.toLocaleString()}`;
 
@@ -28,12 +28,14 @@ export function ClassPaymentStatus({
   transactions,
   feeStructures,
   yearId,
+  onRecalculated,
 }: {
   classes: Class[];
   academicYears: any[];
   transactions: FeeTransaction[];
   feeStructures: FeeStructure[];
   yearId: string;
+  onRecalculated?: () => Promise<void> | void;
 }) {
   // The page's year picker can be "All Time"; a per-class view needs one real year.
   const activeYear = academicYears.find(y => y.is_active) || academicYears[0];
@@ -54,6 +56,7 @@ export function ClassPaymentStatus({
   const [search, setSearch] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   // Keep the picked class valid when the academic year changes.
   useEffect(() => {
@@ -98,6 +101,25 @@ export function ClassPaymentStatus({
   const collected = rows.reduce((sum, r) => sum + r.paid, 0);
 
   const visible = filterPaymentRows(rows, filter, search);
+
+  // Re-measures every recorded payment against today's fees, so a fee that was
+  // changed after people paid no longer leaves them showing Part paid.
+  const recalculate = async () => {
+    setRecalculating(true);
+    try {
+      const result = await feesApi.recalculateBalances(effectiveYearId || undefined);
+      await onRecalculated?.();
+      toast.success(
+        result.updated
+          ? `Updated ${result.updated} payment${result.updated === 1 ? '' : 's'} to the current fees.`
+          : 'Every payment already matches the current fees.'
+      );
+    } catch (error) {
+      toast.error(handleApiError(error) || 'Could not recalculate balances');
+    } finally {
+      setRecalculating(false);
+    }
+  };
 
   // Opens the printable list for what is on screen (class, term, year, status filter, search).
   const openPrintable = () => {
@@ -159,6 +181,10 @@ export function ClassPaymentStatus({
           <Button variant="outline" onClick={openPrintable} disabled={!classId || loading}>
             <Download className="mr-2 h-4 w-4" />
             Download List
+          </Button>
+          <Button variant="outline" onClick={recalculate} disabled={recalculating} title="Update paid/part-paid status after a fee change">
+            <RefreshCw className={`mr-2 h-4 w-4 ${recalculating ? 'animate-spin' : ''}`} />
+            Recalculate balances
           </Button>
         </div>
 

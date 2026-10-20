@@ -71,9 +71,11 @@ export const buildPaymentRows = (
         t => t.studentId === student.id && t.term === term && t.academicYearId === yearId
       );
       const paid = record?.amount ?? 0;
-      const fee = record?.totalAmount || tuitionFor(student, grade, yearId, feeStructures);
+      // Measure against today's fee: a payment keeps the total from when it was
+      // recorded, which is stale once the fee has been changed.
+      const fee = tuitionFor(student, grade, yearId, feeStructures) ?? (record?.totalAmount || null);
       let state: PayState = 'unpaid';
-      if (record && (record.status === 'paid' || (fee && paid >= fee))) state = 'paid';
+      if (fee != null ? paid >= fee && paid > 0 : record?.status === 'paid') state = 'paid';
       else if (paid > 0) state = 'partial';
       return { student, paid, fee, state, balance: fee != null ? Math.max(fee - paid, 0) : null };
     });
