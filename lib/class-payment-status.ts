@@ -40,8 +40,8 @@ export const tuitionFor = (
         s.academicYearId === yearId &&
         s.grade === grade &&
         s.studentType === studentType &&
-        ((s.gender === (student.gender || '') && s.department === (student.department || '')) ||
-          (!s.gender && !s.department)) &&
+        (!s.gender || s.gender === student.gender) &&
+        (!s.department || s.department === student.department) &&
         (!s.section || s.section === student.section)
       )
       .sort((a, b) =>
